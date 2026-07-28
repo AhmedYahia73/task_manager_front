@@ -5,6 +5,7 @@ import { removeAuthToken } from '@/utils/auth';
 const navItems = [
   { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
   { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
+  { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings' },
   { name: 'Users', path: '/admin/users', icon: 'group' },
   { name: 'Settings', path: '/admin/settings', icon: 'settings' },
 ];

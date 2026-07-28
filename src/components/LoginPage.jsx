@@ -1,17 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
-import { setAuthToken } from '@/utils/auth';
+import { setAuthToken, isAuthenticated } from '@/utils/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useMutation } from '@/hooks/useMutation';
 
-// استيراد اللوجو (تأكدي من صحة المسار في مشروعك)
+// استيراد اللوجو
 import logo from '@/assets/logo.jpg'; 
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // If already authenticated, redirect immediately
+    if (isAuthenticated()) {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const role = user?.role?.toLowerCase?.() || '';
+        if (role === 'admin') {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          navigate('/home', { replace: true });
+        }
+      } catch {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    }
+  }, [navigate]);
+
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   
@@ -25,7 +43,7 @@ export const LoginPage = () => {
     setShowPassword((prev) => !prev);
   };
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const response = await mutate({
@@ -34,71 +52,62 @@ const handleSubmit = async (e) => {
       data: formData
     });
     
-    // الحل: الوصول إلى البيانات عبر المسار الصحيح (response.data.data)
-    // نتحقق أولاً أن response.data.data موجود
     if (response?.data?.data) {
         const { token, user } = response.data.data;
         
-        // 1. تخزين التوكن في الكوكيز
         setAuthToken(token);
-        
-        // 2. تخزين بيانات المستخدم في LocalStorage
         localStorage.setItem('user', JSON.stringify(user));
         
-        // 3. التوجيه حسب الـ Role
         const userRole = user?.role?.toLowerCase?.() || '';
         if (userRole === 'admin') {
           navigate('/admin/dashboard', { replace: true });
         } else {
           navigate('/home', { replace: true });
         }
-    } else {
-        console.log("Login failed or structure mismatch. Response:", response);
     }
   };
+
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4 overflow-hidden">
-      {/* Subtle Branded Background Glows */}
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-zinc-400/10 dark:bg-zinc-800/5 blur-[120px] pointer-events-none" />
-      
-      {/* Subtle Grid Pattern for Technical Feel */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
+    <div className="relative min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-[#191c1d] p-4 overflow-hidden font-['Plus_Jakarta_Sans']">
+      {/* Dynamic Background */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -right-[10%] w-[500px] h-[500px] rounded-full bg-[#3525cd]/10 blur-[100px]" />
+        <div className="absolute -bottom-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-[#006c49]/10 blur-[100px]" />
+      </div>
 
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-200/60 dark:border-zinc-800 p-8 z-10"
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-[420px] bg-white dark:bg-[#202425] rounded-3xl shadow-[0_8px_40px_rgb(0,0,0,0.08)] border border-[#edeeef] dark:border-[#2a2e2f] p-10 z-10"
       >
-        <div className="text-center mb-8">
-          {/* عرض اللوجو هنا */}
+        <div className="text-center mb-10">
           <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.3 }}
-            className="flex items-center justify-center mx-auto mb-4"
+            initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={{ delay: 0.2, duration: 0.4, type: 'spring' }}
+            className="flex items-center justify-center mx-auto mb-6 bg-white rounded-2xl p-2 w-24 h-24 shadow-sm border border-[#edeeef]"
           >
-            <img src={logo} alt="Company Logo" className="w-20 h-20 object-contain" />
+            <img src={logo} alt="Systego Logo" className="w-full h-full object-contain" />
           </motion.div>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5">
-            Sign in to manage your sales dashboard
+          <h1 className="text-2xl font-bold text-[#191c1d] dark:text-white mb-2">Welcome Back</h1>
+          <p className="text-sm text-[#464555] dark:text-[#a1a1a1]">
+            Please enter your admin credentials
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email Input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[13px] font-semibold text-[#191c1d] dark:text-[#e1e3e4]">
               Email Address
             </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <div className="relative group">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#464555] group-focus-within:text-[#3525cd] transition-colors" />
               <Input 
                 type="email" 
                 name="email"
-                placeholder="name@systego.net"
-                className="pl-10 h-11 bg-zinc-50/50 dark:bg-zinc-950/50 focus-visible:ring-primary/50"
+                placeholder="admin@example.com"
+                className="pl-11 h-12 bg-[#f8f9fa] dark:bg-[#191c1d] border-[#edeeef] dark:border-[#2a2e2f] focus-visible:ring-[#3525cd]/20 focus-visible:border-[#3525cd] transition-all rounded-xl text-[15px]"
                 value={formData.email}
                 onChange={handleChange}
                 required
@@ -106,18 +115,17 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
-          {/* Password Input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <div className="space-y-2">
+            <label className="text-[13px] font-semibold text-[#191c1d] dark:text-[#e1e3e4]">
               Password
             </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <div className="relative group">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#464555] group-focus-within:text-[#3525cd] transition-colors" />
               <Input 
                 type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="••••••••"
-                className="pl-10 pr-10 h-11 bg-zinc-50/50 dark:bg-zinc-950/50 focus-visible:ring-primary/50"
+                className="pl-11 pr-11 h-12 bg-[#f8f9fa] dark:bg-[#191c1d] border-[#edeeef] dark:border-[#2a2e2f] focus-visible:ring-[#3525cd]/20 focus-visible:border-[#3525cd] transition-all rounded-xl text-[15px]"
                 value={formData.password}
                 onChange={handleChange}
                 required
@@ -125,27 +133,22 @@ const handleSubmit = async (e) => {
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors focus:outline-none"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#464555] hover:text-[#191c1d] dark:hover:text-white transition-colors focus:outline-none"
               >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
+                {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
               </button>
             </div>
           </div>
 
           <Button 
             type="submit" 
-            className="w-full h-11 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 dark:shadow-none mt-2" 
+            className="w-full h-12 text-[15px] font-semibold bg-[#3525cd] hover:bg-[#2b1da8] text-white transition-all shadow-[0_4px_14px_rgba(53,37,205,0.3)] hover:shadow-[0_6px_20px_rgba(53,37,205,0.4)] rounded-xl mt-4" 
             disabled={loading}
           >
             {loading ? (
               <div className="flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Verifying...</span>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Signing in...</span>
               </div>
             ) : (
               "Sign In"

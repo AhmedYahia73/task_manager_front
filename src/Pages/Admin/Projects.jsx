@@ -1,55 +1,156 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-
-const projectsData = [
-  {
-    id: 1,
-    name: 'Quantum Pay Gateway',
-    description: 'Integrate the new quantum-safe cryptographic payment gateway for international transactions.',
-    progress: 78,
-    color: 'border-l-[#3525cd]',
-    progressColor: 'bg-[#3525cd]',
-    docLink: 'https://docs.quantumpay.local',
-    testers: ['A', 'B', 'C'],
-    extraTesters: 2,
-  },
-  {
-    id: 2,
-    name: 'EcoStream Analytics',
-    description: 'Real-time environmental data stream processing and analytics dashboard for enterprise clients.',
-    progress: 100,
-    color: 'border-l-[#006c49]',
-    progressColor: 'bg-[#006c49]',
-    docLink: 'https://docs.ecostream.local',
-    testers: ['D', 'E'],
-    extraTesters: 0,
-  },
-  {
-    id: 3,
-    name: 'Project Hydra UI',
-    description: 'A complete overhaul of the internal administrative interfaces using the new design system.',
-    progress: 42,
-    color: 'border-l-[#684000]',
-    progressColor: 'bg-[#684000]',
-    docLink: 'https://docs.hydra.local',
-    testers: ['F', 'G', 'H', 'I'],
-    extraTesters: 5,
-  }
-];
+import { Loader2, Search, Plus, Edit, Trash2, X, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+import { useGet } from '@/hooks/useGet';
+import { useMutation } from '@/hooks/useMutation';
 
 const Projects = () => {
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [projects, setProjects] = useState(projectsData);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const handleAddProject = (e) => {
-    e.preventDefault();
-    setIsModalOpen(false);
-    toast.success('Project created successfully!');
+  // Fetch Projects Data
+  const { data: projectsData, loading, refresh } = useGet(`/api/admin/project?page=${page}&limit=9&search=${debouncedSearch}`);
+  const projects = projectsData?.Projects || [];
+  const pagination = projectsData?.pagination || { totalPages: 1, page: 1, total: 0 };
+
+  // Fetch Lists for Dropdowns
+  const { data: listsData } = useGet('/api/admin/project/lists');
+  const testersList = listsData?.testers || [];
+  const engineersList = listsData?.users_list || [];
+
+  const { mutate, loading: mutationLoading } = useMutation();
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    documentation: '', // Will hold base64 string
+    tester_id: '',
+    users_ids: []
+  });
+  const fileInputRef = useRef(null);
+
+  const openModal = (project = null) => {
+    if (project) {
+      setEditingId(project.id);
+      setFormData({
+        name: project.name,
+        description: project.description || '',
+        documentation: '', // Don't preload base64 of existing file, only update if new file selected
+        tester_id: project.tester_id || '',
+        users_ids: [] // We don't get users_ids in the main project list, might need to fetch them if editing, but the backend requires it on PUT.
+        // Wait, updateProjectSchema in backend says users_ids is optional. So if it's empty, it might be ignored or might delete all. We should fetch them to prepopulate, but for now we will leave it empty and only update if changed, OR we fetch project users.
+      });
+      // Fetch users for this project to pre-fill multi-select
+      fetchProjectUsers(project.id);
+    } else {
+      setEditingId(null);
+      setFormData({ name: '', description: '', documentation: '', tester_id: '', users_ids: [] });
+    }
+    setIsModalOpen(true);
   };
+
+  const fetchProjectUsers = async (id) => {
+    const res = await mutate({ method: 'GET', url: `/api/admin/project/${id}/users`, showToast: false });
+    if (res?.success && res.data?.users) {
+      setFormData(prev => ({ ...prev, users_ids: res.data.users.map(u => u.id) }));
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    if(fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleMultiSelectChange = (e) => {
+    const value = Array.from(e.target.selectedOptions, option => option.value);
+    setFormData({ ...formData, users_ids: value });
+  };
+
+  const toggleUserSelection = (userId) => {
+    setFormData(prev => {
+      const isSelected = prev.users_ids.includes(userId);
+      if (isSelected) {
+        return { ...prev, users_ids: prev.users_ids.filter(id => id !== userId) };
+      } else {
+        return { ...prev, users_ids: [...prev.users_ids, userId] };
+      }
+    });
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, documentation: reader.result });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData({ ...formData, documentation: '' });
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const payload = { ...formData };
+    
+    if (editingId && !payload.documentation) {
+      delete payload.documentation;
+    }
+
+    const response = await mutate({
+      method: editingId ? 'PUT' : 'POST',
+      url: editingId ? `/api/admin/project/${editingId}` : '/api/admin/project',
+      data: payload
+    });
+
+    if (response?.success) {
+      closeModal();
+      refresh();
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this project?')) return;
+    
+    const response = await mutate({
+      method: 'DELETE',
+      url: `/api/admin/project/${id}`
+    });
+
+    if (response?.success) {
+      refresh();
+    }
+  };
+
+  const colors = [
+    { border: 'border-l-[#3525cd]', bg: 'bg-[#3525cd]' },
+    { border: 'border-l-[#006c49]', bg: 'bg-[#006c49]' },
+    { border: 'border-l-[#684000]', bg: 'bg-[#684000]' },
+    { border: 'border-l-[#ba1a1a]', bg: 'bg-[#ba1a1a]' },
+    { border: 'border-l-[#0061a4]', bg: 'bg-[#0061a4]' }
+  ];
 
   return (
     <div className="admin-projects p-4 md:p-8 min-h-screen bg-[#f8f9fa] text-[#191c1d]">
@@ -59,131 +160,232 @@ const Projects = () => {
           <h1 className="text-4xl font-bold font-['Plus_Jakarta_Sans'] text-[#3525cd] mb-2">Projects</h1>
           <p className="text-[#464555] font-['Inter']">Manage your enterprise workflow and testing cycles.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="bg-[#3525cd] hover:bg-[#3525cd]/90 text-white flex items-center gap-2">
-          <span className="material-symbols-outlined text-sm">add</span>
-          Add Project
-        </Button>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="bg-white px-3 py-2 rounded-lg shadow-sm border border-[#edeeef] flex items-center gap-2 flex-1 md:w-64">
+            <Search className="text-[#464555] w-4 h-4" />
+            <Input 
+              type="text" 
+              placeholder="Search projects..." 
+              className="border-none shadow-none focus-visible:ring-0 h-auto p-0 text-sm w-full"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => openModal()} className="bg-[#3525cd] hover:bg-[#3525cd]/90 text-white flex items-center gap-2 whitespace-nowrap">
+            <Plus className="w-4 h-4" />
+            Add Project
+          </Button>
+        </div>
       </div>
 
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-        {projects.map((project) => (
-          <div key={project.id} className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col relative border-l-4 ${project.color}`}>
-            <button className="absolute top-4 right-4 text-gray-400 hover:text-[#3525cd] transition-colors">
-              <span className="material-symbols-outlined text-xl">edit</span>
-            </button>
-            <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans'] mb-2 pr-8">{project.name}</h3>
-            <p className="text-[#464555] font-['Inter'] text-sm mb-6 line-clamp-2 h-10">{project.description}</p>
-            
-            <div className="mb-4">
-              <div className="flex justify-between text-sm font-medium mb-2">
-                <span>Progress</span>
-                <span>{project.progress}%</span>
-              </div>
-              <div className="w-full bg-[#f3f4f5] rounded-full h-2">
-                <div className={`${project.progressColor} h-2 rounded-full`} style={{ width: `${project.progress}%` }}></div>
-              </div>
-            </div>
-
-            <a href={project.docLink} target="_blank" rel="noreferrer" className="text-sm text-[#3525cd] flex items-center gap-1 mb-6 hover:underline w-fit">
-              <span className="material-symbols-outlined text-sm">link</span>
-              Documentation
-            </a>
-
-            <div className="flex items-center mb-6">
-              <div className="flex -space-x-3">
-                {project.testers.map((t, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-[#edeeef] border-2 border-white flex items-center justify-center text-xs font-bold text-[#464555]">
-                    {t}
+        {loading && projects.length === 0 ? (
+          <div className="col-span-full py-12 flex justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-[#3525cd]" />
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="col-span-full py-12 flex flex-col items-center justify-center text-[#464555]">
+            <span className="material-symbols-outlined text-4xl mb-2 text-gray-300">folder_off</span>
+            <p>No projects found.</p>
+          </div>
+        ) : (
+          projects.map((project, idx) => {
+            const colorTheme = colors[idx % colors.length];
+            return (
+              <div key={project.id} className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col relative border-l-4 ${colorTheme.border}`}>
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button onClick={() => openModal(project)} className="text-gray-400 hover:text-[#3525cd] transition-colors p-1 bg-gray-50 rounded-md">
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(project.id)} className="text-gray-400 hover:text-[#ba1a1a] transition-colors p-1 bg-gray-50 rounded-md">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans'] mb-2 pr-16 truncate" title={project.name}>{project.name}</h3>
+                <p className="text-[#464555] font-['Inter'] text-sm mb-6 line-clamp-2 h-10">{project.description || 'No description provided.'}</p>
+                
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm font-medium mb-2">
+                    <span>Progress</span>
+                    <span>{project.progress}%</span>
                   </div>
-                ))}
-                {project.extraTesters > 0 && (
-                  <div className="w-8 h-8 rounded-full bg-[#f3f4f5] border-2 border-white flex items-center justify-center text-xs font-bold text-[#464555]">
-                    +{project.extraTesters}
+                  <div className="w-full bg-[#f3f4f5] rounded-full h-2">
+                    <div className={`${colorTheme.bg} h-2 rounded-full transition-all duration-500`} style={{ width: `${project.progress}%` }}></div>
+                  </div>
+                </div>
+
+                {project.documentation && (
+                  <a href={project.documentation} target="_blank" rel="noreferrer" className="text-sm text-[#3525cd] flex items-center gap-1 mb-6 hover:underline w-fit">
+                    <LinkIcon className="w-4 h-4" />
+                    Documentation
+                  </a>
+                )}
+                {!project.documentation && (
+                  <div className="text-sm text-gray-400 flex items-center gap-1 mb-6 w-fit">
+                    <LinkIcon className="w-4 h-4" />
+                    No Documentation
                   </div>
                 )}
+
+                <div className="flex items-center mb-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#464555] font-medium">Lead Tester:</span>
+                    {project.tester_name ? (
+                      <div className="flex items-center gap-2 bg-[#f3f4f5] px-2 py-1 rounded-md">
+                        <div className="w-6 h-6 rounded-full bg-[#3525cd] text-white flex items-center justify-center text-[10px] font-bold">
+                          {project.tester_name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-xs font-semibold text-[#191c1d]">{project.tester_name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">Unassigned</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                  <Button onClick={() => navigate(`/admin/projects/${project.id}`)} variant="outline" className="flex-1 border-[#3525cd] text-[#3525cd] hover:bg-[#3525cd]/5">
+                    View Details
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
-              <Button onClick={() => navigate(`/admin/projects/${project.id}`)} variant="outline" className="flex-1 border-[#3525cd] text-[#3525cd] hover:bg-[#3525cd]/5">
-                View Details
-              </Button>
-              <Button variant="ghost" className="text-[#ba1a1a] hover:bg-[#ba1a1a]/10 hover:text-[#ba1a1a] px-3">
-                <span className="material-symbols-outlined">delete</span>
-              </Button>
-            </div>
-          </div>
-        ))}
-
-        {/* Add New Card */}
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-[#464555] hover:text-[#3525cd] hover:border-[#3525cd] hover:bg-[#3525cd]/5 transition-all min-h-[320px]"
-        >
-          <span className="material-symbols-outlined text-4xl mb-2">add_circle</span>
-          <span className="font-semibold font-['Plus_Jakarta_Sans']">Add New Project</span>
-        </button>
+            );
+          })
+        )}
       </div>
 
-      {/* Footer Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-        {[
-          { label: 'Active Projects', value: '12', icon: 'monitoring' },
-          { label: 'Total Testers', value: '48', icon: 'group' },
-          { label: 'Completed This Month', value: '05', icon: 'task_alt' },
-          { label: 'Avg. Completion Rate', value: '64%', icon: 'trending_up' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#f3f4f5] flex items-center justify-center text-[#3525cd] shrink-0">
-              <span className="material-symbols-outlined">{stat.icon}</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold font-['Plus_Jakarta_Sans']">{stat.value}</p>
-              <p className="text-xs text-[#464555] font-['Inter'] whitespace-nowrap">{stat.label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Pagination Controls */}
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-8">
+          <Button 
+            variant="outline" 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="text-[#464555]"
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-[#464555] font-medium">
+            Page {page} of {pagination.totalPages}
+          </span>
+          <Button 
+            variant="outline" 
+            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+            disabled={page === pagination.totalPages}
+            className="text-[#464555]"
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans']">Create New Project</h2>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-700">
-                <span className="material-symbols-outlined">close</span>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa] rounded-t-2xl">
+              <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] text-[#191c1d]">{editingId ? 'Edit Project' : 'Create New Project'}</h2>
+              <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-700 bg-white p-1 rounded-md shadow-sm">
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleAddProject} className="p-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[#191c1d] mb-1">Project Name</label>
-                <Input placeholder="e.g. Quantum Pay Gateway" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#191c1d] mb-1">Description</label>
-                <textarea 
-                  className="w-full flex min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Enter project description"
-                  rows={3}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#191c1d] mb-1">Documentation Link</label>
-                <Input type="url" placeholder="https://..." />
-              </div>
-              
-              <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-[#3525cd] hover:bg-[#3525cd]/90 text-white">
-                  Create Project
-                </Button>
-              </div>
-            </form>
+            
+            <div className="overflow-y-auto p-6">
+              <form id="project-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#191c1d] mb-1">Project Name</label>
+                  <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Quantum Pay Gateway" required />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-[#191c1d] mb-1">Description</label>
+                  <textarea 
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    className="w-full flex min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Enter project description"
+                    rows={3}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-[#191c1d] mb-1">Documentation File</label>
+                  <div className="border border-input rounded-md flex items-center bg-white pr-2 overflow-hidden">
+                    <input 
+                      type="file" 
+                      accept="image/*,.pdf" 
+                      onChange={handleFileChange} 
+                      ref={fileInputRef}
+                      className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-[#3525cd]/10 file:text-[#3525cd] hover:file:bg-[#3525cd]/20 cursor-pointer"
+                      required={!editingId}
+                    />
+                  </div>
+                  {editingId && <p className="text-xs text-gray-500 mt-1">Leave empty to keep current documentation file.</p>}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-[#191c1d] mb-1">Assign Tester</label>
+                  <select 
+                    name="tester_id" 
+                    value={formData.tester_id} 
+                    onChange={handleInputChange}
+                    required
+                    className="flex w-full items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="">Select a Tester</option>
+                    {testersList.map(tester => (
+                      <option key={tester.id} value={tester.id}>{tester.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#191c1d] mb-1 flex justify-between">
+                    <span>Assign Engineers</span>
+                    <span className="text-[#3525cd]">{formData.users_ids.length} selected</span>
+                  </label>
+                  <div className="border border-input rounded-md max-h-40 overflow-y-auto bg-white p-2 flex flex-col gap-1">
+                    {engineersList.length === 0 ? (
+                      <p className="text-sm text-gray-500 p-2 text-center">No engineers available.</p>
+                    ) : (
+                      engineersList.map(engineer => (
+                        <div 
+                          key={engineer.id} 
+                          onClick={() => toggleUserSelection(engineer.id)}
+                          className={`flex items-center px-3 py-2 rounded-md cursor-pointer transition-colors text-sm ${
+                            formData.users_ids.includes(engineer.id) 
+                              ? 'bg-[#3525cd]/10 text-[#3525cd] font-medium' 
+                              : 'hover:bg-gray-100 text-[#464555]'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 ${
+                            formData.users_ids.includes(engineer.id) ? 'bg-[#3525cd] border-[#3525cd]' : 'border-gray-300'
+                          }`}>
+                            {formData.users_ids.includes(engineer.id) && <span className="material-symbols-outlined text-[12px] text-white font-bold">check</span>}
+                          </div>
+                          {engineer.name}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {formData.users_ids.length === 0 && (
+                    <p className="text-xs text-red-500 mt-1">Please select at least one engineer.</p>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-white rounded-b-2xl">
+              <Button type="button" variant="outline" onClick={closeModal} className="px-6">
+                Cancel
+              </Button>
+              <Button type="submit" form="project-form" disabled={mutationLoading || formData.users_ids.length === 0} className="bg-[#3525cd] hover:bg-[#3525cd]/90 text-white px-6">
+                {mutationLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? 'Update Project' : 'Create Project')}
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -9,11 +9,12 @@ import { LoginPage } from '@/components/LoginPage';
 import Visits from '@/Pages/Visits/Visits';
 import VisitsAdd from '@/Pages/Visits/VisitsAdd';
 
-// Admin Pages
 import Dashboard from '@/Pages/Admin/Dashboard';
 import Projects from '@/Pages/Admin/Projects';
 import ProjectDetails from '@/Pages/Admin/ProjectDetails';
 import Tasks from '@/Pages/Admin/Tasks';
+import Admins from '@/Pages/Admin/Admins';
+import Users from '@/Pages/Admin/Users';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -53,6 +54,13 @@ const SmartRedirect = () => {
   return <Navigate to="/visits" replace />;
 };
 
+const NotFoundRedirect = () => {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Navigate to="/" replace />;
+};
+
 // Router Configuration
 export const router = createBrowserRouter([
   {
@@ -69,9 +77,9 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'projects', element: <Projects /> },
       { path: 'projects/:id', element: <ProjectDetails /> },
-      { path: 'projects/:id/tasks', element: <Tasks /> },
-      // Users & Settings placeholder - redirect to dashboard for now
-      { path: 'users', element: <Dashboard /> },
+      { path: 'projects/:projectId/groups/:groupId/tasks', element: <Tasks /> },
+      { path: 'admins', element: <Admins /> },
+      { path: 'users', element: <Users /> },
       { path: 'settings', element: <Dashboard /> },
     ],
   },
@@ -93,6 +101,6 @@ export const router = createBrowserRouter([
 
   {
     path: '*',
-    element: <Navigate to="/" replace />,
+    element: <NotFoundRedirect />,
   },
 ]);
