@@ -8,6 +8,7 @@ export const useGet = (url, autoFetch = true) => {
     const [error, setError] = useState(null);
 
     const fetchData = useCallback(async () => {
+        if (!url) return;
         setLoading(true);
         try {
             // 2. استخدام apiClient بدلاً من axios العادي

@@ -55,16 +55,8 @@ const Tasks = () => {
         delivery_date: task.delivery_date ? dayjs(task.delivery_date).format('YYYY-MM-DD') : '',
         status: task.status,
         tester_note: task.tester_note || '',
-        users_ids: []
+        users_ids: task.user_id ? [task.user_id] : []
       });
-      // Try to fetch task details to get assigned users.
-      // But wait, the backend `getTaskById` returns the task with ONE user_id (since they duplicate tasks per user in createTasks!).
-      // Wait, let's look at backend createTasks:
-      // It iterates `users_ids.map` and inserts a duplicate task per user.
-      // So if you edit a task, you are editing one specific task for ONE user.
-      // Ah! In `getAllTasks`, they are separate rows for each user.
-      // So `users_ids` should just be prefilled with the task's single `user_id` if editing.
-      setFormData(prev => ({ ...prev, users_ids: task.user_id ? [task.user_id] : [] }));
     } else {
       setEditingId(null);
       setFormData({ 
