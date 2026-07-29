@@ -67,8 +67,9 @@ const Projects = () => {
 
   const fetchProjectUsers = async (id) => {
     const res = await mutate({ method: 'GET', url: `/api/admin/project/${id}/users`, showToast: false });
-    if (res?.success && res.data?.users) {
-      setFormData(prev => ({ ...prev, users_ids: res.data.users.map(u => u.id) }));
+    if (res?.success && (res.data?.users || res.data?.data?.users)) {
+      const users = res.data?.users || res.data?.data?.users;
+      setFormData(prev => ({ ...prev, users_ids: users.map(u => u.id) }));
     }
   };
 

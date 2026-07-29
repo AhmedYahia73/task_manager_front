@@ -79,8 +79,9 @@ const ProjectDetails = () => {
       });
       // Fetch users for this group to prepopulate multi-select
       const res = await mutate({ method: 'GET', url: `/api/admin/projectGroup/${group.id}/users`, showToast: false });
-      if (res?.success && res.data?.users) {
-        setFormData(prev => ({ ...prev, users_ids: res.data.users.map(u => u.id) }));
+      if (res?.success && (res.data?.users || res.data?.data?.users)) {
+        const users = res.data?.users || res.data?.data?.users;
+        setFormData(prev => ({ ...prev, users_ids: users.map(u => u.id) }));
       }
     } else {
       setEditingId(null);
@@ -284,20 +285,20 @@ const ProjectDetails = () => {
                   <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
                 </div>
                 
-                <div className="px-6 pb-6 -mt-10 relative">
-                  <div className="flex justify-between items-end mb-6">
-                    <div className="flex items-end gap-4">
-                      <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-[#3525cd] border-4 border-[#f8f9fa] shadow-md z-10">
+                <div className="px-6 pb-6 relative">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-20 h-20 shrink-0 bg-white rounded-2xl flex items-center justify-center text-[#3525cd] border-4 border-[#f8f9fa] shadow-md z-10 -mt-10">
                         <span className="material-symbols-outlined text-4xl">diversity_3</span>
                       </div>
-                      <div className="mb-1">
+                      <div className="mt-3">
                         <h2 className="text-2xl font-bold font-['Plus_Jakarta_Sans'] text-[#191c1d]">{activeGroup.name}</h2>
                         <p className="text-[#464555] text-sm flex items-center mt-1">
                            Part of <span className="font-semibold ml-1">{project.name}</span>
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mt-3">
                       <Button onClick={() => openModal(activeGroup)} variant="outline" className="border-[#3525cd] text-[#3525cd] hover:bg-[#3525cd]/5">
                         <Edit className="w-4 h-4 mr-2" />
                         Edit Group
