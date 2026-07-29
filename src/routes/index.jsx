@@ -61,6 +61,9 @@ const NotFoundRedirect = () => {
   return <Navigate to="/" replace />;
 };
 
+// Import FilteredTasks
+import FilteredTasks from '@/Pages/Admin/FilteredTasks';
+
 // Router Configuration
 export const router = createBrowserRouter([
   {
@@ -78,6 +81,7 @@ export const router = createBrowserRouter([
       { path: 'projects', element: <Projects /> },
       { path: 'projects/:id', element: <ProjectDetails /> },
       { path: 'projects/:projectId/groups/:groupId/tasks', element: <Tasks /> },
+      { path: 'tasks/:type', element: <FilteredTasks /> },
       { path: 'admins', element: <Admins /> },
       { path: 'users', element: <Users /> },
       { path: 'settings', element: <Dashboard /> },

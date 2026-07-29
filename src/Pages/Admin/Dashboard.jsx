@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { Loader2 } from 'lucide-react';
 
 const Dashboard = () => {
   const { data, loading } = useGet('/api/admin/dashboard');
+  const navigate = useNavigate();
 
   return (
     <div className="p-6 md:p-8 space-y-8 bg-[#f8f9fa] min-h-screen relative text-[#191c1d]">
@@ -23,7 +25,10 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Pending Tasks */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#edeeef] border-l-4 border-l-[#684000] flex items-start gap-4">
+          <div 
+            onClick={() => navigate('/admin/tasks/pending')}
+            className="bg-white p-6 rounded-xl shadow-sm border border-[#edeeef] border-l-4 border-l-[#684000] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
+          >
             <div className="bg-[#f3f4f5] p-3 rounded-lg text-[#684000]">
               <span className="material-symbols-outlined text-3xl">assignment_late</span>
             </div>
@@ -34,7 +39,10 @@ const Dashboard = () => {
           </div>
 
           {/* Active Projects */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#edeeef] border-l-4 border-l-[#3525cd] flex items-start gap-4">
+          <div 
+            onClick={() => navigate('/admin/projects')}
+            className="bg-white p-6 rounded-xl shadow-sm border border-[#edeeef] border-l-4 border-l-[#3525cd] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
+          >
             <div className="bg-[#f3f4f5] p-3 rounded-lg text-[#3525cd]">
               <span className="material-symbols-outlined text-3xl">rocket_launch</span>
             </div>
@@ -45,7 +53,10 @@ const Dashboard = () => {
           </div>
 
           {/* Delay Tasks */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#edeeef] border-l-4 border-l-[#ba1a1a] flex items-start gap-4">
+          <div 
+            onClick={() => navigate('/admin/tasks/delay')}
+            className="bg-white p-6 rounded-xl shadow-sm border border-[#edeeef] border-l-4 border-l-[#ba1a1a] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
+          >
             <div className="bg-[#fef2f2] p-3 rounded-lg text-[#ba1a1a]">
               <span className="material-symbols-outlined text-3xl">alarm</span>
             </div>
