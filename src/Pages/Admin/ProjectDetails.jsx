@@ -345,8 +345,16 @@ const ProjectDetails = () => {
                               <tr key={user.id} className="hover:bg-[#f8f9fa] transition-colors">
                                 <td className="px-6 py-4">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-[#3525cd]/10 text-[#3525cd] flex items-center justify-center font-bold border border-[#3525cd]/20">
-                                      {user.name.charAt(0).toUpperCase()}
+                                    <div className="w-8 h-8 rounded-full bg-[#f3f4f5] text-[#3525cd] flex items-center justify-center font-bold text-sm border border-[#edeeef]">
+                                      {user.image ? (
+                                        <img 
+                                          src={user.image.startsWith('http') ? user.image : `${import.meta.env.VITE_API_BASE_URL}${user.image.startsWith('/') ? '' : '/'}${user.image}`} 
+                                          alt={user.name} 
+                                          className="w-8 h-8 rounded-full object-cover" 
+                                        />
+                                      ) : (
+                                        user.name.charAt(0).toUpperCase()
+                                      )}
                                     </div>
                                     <div>
                                       <div className="font-semibold text-[#191c1d]">{user.name}</div>
@@ -382,8 +390,8 @@ const ProjectDetails = () => {
 
       {/* Group Form Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={closeModal}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa] rounded-t-2xl">
               <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] text-[#191c1d]">{editingId ? 'Edit Group' : 'Create New Group'}</h2>
               <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-700 bg-white p-1 rounded-md shadow-sm">

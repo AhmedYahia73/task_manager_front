@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
+import { useMutation } from '@/hooks/useMutation';
 import { Loader2, Search, Calendar, ChevronLeft } from 'lucide-react';
 import dayjs from 'dayjs';
 
@@ -38,6 +39,22 @@ const FilteredTasks = () => {
       case 'edit': return { color: 'bg-orange-500', badge: 'bg-orange-100 text-orange-700', label: 'Edit' };
       case 'approve': return { color: 'bg-purple-500', badge: 'bg-purple-100 text-purple-700', label: 'Approve' };
       default: return { color: 'bg-gray-500', badge: 'bg-gray-100 text-gray-700', label: status };
+    }
+  };
+
+  const { mutate } = useMutation();
+
+  const handleStatusChange = async (taskId, newStatus) => {
+    const response = await mutate({
+      method: 'PUT',
+      url: `/api/admin/tasks/${taskId}`,
+      data: { status: newStatus }
+    });
+    if (response?.success) {
+      // Trigger a refresh (since useGet doesn't expose refresh here directly, we can force a re-render or we can expose refresh from useGet)
+      setPage(prev => prev); // This might not trigger a refresh if page is the same. Let's trigger a search trigger instead.
+      setSearch(prev => prev + ' '); 
+      setTimeout(() => setSearch(prev => prev.trim()), 10);
     }
   };
 
@@ -118,9 +135,17 @@ const FilteredTasks = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3525cd]/10 text-[#3525cd] font-bold border border-[#3525cd]/20">
-                            {task.user_name ? task.user_name.charAt(0).toUpperCase() : '?'}
-                          </div>
+                          {task.user_image ? (
+                            <img 
+                              src={task.user_image} 
+                              alt={task.user_name} 
+                              className="h-10 w-10 rounded-full object-cover border border-[#edeeef]" 
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3525cd]/10 text-[#3525cd] font-bold border border-[#3525cd]/20">
+                              {task.user_name ? task.user_name.charAt(0).toUpperCase() : '?'}
+                            </div>
+                          )}
                           <div className="flex flex-col">
                             <span className="font-semibold text-[#191c1d]">{task.user_name || 'Unassigned'}</span>
                             <span className="text-xs text-[#464555]">{task.user_phone || 'Engineer'}</span>
@@ -134,10 +159,18 @@ const FilteredTasks = () => {
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${style.badge}`}>
-                          <span className={`h-2 w-2 rounded-full ${style.color}`}></span>
-                          {style.label}
-                        </span>
+                        <select
+                          value={task.status}
+                          onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3525cd]/50 ${style.badge}`}
+                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                        >
+                          <option value="pending" className="bg-white text-gray-900">Pending</option>
+                          <option value="inprogress" className="bg-white text-gray-900">In Progress</option>
+                          <option value="done" className="bg-white text-gray-900">Done</option>
+                          <option value="edit" className="bg-white text-gray-900">Needs Revision</option>
+                          <option value="approve" className="bg-white text-gray-900">Approve</option>
+                        </select>
                       </td>
                     </tr>
                   )

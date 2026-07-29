@@ -142,6 +142,17 @@ const Tasks = () => {
     }
   };
 
+  const handleStatusChange = async (taskId, newStatus) => {
+    const response = await mutate({
+      method: 'PUT',
+      url: `/api/admin/tasks/${taskId}`,
+      data: { status: newStatus }
+    });
+    if (response?.success) {
+      refresh();
+    }
+  };
+
   // Compute stats for bottom cards
   const pendingCount = tasks.filter(t => t.status === 'pending').length;
   const inProgressCount = tasks.filter(t => t.status === 'inprogress').length;
@@ -223,9 +234,17 @@ const Tasks = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3525cd]/10 text-[#3525cd] font-bold border border-[#3525cd]/20">
-                            {task.user_name ? task.user_name.charAt(0).toUpperCase() : '?'}
-                          </div>
+                          {task.user_image ? (
+                            <img 
+                              src={task.user_image} 
+                              alt={task.user_name} 
+                              className="h-10 w-10 rounded-full object-cover border border-[#edeeef]" 
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3525cd]/10 text-[#3525cd] font-bold border border-[#3525cd]/20">
+                              {task.user_name ? task.user_name.charAt(0).toUpperCase() : '?'}
+                            </div>
+                          )}
                           <div className="flex flex-col">
                             <span className="font-semibold text-[#191c1d]">{task.user_name || 'Unassigned'}</span>
                             <span className="text-xs text-[#464555]">{task.user_phone || 'Engineer'}</span>
@@ -239,10 +258,18 @@ const Tasks = () => {
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${style.badge}`}>
-                          <span className={`h-2 w-2 rounded-full ${style.color}`}></span>
-                          {style.label}
-                        </span>
+                        <select
+                          value={task.status}
+                          onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3525cd]/50 ${style.badge}`}
+                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                        >
+                          <option value="pending" className="bg-white text-gray-900">Pending</option>
+                          <option value="inprogress" className="bg-white text-gray-900">In Progress</option>
+                          <option value="done" className="bg-white text-gray-900">Done</option>
+                          <option value="edit" className="bg-white text-gray-900">Needs Revision</option>
+                          <option value="approve" className="bg-white text-gray-900">Approve</option>
+                        </select>
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
@@ -335,8 +362,8 @@ const Tasks = () => {
 
       {/* Task Form Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa] rounded-t-2xl">
               <h2 className="text-2xl font-bold font-['Plus_Jakarta_Sans'] text-[#191c1d]">{editingId ? 'Edit Task' : 'Create New Task'}</h2>
               <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-700 bg-white p-1.5 rounded-md shadow-sm border border-gray-200">

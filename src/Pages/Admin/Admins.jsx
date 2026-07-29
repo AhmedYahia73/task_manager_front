@@ -35,6 +35,7 @@ const Admins = () => {
     phone: '',
     password: '',
     status: 'active',
+    image: null,
   });
 
   const openModal = (admin = null) => {
@@ -46,10 +47,11 @@ const Admins = () => {
         phone: admin.phone,
         password: '', // Don't fill password on edit
         status: admin.status,
+        image: admin.image || null,
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', password: '', status: 'active' });
+      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', image: null });
     }
     setIsModalOpen(true);
   };
@@ -61,6 +63,19 @@ const Admins = () => {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData({ ...formData, image: null });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -153,9 +168,17 @@ const Admins = () => {
                 admins.map((admin) => (
                   <tr key={admin.id} className="hover:bg-[#f8f9fa] transition-colors">
                     <td className="px-6 py-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#f3f4f5] text-[#3525cd] flex items-center justify-center font-bold text-lg border border-[#edeeef]">
-                        {admin.name.charAt(0).toUpperCase()}
-                      </div>
+                      {admin.image ? (
+                        <img 
+                          src={admin.image} 
+                          alt={admin.name} 
+                          className="w-10 h-10 rounded-full object-cover border border-[#edeeef]" 
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-[#f3f4f5] text-[#3525cd] flex items-center justify-center font-bold text-lg border border-[#edeeef]">
+                          {admin.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div>
                         <p className="font-semibold text-[#191c1d]">{admin.name}</p>
                         <p className="text-[#464555] text-xs mt-0.5">{admin.email}</p>
@@ -218,8 +241,8 @@ const Admins = () => {
 
       {/* Admin Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={closeModal}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-[#edeeef]">
               <h2 className="text-lg font-bold text-[#191c1d]">{editingId ? 'Edit Admin' : 'Add New Admin'}</h2>
               <button onClick={closeModal} className="text-[#464555] hover:bg-[#f3f4f5] p-1.5 rounded-lg transition-colors">
@@ -228,6 +251,27 @@ const Admins = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  {formData.image ? (
+                    <img 
+                      src={formData.image}
+                      alt="Profile" 
+                      className="w-24 h-24 rounded-full object-cover border-2 border-[#edeeef] shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-[#f3f4f5] text-[#464555] flex items-center justify-center border-2 border-[#edeeef] shadow-sm">
+                      <span className="material-symbols-outlined text-3xl">person</span>
+                    </div>
+                  )}
+                  <label className="absolute bottom-0 right-0 bg-white p-1.5 rounded-full border border-[#edeeef] shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
+                    <span className="material-symbols-outlined text-[16px] text-[#3525cd]">edit</span>
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  </label>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-[#191c1d]">Name</label>
                 <Input name="name" value={formData.name} onChange={handleInputChange} required className="h-11" placeholder="Admin Name" />

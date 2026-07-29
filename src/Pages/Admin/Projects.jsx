@@ -235,9 +235,17 @@ const Projects = () => {
                     <span className="text-xs text-[#464555] font-medium">Lead Tester:</span>
                     {project.tester_name ? (
                       <div className="flex items-center gap-2 bg-[#f3f4f5] px-2 py-1 rounded-md">
-                        <div className="w-6 h-6 rounded-full bg-[#3525cd] text-white flex items-center justify-center text-[10px] font-bold">
-                          {project.tester_name.charAt(0).toUpperCase()}
-                        </div>
+                        {project.tester_image ? (
+                          <img 
+                            src={project.tester_image.startsWith('http') ? project.tester_image : `${import.meta.env.VITE_API_BASE_URL}${project.tester_image.startsWith('/') ? '' : '/'}${project.tester_image}`} 
+                            alt={project.tester_name}
+                            className="w-6 h-6 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-[#3525cd] text-white flex items-center justify-center text-[10px] font-bold">
+                            {project.tester_name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <span className="text-xs font-semibold text-[#191c1d]">{project.tester_name}</span>
                       </div>
                     ) : (
@@ -284,8 +292,8 @@ const Projects = () => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={closeModal}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa] rounded-t-2xl">
               <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] text-[#191c1d]">{editingId ? 'Edit Project' : 'Create New Project'}</h2>
               <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-700 bg-white p-1 rounded-md shadow-sm">
