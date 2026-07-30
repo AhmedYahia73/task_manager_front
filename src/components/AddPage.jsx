@@ -179,7 +179,7 @@ const AddPage = ({
                               variant="outline"
                               role="combobox"
                               className={cn(
-                                "w-full justify-between font-normal text-left h-10 bg-white border-input",
+                                "w-full justify-between font-normal text-left h-10 bg-card border-input",
                                 errors[fieldItem.name]
                                   ? "border-destructive text-destructive"
                                   : "",
@@ -378,7 +378,7 @@ const AddPage = ({
                           }
                         />
                         {value && (
-                          <div className="relative w-32 h-32 border rounded-lg overflow-hidden bg-gray-50">
+                          <div className="relative w-32 h-32 border rounded-lg overflow-hidden bg-muted">
                             <img
                               src={value}
                               alt="Preview"

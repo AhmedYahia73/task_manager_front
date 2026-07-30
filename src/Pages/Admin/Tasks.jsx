@@ -138,7 +138,7 @@ const Tasks = () => {
       case 'pending': return { color: 'bg-amber-500', badge: 'bg-amber-100 text-amber-700', label: 'Pending' };
       case 'edit': return { color: 'bg-orange-500', badge: 'bg-orange-100 text-orange-700', label: 'Edit' };
       case 'approve': return { color: 'bg-purple-500', badge: 'bg-purple-100 text-purple-700', label: 'Approve' };
-      default: return { color: 'bg-gray-500', badge: 'bg-gray-100 text-gray-700', label: status };
+      default: return { color: 'bg-muted0', badge: 'bg-gray-100 text-gray-700', label: status };
     }
   };
 
@@ -160,19 +160,19 @@ const Tasks = () => {
   const editCount = tasks.filter(t => t.status === 'edit').length;
 
   return (
-    <div className="admin-tasks-page min-h-screen bg-[#f8f9fa] p-4 md:p-8 font-inter text-[#191c1d]">
+    <div className="admin-tasks-page min-h-screen bg-background p-4 md:p-8 font-inter text-foreground">
       {/* Header Section */}
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <nav className="mb-3 text-sm text-[#464555] flex items-center">
-            <Link to="/admin/projects" className="hover:underline hover:text-[#3525cd]">Projects</Link>
+          <nav className="mb-3 text-sm text-muted-foreground flex items-center">
+            <Link to="/admin/projects" className="hover:underline hover:text-primary">Projects</Link>
             <span className="material-symbols-outlined mx-1 text-[16px]">chevron_right</span>
-            <Link to={`/admin/projects/${projectId}`} className="hover:underline hover:text-[#3525cd]">Details</Link>
+            <Link to={`/admin/projects/${projectId}`} className="hover:underline hover:text-primary">Details</Link>
             <span className="material-symbols-outlined mx-1 text-[16px]">chevron_right</span>
-            <span className="font-semibold text-[#191c1d]">Tasks</span>
+            <span className="font-semibold text-foreground">Tasks</span>
           </nav>
-          <h1 className="font-plus-jakarta text-4xl font-bold tracking-tight text-[#3525cd]">Task Management</h1>
-          <p className="mt-2 text-[#464555]">Manage tasks for the selected group.</p>
+          <h1 className="font-plus-jakarta text-4xl font-bold tracking-tight text-primary">Task Management</h1>
+          <p className="mt-2 text-muted-foreground">Manage tasks for the selected group.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
@@ -181,10 +181,10 @@ const Tasks = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tasks..." 
-              className="pl-9 h-11 border-gray-200 focus-visible:ring-[#3525cd] bg-white rounded-xl shadow-sm"
+              className="pl-9 h-11 border-border focus-visible:ring-primary bg-card rounded-xl shadow-sm"
             />
           </div>
-          <Button onClick={() => openModal()} className="h-11 flex items-center gap-2 rounded-xl bg-[#3525cd] px-5 text-sm font-medium text-white transition-colors hover:bg-opacity-90 shadow-md">
+          <Button onClick={() => openModal()} className="h-11 flex items-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-white transition-colors hover:bg-opacity-90 shadow-md">
             <Plus className="w-4 h-4" />
             Add Task
           </Button>
@@ -192,10 +192,10 @@ const Tasks = () => {
       </div>
 
       {/* Task Table */}
-      <div className="mb-8 overflow-hidden rounded-2xl border border-[#edeeef] bg-white shadow-sm">
+      <div className="mb-8 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#f3f4f5] text-xs uppercase tracking-wider text-[#464555]">
+            <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th scope="col" className="px-6 py-5 font-semibold rounded-tl-2xl">Task Details</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Assigned To</th>
@@ -206,24 +206,24 @@ const Tasks = () => {
             </thead>
             <tbody className="divide-y divide-[#edeeef]">
               {tasksLoading && tasks.length === 0 ? (
-                <tr><td colSpan="5" className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-[#3525cd]" /></td></tr>
+                <tr><td colSpan="5" className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></td></tr>
               ) : tasks.length === 0 ? (
-                <tr><td colSpan="5" className="py-12 text-center text-gray-500"><div className="flex flex-col items-center"><span className="material-symbols-outlined text-4xl mb-2 text-gray-300">task</span>No tasks found.</div></td></tr>
+                <tr><td colSpan="5" className="py-12 text-center text-muted-foreground"><div className="flex flex-col items-center"><span className="material-symbols-outlined text-4xl mb-2 text-gray-300">task</span>No tasks found.</div></td></tr>
               ) : (
                 tasks.map((task) => {
                   const style = getStatusStyles(task.status);
                   return (
                     <tr 
                       key={task.id} 
-                      className={`group bg-white hover:bg-[#f3f4f5] transition-colors ${task.status === 'done' ? 'opacity-70' : ''}`}
+                      className={`group bg-card hover:bg-muted transition-colors ${task.status === 'done' ? 'opacity-70' : ''}`}
                     >
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
                         <div className="flex flex-col">
-                          <span className={`font-plus-jakarta text-base font-bold text-[#191c1d] ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}>
+                          <span className={`font-plus-jakarta text-base font-bold text-foreground ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}>
                             {task.name}
                           </span>
-                          <span className="mt-1 text-sm text-[#464555] line-clamp-2 max-w-md">{task.description || <span className="italic">No description</span>}</span>
+                          <span className="mt-1 text-sm text-muted-foreground line-clamp-2 max-w-md">{task.description || <span className="italic">No description</span>}</span>
                           {task.tester_note && (
                             <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-700 border border-amber-100">
                               <span className="material-symbols-outlined text-[14px]">speaker_notes</span>
@@ -238,21 +238,21 @@ const Tasks = () => {
                             <img 
                               src={task.user_image} 
                               alt={task.user_name} 
-                              className="h-10 w-10 rounded-full object-cover border border-[#edeeef]" 
+                              className="h-10 w-10 rounded-full object-cover border border-border" 
                             />
                           ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3525cd]/10 text-[#3525cd] font-bold border border-[#3525cd]/20">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
                               {task.user_name ? task.user_name.charAt(0).toUpperCase() : '?'}
                             </div>
                           )}
                           <div className="flex flex-col">
-                            <span className="font-semibold text-[#191c1d]">{task.user_name || 'Unassigned'}</span>
-                            <span className="text-xs text-[#464555]">{task.user_phone || 'Engineer'}</span>
+                            <span className="font-semibold text-foreground">{task.user_name || 'Unassigned'}</span>
+                            <span className="text-xs text-muted-foreground">{task.user_phone || 'Engineer'}</span>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="flex items-center text-[#191c1d] font-medium">
+                        <div className="flex items-center text-foreground font-medium">
                           <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                           {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
                         </div>
@@ -261,22 +261,22 @@ const Tasks = () => {
                         <select
                           value={task.status}
                           onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3525cd]/50 ${style.badge}`}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
                           style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
                         >
-                          <option value="pending" className="bg-white text-gray-900">Pending</option>
-                          <option value="inprogress" className="bg-white text-gray-900">In Progress</option>
-                          <option value="done" className="bg-white text-gray-900">Done</option>
-                          <option value="edit" className="bg-white text-gray-900">Needs Revision</option>
-                          <option value="approve" className="bg-white text-gray-900">Approve</option>
+                          <option value="pending" className="bg-card text-foreground">Pending</option>
+                          <option value="inprogress" className="bg-card text-foreground">In Progress</option>
+                          <option value="done" className="bg-card text-foreground">Done</option>
+                          <option value="edit" className="bg-card text-foreground">Needs Revision</option>
+                          <option value="approve" className="bg-card text-foreground">Approve</option>
                         </select>
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                          <button onClick={() => openModal(task)} className="flex h-9 w-9 items-center justify-center rounded-lg text-[#464555] hover:bg-white hover:shadow-sm hover:text-[#3525cd] transition-all border border-transparent hover:border-gray-200">
+                          <button onClick={() => openModal(task)} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-card hover:shadow-sm hover:text-primary transition-all border border-transparent hover:border-border">
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDelete(task.id)} className="flex h-9 w-9 items-center justify-center rounded-lg text-[#464555] hover:bg-white hover:shadow-sm hover:text-red-500 transition-all border border-transparent hover:border-gray-200">
+                          <button onClick={() => handleDelete(task.id)} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-card hover:shadow-sm hover:text-red-500 transition-all border border-transparent hover:border-border">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -291,15 +291,15 @@ const Tasks = () => {
         
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-[#edeeef] bg-[#f8f9fa] px-6 py-4 rounded-b-2xl">
-            <span className="text-sm text-[#464555] font-medium">Showing page {page} of {pagination.totalPages}</span>
+          <div className="flex items-center justify-between border-t border-border bg-background px-6 py-4 rounded-b-2xl">
+            <span className="text-sm text-muted-foreground font-medium">Showing page {page} of {pagination.totalPages}</span>
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => setPage(p => Math.max(1, p - 1))} 
                 disabled={page === 1}
-                className="bg-white"
+                className="bg-card"
               >
                 Previous
               </Button>
@@ -308,7 +308,7 @@ const Tasks = () => {
                 size="sm" 
                 onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))} 
                 disabled={page === pagination.totalPages}
-                className="bg-white"
+                className="bg-card"
               >
                 Next
               </Button>
@@ -319,43 +319,43 @@ const Tasks = () => {
 
       {/* Bottom Stats - Only showing counts for current page as a quick summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="flex items-center gap-4 rounded-2xl border border-[#edeeef] bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
             <span className="material-symbols-outlined">pending_actions</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-[#464555]">Pending</p>
-            <p className="text-2xl font-bold text-[#191c1d]">{pendingCount}</p>
+            <p className="text-sm font-medium text-muted-foreground">Pending</p>
+            <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-4 rounded-2xl border border-[#edeeef] bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
             <span className="material-symbols-outlined">clock_loader_40</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-[#464555]">In Progress</p>
-            <p className="text-2xl font-bold text-[#191c1d]">{inProgressCount}</p>
+            <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+            <p className="text-2xl font-bold text-foreground">{inProgressCount}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-4 rounded-2xl border border-[#edeeef] bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
             <span className="material-symbols-outlined">check_circle</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-[#464555]">Completed</p>
-            <p className="text-2xl font-bold text-[#191c1d]">{doneCount}</p>
+            <p className="text-sm font-medium text-muted-foreground">Completed</p>
+            <p className="text-2xl font-bold text-foreground">{doneCount}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-4 rounded-2xl border border-[#edeeef] bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
             <span className="material-symbols-outlined">error</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-[#464555]">Needs Revision</p>
-            <p className="text-2xl font-bold text-[#191c1d]">{editCount}</p>
+            <p className="text-sm font-medium text-muted-foreground">Needs Revision</p>
+            <p className="text-2xl font-bold text-foreground">{editCount}</p>
           </div>
         </div>
       </div>
@@ -363,10 +363,10 @@ const Tasks = () => {
       {/* Task Form Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa] rounded-t-2xl">
-              <h2 className="text-2xl font-bold font-['Plus_Jakarta_Sans'] text-[#191c1d]">{editingId ? 'Edit Task' : 'Create New Task'}</h2>
-              <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-700 bg-white p-1.5 rounded-md shadow-sm border border-gray-200">
+          <div className="bg-card rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-border flex justify-between items-center bg-background rounded-t-2xl">
+              <h2 className="text-2xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{editingId ? 'Edit Task' : 'Create New Task'}</h2>
+              <button type="button" onClick={closeModal} className="text-gray-400 hover:text-gray-700 bg-card p-1.5 rounded-md shadow-sm border border-border">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -375,12 +375,12 @@ const Tasks = () => {
               <form id="task-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-[#191c1d] mb-1.5">Task Name</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Task Name</label>
                     <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Implement OAuth2 Login" className="h-11" required />
                   </div>
                   
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-[#191c1d] mb-1.5">Description</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Description</label>
                     <textarea 
                       name="description"
                       value={formData.description}
@@ -392,18 +392,18 @@ const Tasks = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-[#191c1d] mb-1.5">Delivery Date</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Delivery Date</label>
                     <Input type="date" name="delivery_date" value={formData.delivery_date} onChange={handleInputChange} className="h-11" />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-[#191c1d] mb-1.5">Status</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Status</label>
                     <select 
                       name="status" 
                       value={formData.status} 
                       onChange={handleInputChange}
                       required
-                      className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                       <option value="pending">Pending</option>
                       <option value="inprogress">In Progress</option>
@@ -414,16 +414,16 @@ const Tasks = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-[#191c1d] mb-1.5 flex justify-between items-center">
+                    <label className="block text-sm font-semibold text-foreground mb-1.5 flex justify-between items-center">
                       <span>Assign {editingId ? 'Engineer' : 'Engineers'}</span>
-                      <span className="text-[#3525cd] bg-[#3525cd]/10 px-2.5 rounded-full text-xs py-1 font-bold">
+                      <span className="text-primary bg-primary/10 px-2.5 rounded-full text-xs py-1 font-bold">
                         {formData.users_ids.length} selected
                       </span>
                     </label>
-                    {editingId && <p className="text-xs text-gray-500 mb-2">Since you are editing a specific user's task, select only one engineer.</p>}
-                    <div className="border border-input rounded-xl h-48 overflow-y-auto bg-gray-50 p-3 flex flex-col gap-2 custom-scrollbar shadow-inner">
+                    {editingId && <p className="text-xs text-muted-foreground mb-2">Since you are editing a specific user's task, select only one engineer.</p>}
+                    <div className="border border-input rounded-xl h-48 overflow-y-auto bg-muted p-3 flex flex-col gap-2 custom-scrollbar shadow-inner">
                       {engineersList.length === 0 ? (
-                        <p className="text-sm text-gray-500 p-2 text-center h-full flex items-center justify-center">No engineers available.</p>
+                        <p className="text-sm text-muted-foreground p-2 text-center h-full flex items-center justify-center">No engineers available.</p>
                       ) : (
                         engineersList.map(engineer => {
                           const isSelected = formData.users_ids.includes(engineer.id);
@@ -440,16 +440,16 @@ const Tasks = () => {
                               }}
                               className={`flex items-center px-4 py-2.5 rounded-lg cursor-pointer transition-all border text-sm ${
                                 isSelected 
-                                  ? 'bg-white border-[#3525cd] shadow-[0_0_0_1px_#3525cd]' 
-                                  : 'bg-white border-transparent shadow-sm hover:border-gray-300'
+                                  ? 'bg-card border-primary shadow-[0_0_0_1px_var(--color-primary)]' 
+                                  : 'bg-card border-transparent shadow-sm hover:border-gray-300'
                               }`}
                             >
                               <div className={`w-5 h-5 rounded-[4px] border flex items-center justify-center mr-4 transition-colors ${
-                                isSelected ? 'bg-[#3525cd] border-[#3525cd]' : 'border-gray-300 bg-white'
+                                isSelected ? 'bg-primary border-primary' : 'border-gray-300 bg-card'
                               }`}>
                                 {isSelected && <span className="material-symbols-outlined text-[14px] text-white font-bold">check</span>}
                               </div>
-                              <span className={`font-semibold ${isSelected ? 'text-[#3525cd]' : 'text-[#191c1d]'}`}>{engineer.name}</span>
+                              <span className={`font-semibold ${isSelected ? 'text-primary' : 'text-foreground'}`}>{engineer.name}</span>
                             </div>
                           )
                         })
@@ -464,7 +464,7 @@ const Tasks = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-[#191c1d] mb-1.5">Tester Note (Optional)</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Tester Note (Optional)</label>
                     <textarea 
                       name="tester_note"
                       value={formData.tester_note}
@@ -479,11 +479,11 @@ const Tasks = () => {
               </form>
             </div>
 
-            <div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-white rounded-b-2xl">
-              <Button type="button" variant="outline" onClick={closeModal} className="px-6 h-11 rounded-xl font-semibold text-[#464555]">
+            <div className="flex justify-end gap-3 p-6 border-t border-border bg-card rounded-b-2xl">
+              <Button type="button" variant="outline" onClick={closeModal} className="px-6 h-11 rounded-xl font-semibold text-muted-foreground">
                 Cancel
               </Button>
-              <Button type="submit" form="task-form" disabled={mutationLoading || formData.users_ids.length === 0} className="bg-[#3525cd] hover:bg-[#3525cd]/90 text-white px-8 h-11 rounded-xl font-bold shadow-md">
+              <Button type="submit" form="task-form" disabled={mutationLoading || formData.users_ids.length === 0} className="bg-primary hover:bg-primary/90 text-white px-8 h-11 rounded-xl font-bold shadow-md">
                 {mutationLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingId ? 'Update Task' : 'Create Task')}
               </Button>
             </div>

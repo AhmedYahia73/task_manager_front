@@ -1,0 +1,155 @@
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Settings2, Save, User, UserCog, Shield } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useGet } from '@/hooks/useGet';
+import { useMutation } from '@/hooks/useMutation';
+import { toast } from 'sonner';
+
+export const Settings = () => {
+  const { data, loading: getLoading, refetch } = useGet('/api/admin/settings');
+  // The response data contains a "Names" object
+  const settingsData = data?.Names || (Array.isArray(data) ? data[0] : data);
+  const settingId = settingsData?.id || 1; 
+  const { mutate, loading: updateLoading } = useMutation();
+
+  const [formData, setFormData] = useState({
+    user: '',
+    leader: '',
+    admin: ''
+  });
+
+  // Update local state when data is fetched
+  useEffect(() => {
+    if (settingsData) {
+      setFormData({
+        user: settingsData.user || '',
+        leader: settingsData.leader || '',
+        admin: settingsData.admin || ''
+      });
+    }
+  }, [data]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await mutate({
+        method: 'PUT',
+        url: `/api/admin/settings/${settingId}`,
+        data: formData
+      });
+      refetch();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  if (getLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Settings2 className="w-8 h-8 text-primary" />
+          System Settings
+        </h1>
+        <p className="text-muted-foreground mt-1">Configure role names and system preferences</p>
+      </div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden"
+      >
+        <div className="p-6 border-b border-border bg-muted/30">
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            Role Custom Names
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Leave the field empty to use the default name.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="space-y-4">
+            
+            {/* User Custom Name */}
+            <div className="space-y-2">
+              <label htmlFor="user" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <User className="w-4 h-4 text-muted-foreground" />
+                User Role Name
+              </label>
+              <Input
+                id="user"
+                name="user"
+                value={formData.user}
+                onChange={handleChange}
+                placeholder="e.g. Employee, Staff, etc."
+                className="max-w-md bg-background border-border focus-visible:ring-primary"
+              />
+            </div>
+
+            {/* Leader Custom Name */}
+            <div className="space-y-2">
+              <label htmlFor="leader" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <UserCog className="w-4 h-4 text-muted-foreground" />
+                Leader Role Name
+              </label>
+              <Input
+                id="leader"
+                name="leader"
+                value={formData.leader}
+                onChange={handleChange}
+                placeholder="e.g. Manager, Supervisor, etc."
+                className="max-w-md bg-background border-border focus-visible:ring-primary"
+              />
+            </div>
+
+            {/* Admin Custom Name */}
+            <div className="space-y-2">
+              <label htmlFor="admin" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Shield className="w-4 h-4 text-muted-foreground" />
+                Admin Role Name
+              </label>
+              <Input
+                id="admin"
+                name="admin"
+                value={formData.admin}
+                onChange={handleChange}
+                placeholder="e.g. Director, Administrator, etc."
+                className="max-w-md bg-background border-border focus-visible:ring-primary"
+              />
+            </div>
+
+          </div>
+
+          <div className="pt-4 flex items-center gap-4 border-t border-border mt-8">
+            <Button 
+              type="submit" 
+              disabled={updateLoading}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground min-w-[120px] h-11 shadow-md flex gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {updateLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};

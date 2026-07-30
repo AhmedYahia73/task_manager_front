@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { removeAuthToken } from '@/utils/auth';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 const navItems = [
   { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
@@ -26,7 +27,10 @@ export const AdminSidebar = () => {
     <aside className="admin-sidebar">
       {/* Brand */}
       <div className="admin-sidebar__brand">
-        <h1 className="admin-sidebar__title">TaskFlow Pro</h1>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Taskito Logo" className="w-8 h-8 object-contain" />
+          <h1 className="admin-sidebar__title">Taskito</h1>
+        </div>
         <p className="admin-sidebar__subtitle">Enterprise Admin</p>
       </div>
 
@@ -48,6 +52,9 @@ export const AdminSidebar = () => {
 
       {/* Footer */}
       <div className="admin-sidebar__footer">
+        <div className="mb-4">
+          <ThemeSwitcher />
+        </div>
         <button
           onClick={handleLogout}
           className="admin-sidebar__link"

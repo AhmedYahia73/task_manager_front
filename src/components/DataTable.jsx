@@ -36,7 +36,7 @@ export const DataTable = ({
       {/* العنوان وزر الإضافة */}
       {(title || (showAdd && onAdd)) && (
         <div className="flex justify-between items-center mb-4">
-          {title && <h2 className="text-xl font-bold text-gray-800">{title}</h2>}
+          {title && <h2 className="text-xl font-bold text-foreground">{title}</h2>}
           {showAdd && onAdd && (
             <Button onClick={onAdd} className="gap-2">
               <Plus className="h-4 w-4" /> Add
@@ -59,9 +59,9 @@ export const DataTable = ({
       )}
 
       {/* الجدول */}
-      <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
+      <div className="rounded-xl border border-border overflow-hidden bg-card shadow-sm">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-muted/50">
             <TableRow>
               {columns.map((col, index) => (
                 <TableHead key={col.accessorKey || index} className="font-semibold text-gray-700">
@@ -76,7 +76,7 @@ export const DataTable = ({
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (hasActions ? 1 : 0)} className="h-32 text-center">
-                  <div className="flex items-center justify-center gap-2 text-gray-500">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
                     <span>Loading data...</span>
                   </div>
@@ -84,7 +84,7 @@ export const DataTable = ({
               </TableRow>
             ) : filteredData.length > 0 ? (
               filteredData.map((row, rowIndex) => (
-                <TableRow key={row.id || rowIndex} className="hover:bg-gray-50/50 transition-colors">
+                <TableRow key={row.id || rowIndex} className="hover:bg-muted/50 transition-colors">
                   {columns.map((col, colIndex) => (
                     <TableCell key={colIndex}>
                       {col.render ? col.render(row) : (row[col.accessorKey] ?? "-")}
@@ -126,7 +126,7 @@ export const DataTable = ({
               <TableRow>
                 <TableCell 
                   colSpan={columns.length + (hasActions ? 1 : 0)} 
-                  className="h-32 text-center text-gray-500 font-medium"
+                  className="h-32 text-center text-muted-foreground font-medium"
                 >
                   No records found
                 </TableCell>

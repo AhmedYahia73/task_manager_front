@@ -15,7 +15,7 @@ import ProjectDetails from '@/Pages/Admin/ProjectDetails';
 import Tasks from '@/Pages/Admin/Tasks';
 import Admins from '@/Pages/Admin/Admins';
 import Users from '@/Pages/Admin/Users';
-
+import { Settings } from '@/Pages/Admin/Settings';
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {
@@ -84,7 +84,7 @@ export const router = createBrowserRouter([
       { path: 'tasks/:type', element: <FilteredTasks /> },
       { path: 'admins', element: <Admins /> },
       { path: 'users', element: <Users /> },
-      { path: 'settings', element: <Dashboard /> },
+      { path: 'settings', element: <Settings /> },
     ],
   },
 

@@ -6,9 +6,9 @@
 .admin-shell {
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--background);
   font-family: 'Inter', sans-serif;
-  color: #191c1d;
+  color: var(--foreground);
 }
 
 /* --- Sidebar --- */
@@ -22,8 +22,8 @@
   flex-direction: column;
   padding: 24px 16px;
   gap: 8px;
-  background-color: #f3f4f5;
-  border-right: 1px solid #c7c4d8;
+  background-color: var(--muted);
+  border-right: 1px solid var(--muted);
   z-index: 50;
   overflow-y: auto;
 }
@@ -39,7 +39,7 @@
   line-height: 32px;
   letter-spacing: -0.01em;
   font-weight: 700;
-  color: #3525cd;
+  color: var(--primary);
 }
 
 .admin-sidebar__subtitle {
@@ -47,7 +47,7 @@
   line-height: 16px;
   letter-spacing: 0.05em;
   font-weight: 600;
-  color: #464555;
+  color: var(--muted-foreground);
 }
 
 .admin-sidebar__nav {
@@ -64,7 +64,7 @@
   padding: 8px 16px;
   border-radius: 0.5rem;
   transition: all 0.2s ease;
-  color: #464555;
+  color: var(--muted-foreground);
   font-size: 14px;
   line-height: 20px;
   letter-spacing: 0.01em;
@@ -78,14 +78,14 @@
 }
 
 .admin-sidebar__link:hover {
-  background-color: #e7e8e9;
+  background-color: var(--muted);
 }
 
 .admin-sidebar__link--active {
-  color: #3525cd;
+  color: var(--primary);
   font-weight: 700;
-  border-right: 4px solid #3525cd;
-  background-color: rgba(79, 70, 229, 0.1);
+  border-right: 4px solid var(--primary);
+  background-color: var(--primary-light);
 }
 
 .admin-sidebar__link .material-symbols-outlined {
@@ -98,7 +98,7 @@
   flex-direction: column;
   gap: 4px;
   padding-top: 16px;
-  border-top: 1px solid #c7c4d8;
+  border-top: 1px solid var(--muted);
 }
 
 .admin-sidebar__user {
@@ -113,14 +113,14 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3525cd, #4f46e5);
-  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: var(--primary-foreground);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 16px;
-  border: 2px solid #4f46e5;
+  border: 2px solid var(--primary-hover);
   flex-shrink: 0;
 }
 
@@ -132,12 +132,12 @@
 .admin-sidebar__user-name {
   font-size: 14px;
   font-weight: 600;
-  color: #191c1d;
+  color: var(--foreground);
 }
 
 .admin-sidebar__user-role {
   font-size: 10px;
-  color: #464555;
+  color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -153,18 +153,18 @@
   width: calc(100% - 280px);
   position: fixed;
   top: 0;
-  background: rgba(248, 249, 250, 0.8);
+  background: var(--background);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 40;
-  border-bottom: 1px solid #c7c4d8;
+  border-bottom: 1px solid var(--muted);
 }
 
 .admin-topbar__search {
   display: flex;
   align-items: center;
   gap: 12px;
-  background-color: #edeeef;
+  background-color: var(--border);
   border-radius: 9999px;
   padding: 6px 24px;
   width: 100%;
@@ -173,12 +173,12 @@
 }
 
 .admin-topbar__search:focus-within {
-  background-color: white;
+  background-color: var(--card);
   box-shadow: 0 0 0 2px rgba(53, 37, 205, 0.2);
 }
 
 .admin-topbar__search-icon {
-  color: #464555;
+  color: var(--muted-foreground);
   font-size: 20px;
 }
 
@@ -189,11 +189,11 @@
   font-size: 14px;
   line-height: 20px;
   width: 100%;
-  color: #191c1d;
+  color: var(--foreground);
 }
 
 .admin-topbar__search-input::placeholder {
-  color: #777587;
+  color: var(--muted-foreground);
 }
 
 .admin-topbar__actions {
@@ -211,12 +211,12 @@
   border: none;
   background: none;
   cursor: pointer;
-  color: #464555;
+  color: var(--muted-foreground);
   transition: all 0.15s ease;
 }
 
 .admin-topbar__icon-btn:hover {
-  background-color: #edeeef;
+  background-color: var(--border);
 }
 
 .admin-topbar__icon-btn:active {
@@ -226,7 +226,7 @@
 .admin-topbar__divider {
   height: 24px;
   width: 1px;
-  background-color: #c7c4d8;
+  background-color: var(--muted);
   margin: 0 8px;
 }
 
@@ -240,8 +240,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3525cd, #4f46e5);
-  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: var(--primary-foreground);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -263,13 +263,13 @@
 .admin-topbar__user-name {
   font-size: 14px;
   font-weight: 600;
-  color: #191c1d;
+  color: var(--foreground);
   line-height: 1;
 }
 
 .admin-topbar__user-role {
   font-size: 10px;
-  color: #464555;
+  color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 1;
@@ -305,7 +305,7 @@
 
 .admin-sidebar::-webkit-scrollbar-thumb,
 .admin-content::-webkit-scrollbar-thumb {
-  background: #c7c4d8;
+  background: var(--muted);
   border-radius: 10px;
 }
 

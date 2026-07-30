@@ -46,7 +46,7 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
   };
 
   return (
-    <aside className={`h-screen bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col fixed left-0 top-0 transition-all duration-300 z-50 ${isOpen ? 'w-64' : 'w-20'}`}>
+    <aside className={`h-screen bg-card border-r border-zinc-200 flex flex-col fixed left-0 top-0 transition-all duration-300 z-50 ${isOpen ? 'w-64' : 'w-20'}`}>
 
       {/* زر التبديل واللوجو */}
       <div className="p-6 flex items-center justify-between cursor-pointer" onClick={toggleSidebar}>
@@ -69,7 +69,7 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
                 <button
                   onClick={toggleRequestsMenu}
                   title={!isOpen ? item.name : ""}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-zinc-600 hover:bg-zinc-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     {item.icon}
@@ -85,7 +85,7 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
 
                 {/* العناصر الفرعية داخل Requests */}
                 {isOpen && isRequestsOpen && (
-                  <div className="ml-4 pl-2 border-l-2 border-zinc-200 dark:border-zinc-800 space-y-1 mt-1">
+                  <div className="ml-4 pl-2 border-l-2 border-zinc-200 space-y-1 mt-1">
                     {item.children.map((subItem) => {
                       const badgeCount = subItem.dataKey && data?.data ? data.data[subItem.dataKey] : null;
 
@@ -97,7 +97,7 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
                             `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                               isActive
                                 ? 'bg-primary/10 text-primary font-medium'
-                                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                : 'text-zinc-600 hover:bg-zinc-100 '
                             }`
                           }
                         >
@@ -131,7 +131,7 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    : 'text-zinc-600 hover:bg-zinc-100 '
                 }`
               }
             >

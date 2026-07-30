@@ -19,7 +19,7 @@ import {
 
 const statusColors = {
     "Negotiation": "bg-yellow-100 text-yellow-800",
-    "Sales": "bg-gray-100 text-gray-800",
+    "Sales": "bg-gray-100 text-foreground",
     "Deliverd": "bg-green-100 text-green-800",
 };
 
@@ -166,7 +166,7 @@ const Visits = () => {
                 return (
                     <select
                         className={`px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-offset-1 transition-colors ${
-                            statusColors[row.visit_status] || "bg-gray-100 text-gray-800"
+                            statusColors[row.visit_status] || "bg-gray-100 text-foreground"
                         }`}
                         value={currentStatusId}
                         onChange={(e) => {
@@ -176,7 +176,7 @@ const Visits = () => {
                     >
                         <option value="" disabled>Select Status</option>
                         {statusList.map((s) => (
-                            <option key={s.id} value={s.id} className="bg-white text-black">
+                            <option key={s.id} value={s.id} className="bg-card text-black">
                                 {s.name}
                             </option>
                         ))}
@@ -194,7 +194,7 @@ const Visits = () => {
                 return (
                     <select
                         className={`px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-offset-1 transition-colors ${
-                            statusColors[row.status] || "bg-gray-100 text-gray-800"
+                            statusColors[row.status] || "bg-gray-100 text-foreground"
                         }`}
                         value={currentStatusId}
                         onChange={(e) => {
@@ -204,7 +204,7 @@ const Visits = () => {
                     >
                         <option value="" disabled>Select Status</option>
                         {sales_statues.map((s) => (
-                            <option key={s} value={s} className="bg-white text-black">
+                            <option key={s} value={s} className="bg-card text-black">
                                 {s}
                             </option>
                         ))}
@@ -221,7 +221,7 @@ const Visits = () => {
 
                 return (
                     <select
-                        className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-white cursor-pointer focus:ring-2 focus:ring-offset-1 transition-colors text-gray-800"
+                        className="px-2 py-1 rounded-full text-xs font-medium border border-border bg-card cursor-pointer focus:ring-2 focus:ring-offset-1 transition-colors text-foreground"
                         value={currentSalesId}
                         onChange={(e) => {
                             if (e.target.value) handleSalesChange(row, e.target.value);
@@ -230,7 +230,7 @@ const Visits = () => {
                     >
                         <option value="" disabled>Select Sales</option>
                         {salesList.map((s) => (
-                            <option key={s.id} value={s.id} className="bg-white text-black">
+                            <option key={s.id} value={s.id} className="bg-card text-black">
                                 {s.name}
                             </option>
                         ))}
@@ -282,7 +282,7 @@ const Visits = () => {
     return (
         <div className="container mx-auto py-10">
             {/* Controls Section: Filter & Search */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-4 bg-card p-4 rounded-lg border border-border shadow-sm">
                 
                 {/* Sales Filter */}
                 <div className="flex items-center gap-3">
@@ -291,7 +291,7 @@ const Visits = () => {
                     </label>
                     <select
                         id="sales-filter"
-                        className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[200px]"
+                        className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-card min-w-[200px]"
                         value={selectedSalesFilter}
                         onChange={handleFilterChange}
                     >
@@ -329,8 +329,8 @@ const Visits = () => {
             />
 
             {/* Pagination Controls */}
-            <div className="flex items-center justify-between mt-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="text-sm text-gray-600">
+            <div className="flex items-center justify-between mt-4 bg-card p-4 rounded-lg border border-border shadow-sm">
+                <div className="text-sm text-muted-foreground">
                     Showing page <span className="font-semibold">{paginationData.page}</span> of{" "}
                     <span className="font-semibold">{paginationData.totalPages || 1}</span> (Total: {paginationData.total})
                 </div>
@@ -370,7 +370,7 @@ const Visits = () => {
                             <StickyNote className="h-5 w-5 text-primary" />
                             Visit Notes - {selectedNotes?.name}
                         </DialogTitle>
-                        <DialogDescription className="pt-2 text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
+                        <DialogDescription className="pt-2 text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                             {selectedNotes?.notes}
                         </DialogDescription>
                     </DialogHeader>

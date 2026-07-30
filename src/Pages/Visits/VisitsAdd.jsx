@@ -184,7 +184,7 @@ const VisitsAdd = () => {
                               className="h-9 text-sm"
                             />
                             <CommandList>
-                              <CommandEmpty className="p-2 text-sm text-center text-gray-500">
+                              <CommandEmpty className="p-2 text-sm text-center text-muted-foreground">
                                 No results found.
                               </CommandEmpty>
                               <CommandGroup>
@@ -254,7 +254,7 @@ const VisitsAdd = () => {
                               className="h-9 text-sm"
                             />
                             <CommandList>
-                              <CommandEmpty className="p-2 text-sm text-center text-gray-500">
+                              <CommandEmpty className="p-2 text-sm text-center text-muted-foreground">
                                 No results found.
                               </CommandEmpty>
                               <CommandGroup>
