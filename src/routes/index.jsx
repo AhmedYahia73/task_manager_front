@@ -5,9 +5,7 @@ import { AdminLayout } from '@/layouts/AdminLayout';
 import { isAuthenticated } from '@/utils/auth';
 import { LoginPage } from '@/components/LoginPage';
 
-// Visits Pages (existing & working)
-import Visits from '@/Pages/Visits/Visits';
-import VisitsAdd from '@/Pages/Visits/VisitsAdd';
+// Removed Visits Pages since they are from the old template
 
 import Dashboard from '@/Pages/Admin/Dashboard';
 import Projects from '@/Pages/Admin/Projects';
@@ -33,7 +31,7 @@ const AdminRoute = ({ children }) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user?.role?.toLowerCase?.() || '';
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'tester') {
       return <Navigate to="/home" replace />;
     }
   } catch {
@@ -47,11 +45,11 @@ const SmartRedirect = () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user?.role?.toLowerCase?.() || '';
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'tester') {
       return <Navigate to="/admin/dashboard" replace />;
     }
-  } catch { /* fallback to visits */ }
-  return <Navigate to="/visits" replace />;
+  } catch { /* fallback to login */ }
+  return <Navigate to="/login" replace />;
 };
 
 const NotFoundRedirect = () => {
@@ -95,11 +93,6 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <SmartRedirect /> },
       { path: 'home', element: <SmartRedirect /> },
-
-      // visits
-      { path: 'visits', element: <Visits /> },
-      { path: 'visits/add', element: <VisitsAdd /> },
-      { path: 'visits/edit/:id', element: <VisitsAdd /> },
     ],
   },
 

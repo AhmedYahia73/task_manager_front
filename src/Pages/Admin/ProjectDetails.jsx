@@ -94,7 +94,7 @@ const ProjectDetails = () => {
       setFormData({
         name: group.name,
         description: group.description || '',
-        documentation: group.documentation || '',
+        documentation: '', // Don't preload URL to avoid invalid base64 on submit
         users_ids: [] 
       });
       if (fileInputRef.current) fileInputRef.current.value = '';

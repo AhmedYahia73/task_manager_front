@@ -76,7 +76,7 @@ const Tasks = () => {
         status: task.status,
         importanc_status: task.importanc_status || 'medium',
         tester_note: task.tester_note || '',
-        documentation: task.documentation || '',
+        documentation: '', // Don't preload URL to avoid invalid base64 on submit
         users_ids: task.user_id ? [task.user_id] : []
       });
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -128,6 +128,7 @@ const Tasks = () => {
     if (editingId) {
         payload.user_id = payload.users_ids[0]; // take the first one if multiple selected by accident
         delete payload.users_ids;
+        if (!payload.documentation) delete payload.documentation;
     }
 
     const response = await mutate({
