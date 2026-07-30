@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { Loader2, Users } from 'lucide-react';
 import { useRoleNames } from '@/context/RoleNameContext';
+import EngineerDashboard from './EngineerDashboard';
 
 const CircularProgress = ({ value, total, colorClass, label }) => {
   const radius = 28;
@@ -47,8 +48,13 @@ const CircularProgress = ({ value, total, colorClass, label }) => {
 
 const Dashboard = () => {
   const { getRoleNamePlural } = useRoleNames();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const { data, loading } = useGet('/api/admin/dashboard');
   const navigate = useNavigate();
+
+  if (user?.role === 'engineer') {
+    return <EngineerDashboard />;
+  }
 
   return (
     <div className="p-6 md:p-8 space-y-8 bg-background min-h-screen relative text-foreground">

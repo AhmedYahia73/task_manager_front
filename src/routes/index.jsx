@@ -31,7 +31,7 @@ const AdminRoute = ({ children }) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user?.role?.toLowerCase?.() || '';
-    if (role !== 'admin' && role !== 'tester') {
+    if (role !== 'admin' && role !== 'tester' && role !== 'engineer') {
       return <Navigate to="/home" replace />;
     }
   } catch {
@@ -45,7 +45,7 @@ const SmartRedirect = () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user?.role?.toLowerCase?.() || '';
-    if (role === 'admin' || role === 'tester') {
+    if (role === 'admin' || role === 'tester' || role === 'engineer') {
       return <Navigate to="/admin/dashboard" replace />;
     }
   } catch { /* fallback to login */ }

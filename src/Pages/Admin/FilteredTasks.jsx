@@ -13,6 +13,9 @@ const FilteredTasks = () => {
   const { getRoleName } = useRoleNames();
   const { type } = useParams(); // 'pending' or 'delay'
   
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = user?.role?.toLowerCase?.() || '';
+  
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -78,23 +81,40 @@ const FilteredTasks = () => {
         const blob = new Blob([u8arr], { type: mime });
         const url = URL.createObjectURL(blob);
         
-        if (mime.includes('image') || mime.includes('pdf')) {
-          window.open(url, '_blank');
-        } else {
-          const link = document.createElement('a');
-          link.href = url;
-          let ext = 'file';
-          if(mime.includes('word')) ext = 'docx';
-          if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
-          if(mime.includes('zip')) ext = 'zip';
-          link.download = `document_${Date.now()}.${ext}`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        const link = document.createElement('a');
+        link.href = url;
+        let ext = 'file';
+        if(mime.includes('word')) ext = 'docx';
+        else if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
+        else if(mime.includes('zip')) ext = 'zip';
+        else if(mime.includes('pdf')) ext = 'pdf';
+        else if(mime.includes('image/jpeg')) ext = 'jpg';
+        else if(mime.includes('image/png')) ext = 'png';
+        else if(mime.includes('image')) ext = 'img';
+        
+        link.download = `document_${Date.now()}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       } else {
-        window.open(docString, '_blank');
+        // Try to fetch the URL to force download
+        fetch(docString)
+          .then(res => res.blob())
+          .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = docString.split('/').pop() || 'document';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+          })
+          .catch(() => {
+            // Fallback if fetch fails (e.g., CORS)
+            window.open(docString, '_blank');
+          });
       }
     } catch(err) {
       console.error("Error viewing document:", err);
@@ -236,7 +256,8 @@ const FilteredTasks = () => {
                         <select
                           value={task.importanc_status || 'medium'}
                           onChange={(e) => handleImportanceChange(task.id, e.target.value)}
-                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
+                          disabled={userRole === 'engineer'}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
                           style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
                         >
                           <option value="low" className="bg-card text-foreground">Low</option>

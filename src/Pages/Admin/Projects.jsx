@@ -10,8 +10,8 @@ import { useRoleNames } from '@/context/RoleNameContext';
 const Projects = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const navigate = useNavigate();
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
-  const userRole = userData?.role || 'admin';
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = user?.role?.toLowerCase?.() || '';
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -87,11 +87,6 @@ const Projects = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleMultiSelectChange = (e) => {
-    const value = Array.from(e.target.selectedOptions, option => option.value);
-    setFormData({ ...formData, users_ids: value });
-  };
-
   const toggleUserSelection = (userId) => {
     setFormData(prev => {
       const isSelected = prev.users_ids.includes(userId);
@@ -149,6 +144,64 @@ const Projects = () => {
     }
   };
 
+  const handleViewDoc = (e, docString) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!docString) return;
+    
+    try {
+      if (docString.startsWith('data:')) {
+        const arr = docString.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        let ext = 'file';
+        if(mime.includes('word')) ext = 'docx';
+        else if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
+        else if(mime.includes('zip')) ext = 'zip';
+        else if(mime.includes('pdf')) ext = 'pdf';
+        else if(mime.includes('image/jpeg')) ext = 'jpg';
+        else if(mime.includes('image/png')) ext = 'png';
+        else if(mime.includes('image')) ext = 'img';
+        
+        link.download = `document_${Date.now()}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } else {
+        // Try to fetch the URL to force download
+        fetch(docString)
+          .then(res => res.blob())
+          .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = docString.split('/').pop() || 'document';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+          })
+          .catch(() => {
+            // Fallback if fetch fails (e.g., CORS)
+            window.open(docString, '_blank');
+          });
+      }
+    } catch(err) {
+      console.error("Error viewing document:", err);
+    }
+  };
+
   const colors = [
     { border: 'border-l-var(--primary)', bg: 'bg-primary' },
     { border: 'border-l-[#006c49]', bg: 'bg-[#006c49]' },
@@ -176,10 +229,12 @@ const Projects = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button onClick={() => openModal()} className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 whitespace-nowrap">
-            <Plus className="w-4 h-4" />
-            Add Project
-          </Button>
+          {userRole !== 'engineer' && (
+            <Button onClick={() => openModal()} className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 whitespace-nowrap">
+              <Plus className="w-4 h-4" />
+              Add Project
+            </Button>
+          )}
         </div>
       </div>
 
@@ -200,13 +255,17 @@ const Projects = () => {
             return (
               <div key={project.id} className={`bg-card rounded-xl shadow-sm border border-border p-6 flex flex-col relative border-l-4 ${colorTheme.border}`}>
                 <div className="absolute top-4 right-4 flex gap-2">
-                  <button onClick={() => openModal(project)} className="text-gray-400 hover:text-primary transition-colors p-1 bg-muted rounded-md">
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  {userRole !== 'tester' && (
-                    <button onClick={() => handleDelete(project.id)} className="text-gray-400 hover:text-[#ba1a1a] transition-colors p-1 bg-muted rounded-md">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  {userRole !== 'engineer' && (
+                    <div className="flex gap-2">
+                      <button onClick={() => openModal(project)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors border border-transparent hover:border-border">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      {userRole !== 'tester' && (
+                        <button onClick={() => handleDelete(project.id)} className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-border">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 
@@ -229,10 +288,10 @@ const Projects = () => {
                 </div>
 
                 {project.documentation && (
-                  <a href={project.documentation} target="_blank" rel="noreferrer" className="text-sm text-primary flex items-center gap-1 mb-6 hover:underline w-fit">
+                  <button onClick={(e) => handleViewDoc(e, project.documentation)} className="text-sm text-primary flex items-center gap-1 mb-6 hover:underline w-fit bg-transparent border-none cursor-pointer p-0">
                     <LinkIcon className="w-4 h-4" />
                     Documentation
-                  </a>
+                  </button>
                 )}
                 {!project.documentation && (
                   <div className="text-sm text-gray-400 flex items-center gap-1 mb-6 w-fit">

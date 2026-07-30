@@ -184,24 +184,40 @@ const ProjectDetails = () => {
         const blob = new Blob([u8arr], { type: mime });
         const url = URL.createObjectURL(blob);
         
-        if (mime.includes('image') || mime.includes('pdf')) {
-          window.open(url, '_blank');
-        } else {
-          const link = document.createElement('a');
-          link.href = url;
-          // Determine extension from mime
-          let ext = 'file';
-          if(mime.includes('word')) ext = 'docx';
-          if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
-          if(mime.includes('zip')) ext = 'zip';
-          link.download = `document_${Date.now()}.${ext}`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        const link = document.createElement('a');
+        link.href = url;
+        let ext = 'file';
+        if(mime.includes('word')) ext = 'docx';
+        else if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
+        else if(mime.includes('zip')) ext = 'zip';
+        else if(mime.includes('pdf')) ext = 'pdf';
+        else if(mime.includes('image/jpeg')) ext = 'jpg';
+        else if(mime.includes('image/png')) ext = 'png';
+        else if(mime.includes('image')) ext = 'img';
+        
+        link.download = `document_${Date.now()}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       } else {
-        window.open(docString, '_blank');
+        // Try to fetch the URL to force download
+        fetch(docString)
+          .then(res => res.blob())
+          .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = docString.split('/').pop() || 'document';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+          })
+          .catch(() => {
+            // Fallback if fetch fails (e.g., CORS)
+            window.open(docString, '_blank');
+          });
       }
     } catch(err) {
       console.error("Error viewing document:", err);
@@ -249,12 +265,14 @@ const ProjectDetails = () => {
           </div>
           {project.description && <p className="mt-3 text-sm text-muted-foreground max-w-3xl">{project.description}</p>}
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <Button onClick={() => openModal()} className="bg-primary hover:bg-primary/90 text-white w-full md:w-auto flex items-center justify-center gap-2">
-            <Plus className="w-4 h-4" />
-            Create Group
-          </Button>
-        </div>
+        {userRole !== 'engineer' && (
+          <div className="flex gap-3 w-full md:w-auto">
+            <Button onClick={() => openModal()} className="bg-primary hover:bg-primary/90 text-white w-full md:w-auto flex items-center justify-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create Group
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Main Layout - 12-column grid */}
@@ -306,16 +324,18 @@ const ProjectDetails = () => {
                           {group.name}
                         </h3>
                         
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={(e) => { e.stopPropagation(); openModal(group); }} className="text-gray-400 hover:text-primary p-1">
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          {userRole !== 'tester' && (
-                            <button onClick={(e) => handleDeleteGroup(group.id, e)} className="text-gray-400 hover:text-red-500 p-1">
-                              <Trash2 className="w-3.5 h-3.5" />
+                        {userRole !== 'engineer' && (
+                          <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                            <button onClick={(e) => { e.stopPropagation(); openModal(group); }} className="text-gray-400 hover:text-primary p-1">
+                              <Edit className="w-3.5 h-3.5" />
                             </button>
-                          )}
-                        </div>
+                            {userRole !== 'tester' && (
+                              <button onClick={(e) => handleDeleteGroup(group.id, e)} className="text-gray-400 hover:text-red-500 p-1">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {group.documentation && (
@@ -396,10 +416,12 @@ const ProjectDetails = () => {
                       </div>
                     </div>
                     <div className="flex gap-2 mt-3">
-                      <Button onClick={() => openModal(activeGroup)} variant="outline" className="border-primary text-primary hover:bg-primary/5">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Group
-                      </Button>
+                      {userRole !== 'engineer' && (
+                        <Button onClick={() => openModal(activeGroup)} variant="outline" className="border-primary text-primary hover:bg-primary/5">
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Group
+                        </Button>
+                      )}
                       <Button onClick={() => navigate(`/admin/projects/${id}/groups/${activeGroup.id}/tasks`)} className="bg-primary hover:bg-primary/90 text-white">
                         <span className="material-symbols-outlined text-sm mr-2">task</span>
                         Manage Tasks

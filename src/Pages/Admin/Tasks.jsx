@@ -14,6 +14,9 @@ const Tasks = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const { projectId, groupId } = useParams();
   
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = user?.role?.toLowerCase?.() || '';
+  
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -35,6 +38,13 @@ const Tasks = () => {
   // Fetch Lists for Dropdowns
   const { data: listsData } = useGet('/api/admin/tasks/lists');
   const engineersList = listsData?.users_list || [];
+
+  // Fetch Project and Group details for documentation links
+  const { data: projectRes } = useGet(`/api/admin/project/${projectId}`);
+  const project = projectRes?.Project || projectRes?.data?.Project || projectRes?.project || projectRes?.data?.project;
+
+  const { data: groupRes } = useGet(`/api/admin/projectGroup/${groupId}`);
+  const group = groupRes?.group || groupRes?.data?.group;
 
   const { mutate, loading: mutationLoading } = useMutation();
 
@@ -196,23 +206,40 @@ const Tasks = () => {
         const blob = new Blob([u8arr], { type: mime });
         const url = URL.createObjectURL(blob);
         
-        if (mime.includes('image') || mime.includes('pdf')) {
-          window.open(url, '_blank');
-        } else {
-          const link = document.createElement('a');
-          link.href = url;
-          let ext = 'file';
-          if(mime.includes('word')) ext = 'docx';
-          if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
-          if(mime.includes('zip')) ext = 'zip';
-          link.download = `document_${Date.now()}.${ext}`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        const link = document.createElement('a');
+        link.href = url;
+        let ext = 'file';
+        if(mime.includes('word')) ext = 'docx';
+        else if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
+        else if(mime.includes('zip')) ext = 'zip';
+        else if(mime.includes('pdf')) ext = 'pdf';
+        else if(mime.includes('image/jpeg')) ext = 'jpg';
+        else if(mime.includes('image/png')) ext = 'png';
+        else if(mime.includes('image')) ext = 'img';
+        
+        link.download = `document_${Date.now()}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       } else {
-        window.open(docString, '_blank');
+        // Try to fetch the URL to force download
+        fetch(docString)
+          .then(res => res.blob())
+          .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = docString.split('/').pop() || 'document';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+          })
+          .catch(() => {
+            // Fallback if fetch fails (e.g., CORS)
+            window.open(docString, '_blank');
+          });
       }
     } catch(err) {
       console.error("Error viewing document:", err);
@@ -261,6 +288,22 @@ const Tasks = () => {
           </nav>
           <h1 className="font-plus-jakarta text-4xl font-bold tracking-tight text-primary">Task Management</h1>
           <p className="mt-2 text-muted-foreground">Manage tasks for the selected group.</p>
+          
+          {/* Quick Docs Links */}
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            {project?.documentation && (
+              <button onClick={(e) => handleViewDoc(e, project.documentation)} className="inline-flex items-center gap-1.5 text-sm bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer border-none font-medium">
+                <span className="material-symbols-outlined text-[18px]">folder</span>
+                Project Docs
+              </button>
+            )}
+            {group?.documentation && (
+              <button onClick={(e) => handleViewDoc(e, group.documentation)} className="inline-flex items-center gap-1.5 text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer border-none font-medium">
+                <span className="material-symbols-outlined text-[18px]">topic</span>
+                Group Docs
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
@@ -356,7 +399,8 @@ const Tasks = () => {
                         <select
                           value={task.importanc_status || 'medium'}
                           onChange={(e) => handleImportanceChange(task.id, e.target.value)}
-                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
+                          disabled={userRole === 'engineer'}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
                           style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
                         >
                           <option value="low" className="bg-card text-foreground">Low</option>
@@ -376,7 +420,7 @@ const Tasks = () => {
                           <option value="inprogress" className="bg-card text-foreground">In Progress</option>
                           <option value="done" className="bg-card text-foreground">Done</option>
                           <option value="edit" className="bg-card text-foreground">Needs Revision</option>
-                          <option value="approve" className="bg-card text-foreground">Approve</option>
+                          {userRole !== 'engineer' && <option value="approve" className="bg-card text-foreground">Approve</option>}
                         </select>
                       </td>
                       <td className="px-6 py-5 text-right">
@@ -482,20 +526,50 @@ const Tasks = () => {
             <div className="overflow-y-auto p-6 custom-scrollbar">
               <form id="task-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-foreground mb-1.5">Task Name</label>
-                    <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Implement OAuth2 Login" className="h-11" required />
+                  <div className="flex flex-col gap-2 relative z-10">
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-primary">badge</span>
+                      Task Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input 
+                      name="name" 
+                      value={formData.name} 
+                      onChange={handleChange} 
+                      placeholder="e.g. Implement Login Page" 
+                      required 
+                      disabled={userRole === 'engineer' && editingId}
+                      className="border-border bg-background focus-visible:ring-primary h-11"
+                    />
                   </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-foreground mb-1.5">Description</label>
+
+                  <div className="flex flex-col gap-2 relative z-10">
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-primary">calendar_month</span>
+                      Delivery Date <span className="text-red-500">*</span>
+                    </label>
+                    <Input 
+                      type="date" 
+                      name="delivery_date" 
+                      value={formData.delivery_date} 
+                      onChange={handleChange} 
+                      required 
+                      disabled={userRole === 'engineer' && editingId}
+                      className="border-border bg-background focus-visible:ring-primary h-11"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2 md:col-span-2 relative z-10">
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-primary">description</span>
+                      Description
+                    </label>
                     <textarea 
                       name="description"
                       value={formData.description}
-                      onChange={handleInputChange}
-                      className="w-full flex min-h-[100px] rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      onChange={handleChange}
                       placeholder="Detailed explanation of the task..."
-                      rows={4}
+                      className="w-full min-h-[100px] p-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm custom-scrollbar text-foreground placeholder:text-muted-foreground"
+                      disabled={userRole === 'engineer' && editingId}
                     />
                   </div>
 
@@ -516,18 +590,14 @@ const Tasks = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-foreground mb-1.5">Delivery Date</label>
-                    <Input type="date" name="delivery_date" value={formData.delivery_date} onChange={handleInputChange} className="h-11" />
-                  </div>
-
-                  <div>
                     <label className="block text-sm font-semibold text-foreground mb-1.5">Importance</label>
                     <select 
                       name="importanc_status" 
                       value={formData.importanc_status} 
                       onChange={handleInputChange}
                       required
-                      className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      disabled={userRole === 'engineer' && editingId}
+                      className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-75"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -549,59 +619,54 @@ const Tasks = () => {
                       <option value="inprogress">In Progress</option>
                       <option value="done">Done</option>
                       <option value="edit">Edit (Needs Revision)</option>
-                      <option value="approve">Approve</option>
+                      {userRole !== 'engineer' && <option value="approve">Approve</option>}
                     </select>
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-foreground mb-1.5 flex justify-between items-center">
-                      <span>Assign {editingId ? getRoleName('engineer') : getRoleNamePlural('engineer')}</span>
-                      <span className="text-primary bg-primary/10 px-2.5 rounded-full text-xs py-1 font-bold">
-                        {formData.users_ids.length} selected
-                      </span>
-                    </label>
-                    {editingId && <p className="text-xs text-muted-foreground mb-2">Since you are editing a specific user's task, select only one {getRoleName('engineer').toLowerCase()}.</p>}
-                    <div className="border border-input rounded-xl h-48 overflow-y-auto bg-muted p-3 flex flex-col gap-2 custom-scrollbar shadow-inner">
-                      {engineersList.length === 0 ? (
-                        <p className="text-sm text-muted-foreground p-2 text-center h-full flex items-center justify-center">No {getRoleNamePlural('engineer').toLowerCase()} available.</p>
-                      ) : (
-                        engineersList.map(engineer => {
-                          const isSelected = formData.users_ids.includes(engineer.id);
+                  {userRole !== 'engineer' && (
+                    <div className="flex flex-col gap-2 md:col-span-2 relative z-20">
+                      <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px] text-primary">group</span>
+                        Assign To
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {engineersList.map(eng => {
+                          const isSelected = formData.users_ids.includes(eng.id);
                           return (
                             <div 
-                              key={engineer.id} 
-                              onClick={() => {
-                                // Enforce single selection on edit
-                                if (editingId && !isSelected) {
-                                  setFormData({ ...formData, users_ids: [engineer.id] });
-                                } else {
-                                  toggleUserSelection(engineer.id);
-                                }
-                              }}
-                              className={`flex items-center px-4 py-2.5 rounded-lg cursor-pointer transition-all border text-sm ${
+                              key={eng.id}
+                              onClick={() => toggleUserSelection(eng.id)}
+                              className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
                                 isSelected 
-                                  ? 'bg-card border-primary shadow-[0_0_0_1px_var(--color-primary)]' 
-                                  : 'bg-card border-transparent shadow-sm hover:border-gray-300'
+                                  ? 'border-primary bg-primary/5 shadow-sm' 
+                                  : 'border-border bg-card hover:border-primary/30'
                               }`}
                             >
-                              <div className={`w-5 h-5 rounded-[4px] border flex items-center justify-center mr-4 transition-colors ${
-                                isSelected ? 'bg-primary border-primary' : 'border-gray-300 bg-card'
-                              }`}>
-                                {isSelected && <span className="material-symbols-outlined text-[14px] text-white font-bold">check</span>}
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-input bg-background'}`}>
+                                {isSelected && <span className="material-symbols-outlined text-[12px] text-primary-foreground font-bold">check</span>}
                               </div>
-                              <span className={`font-semibold ${isSelected ? 'text-primary' : 'text-foreground'}`}>{engineer.name}</span>
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                {eng.image ? (
+                                  <img src={eng.image} alt={eng.name} className="w-6 h-6 rounded-full object-cover" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
+                                    {eng.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <span className="text-xs font-semibold truncate text-foreground">{eng.name}</span>
+                              </div>
                             </div>
-                          )
-                        })
+                          );
+                        })}
+                      </div>
+                      {formData.users_ids.length === 0 && (
+                        <p className="text-xs text-red-500 mt-2 flex items-center font-medium">
+                          <span className="material-symbols-outlined text-[16px] mr-1">error</span>
+                          Please assign at least one {getRoleName('engineer').toLowerCase()}.
+                        </p>
                       )}
                     </div>
-                    {formData.users_ids.length === 0 && (
-                      <p className="text-xs text-red-500 mt-2 flex items-center font-medium">
-                        <span className="material-symbols-outlined text-[16px] mr-1">error</span>
-                        Please assign at least one {getRoleName('engineer').toLowerCase()}.
-                      </p>
-                    )}
-                  </div>
+                  )}
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-foreground mb-1.5">{getRoleName('tester')} Note (Optional)</label>
