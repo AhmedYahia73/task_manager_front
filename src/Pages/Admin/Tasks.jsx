@@ -304,7 +304,7 @@ const Tasks = () => {
                   return (
                     <tr 
                       key={task.id} 
-                      className={`group transition-colors ${task.status === 'done' ? 'opacity-70 bg-card hover:bg-muted' : (task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted')}`}
+                      className={`group transition-colors ${task.status === 'done' ? 'opacity-70' : ''} ${task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted'}`}
                     >
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
