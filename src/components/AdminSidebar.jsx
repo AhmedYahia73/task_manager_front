@@ -2,16 +2,10 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { removeAuthToken } from '@/utils/auth';
 import { ThemeSwitcher } from './ThemeSwitcher';
-
-const navItems = [
-  { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
-  { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
-  { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings' },
-  { name: 'Users', path: '/admin/users', icon: 'group' },
-  { name: 'Settings', path: '/admin/settings', icon: 'settings' },
-];
+import { useRoleNames } from '@/context/RoleNameContext';
 
 export const AdminSidebar = () => {
+  const { getRoleNamePlural } = useRoleNames();
   const navigate = useNavigate();
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = userData?.name || 'Admin User';
@@ -36,7 +30,15 @@ export const AdminSidebar = () => {
 
       {/* Navigation */}
       <nav className="admin-sidebar__nav">
-        {navItems.map((item) => (
+        {[
+          { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
+          { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
+          { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
+          { name: getRoleNamePlural('engineer') + ' & ' + getRoleNamePlural('tester'), path: '/admin/users', icon: 'group', adminOnly: true },
+          { name: 'Settings', path: '/admin/settings', icon: 'settings', adminOnly: true },
+        ]
+        .filter(item => !item.adminOnly || userRole === 'admin')
+        .map((item) => (
           <NavLink
             key={item.name}
             to={item.path}

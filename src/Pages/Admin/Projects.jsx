@@ -10,6 +10,8 @@ import { useRoleNames } from '@/context/RoleNameContext';
 const Projects = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const navigate = useNavigate();
+  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = userData?.role || 'admin';
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -201,9 +203,11 @@ const Projects = () => {
                   <button onClick={() => openModal(project)} className="text-gray-400 hover:text-primary transition-colors p-1 bg-muted rounded-md">
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(project.id)} className="text-gray-400 hover:text-[#ba1a1a] transition-colors p-1 bg-muted rounded-md">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {userRole !== 'tester' && (
+                    <button onClick={() => handleDelete(project.id)} className="text-gray-400 hover:text-[#ba1a1a] transition-colors p-1 bg-muted rounded-md">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
                 
                 <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans'] mb-2 pr-16 truncate" title={project.name}>{project.name}</h3>
@@ -342,21 +346,23 @@ const Projects = () => {
                   {editingId && <p className="text-xs text-muted-foreground mt-1">Leave empty to keep current documentation file.</p>}
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Assign {getRoleName('tester')}</label>
-                  <select 
-                    name="tester_id" 
-                    value={formData.tester_id} 
-                    onChange={handleInputChange}
-                    required
-                    className="flex w-full items-center justify-between rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <option value="">Select a {getRoleName('tester')}</option>
-                    {testersList.map(tester => (
-                      <option key={tester.id} value={tester.id}>{tester.name}</option>
-                    ))}
-                  </select>
-                </div>
+                {userRole !== 'tester' && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Assign {getRoleName('tester')}</label>
+                    <select 
+                      name="tester_id" 
+                      value={formData.tester_id} 
+                      onChange={handleInputChange}
+                      required
+                      className="flex w-full items-center justify-between rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">Select a {getRoleName('tester')}</option>
+                      {testersList.map(tester => (
+                        <option key={tester.id} value={tester.id}>{tester.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1 flex justify-between">

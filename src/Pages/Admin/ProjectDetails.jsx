@@ -13,6 +13,8 @@ const ProjectDetails = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const { id } = useParams();
   const navigate = useNavigate();
+  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = userData?.role || 'admin';
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [groupSearch, setGroupSearch] = useState('');
   const [groupPage, setGroupPage] = useState(1);
@@ -308,9 +310,11 @@ const ProjectDetails = () => {
                           <button onClick={(e) => { e.stopPropagation(); openModal(group); }} className="text-gray-400 hover:text-primary p-1">
                             <Edit className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={(e) => handleDeleteGroup(group.id, e)} className="text-gray-400 hover:text-red-500 p-1">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {userRole !== 'tester' && (
+                            <button onClick={(e) => handleDeleteGroup(group.id, e)} className="text-gray-400 hover:text-red-500 p-1">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
 

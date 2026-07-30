@@ -108,7 +108,7 @@ const Users = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    if (!window.confirm('Are you sure you want to delete this record?')) return;
     
     const response = await mutate({
       method: 'DELETE',
@@ -131,7 +131,7 @@ const Users = () => {
         </div>
         <Button onClick={() => openModal()} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
           <Plus className="w-4 h-4" />
-          Add User
+          Add {getRoleName('engineer')}
         </Button>
       </div>
 
@@ -153,7 +153,7 @@ const Users = () => {
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-background text-muted-foreground font-semibold border-b border-border">
               <tr>
-                <th className="px-6 py-4">USER</th>
+                <th className="px-6 py-4">{getRoleName('engineer').toUpperCase()}</th>
                 <th className="px-6 py-4">CONTACT</th>
                 <th className="px-6 py-4">ROLE</th>
                 <th className="px-6 py-4">STATUS</th>
