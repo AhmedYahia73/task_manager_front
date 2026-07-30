@@ -7,8 +7,10 @@ import { useMutation } from '@/hooks/useMutation';
 import { Loader2, Search, Plus, Edit, Trash2, X, Users, PersonStanding, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
+import { useRoleNames } from '@/context/RoleNameContext';
 
 const ProjectDetails = () => {
+  const { getRoleName, getRoleNamePlural } = useRoleNames();
   const { id } = useParams();
   const navigate = useNavigate();
   const [selectedGroupId, setSelectedGroupId] = useState(null);
@@ -66,8 +68,23 @@ const ProjectDetails = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    documentation: '',
     users_ids: []
   });
+  const fileInputRef = React.useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, documentation: reader.result });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData({ ...formData, documentation: '' });
+    }
+  };
 
   const openModal = async (group = null) => {
     if (group) {
@@ -75,8 +92,10 @@ const ProjectDetails = () => {
       setFormData({
         name: group.name,
         description: group.description || '',
+        documentation: group.documentation || '',
         users_ids: [] 
       });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       // Fetch users for this group to prepopulate multi-select
       const res = await mutate({ method: 'GET', url: `/api/admin/projectGroup/${group.id}/users`, showToast: false });
       if (res?.success && (res.data?.users || res.data?.data?.users)) {
@@ -85,7 +104,8 @@ const ProjectDetails = () => {
       }
     } else {
       setEditingId(null);
-      setFormData({ name: '', description: '', users_ids: [] });
+      setFormData({ name: '', description: '', documentation: '', users_ids: [] });
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
     setIsModalOpen(true);
   };
@@ -173,8 +193,13 @@ const ProjectDetails = () => {
               </>
             )}
             <span className="hidden md:inline">•</span>
+            <span className="hidden md:inline">•</span>
             <span className="flex items-center gap-1 bg-[#006c49]/10 text-[#006c49] px-2 py-0.5 rounded-md font-medium">
-              Progress: {project.progress}%
+              Approved: {project.progress}%
+            </span>
+            <span className="hidden md:inline">•</span>
+            <span className="flex items-center gap-1 bg-red-100 text-red-600 px-2 py-0.5 rounded-md font-medium">
+              Done: {project.done_progress || 0}%
             </span>
           </div>
           {project.description && <p className="mt-3 text-sm text-muted-foreground max-w-3xl">{project.description}</p>}
@@ -231,7 +256,7 @@ const ProjectDetails = () => {
                     >
                       {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
                       
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center justify-between mb-2">
                         <h3 className={`font-semibold font-['Plus_Jakarta_Sans'] truncate pr-4 ${isActive ? 'text-primary' : 'text-foreground'}`}>
                           {group.name}
                         </h3>
@@ -245,14 +270,31 @@ const ProjectDetails = () => {
                           </button>
                         </div>
                       </div>
+
+                      {group.documentation && (
+                        <a href={group.documentation} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center text-xs text-primary bg-primary/10 px-2 py-1 rounded mb-2 hover:bg-primary/20 transition-colors">
+                          <LinkIcon className="w-3 h-3 mr-1" />
+                          Documentation
+                        </a>
+                      )}
                       
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-3 h-10 text-ellipsis">
                         {group.description || <span className="italic text-gray-400">No description</span>}
                       </p>
                       
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Users className="w-3.5 h-3.5 mr-1.5" />
-                        Created {dayjs(group.createdAt).format('MMM DD, YYYY')}
+                      <div className="flex items-center justify-between mt-3 text-xs">
+                        <div className="flex items-center text-muted-foreground">
+                          <Users className="w-3.5 h-3.5 mr-1.5" />
+                          Created {dayjs(group.createdAt).format('MMM DD, YYYY')}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden" title={`Approved: ${group.progress || 0}%`}>
+                          <div className="bg-[#006c49] h-full" style={{ width: `${group.progress || 0}%` }}></div>
+                        </div>
+                        <div className="flex-1 bg-red-100 rounded-full h-1.5 overflow-hidden" title={`Done: ${group.done_progress || 0}%`}>
+                          <div className="bg-red-500 h-full" style={{ width: `${group.done_progress || 0}%` }}></div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -293,9 +335,17 @@ const ProjectDetails = () => {
                       </div>
                       <div className="mt-3">
                         <h2 className="text-2xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{activeGroup.name}</h2>
-                        <p className="text-muted-foreground text-sm flex items-center mt-1">
-                           Part of <span className="font-semibold ml-1">{project.name}</span>
-                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <p className="text-muted-foreground text-sm flex items-center">
+                             Part of <span className="font-semibold ml-1">{project.name}</span>
+                          </p>
+                          {activeGroup.documentation && (
+                            <a href={activeGroup.documentation} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline flex items-center bg-primary/10 px-2 py-0.5 rounded-md">
+                              <LinkIcon className="w-3 h-3 mr-1" />
+                              Documentation
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2 mt-3">
@@ -319,7 +369,7 @@ const ProjectDetails = () => {
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-bold font-['Plus_Jakarta_Sans'] text-foreground flex items-center gap-2">
                         <Users className="w-5 h-5 text-primary" />
-                        Assigned Engineers
+                        Assigned {getRoleNamePlural('engineer')}
                       </h3>
                       <span className="bg-primary-light text-primary px-3 py-1 rounded-full text-xs font-bold">
                         {assignedUsers.length} Members
@@ -330,7 +380,7 @@ const ProjectDetails = () => {
                       <table className="w-full text-left border-collapse">
                         <thead className="bg-background">
                           <tr className="border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            <th className="px-6 py-4 font-medium">Engineer</th>
+                            <th className="px-6 py-4 font-medium">{getRoleName('engineer')}</th>
                             <th className="px-6 py-4 font-medium">Role</th>
                             <th className="px-6 py-4 font-medium w-32">Status</th>
                           </tr>
@@ -339,7 +389,7 @@ const ProjectDetails = () => {
                           {groupUsersLoading ? (
                             <tr><td colSpan="3" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></td></tr>
                           ) : assignedUsers.length === 0 ? (
-                            <tr><td colSpan="3" className="py-8 text-center text-muted-foreground">No engineers assigned to this group.</td></tr>
+                            <tr><td colSpan="3" className="py-8 text-center text-muted-foreground">No {getRoleNamePlural('engineer').toLowerCase()} assigned to this group.</td></tr>
                           ) : (
                             assignedUsers.map(user => (
                               <tr key={user.id} className="hover:bg-background transition-colors">
@@ -364,7 +414,7 @@ const ProjectDetails = () => {
                                 </td>
                                 <td className="px-6 py-4">
                                   <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-muted text-muted-foreground capitalize border border-border">
-                                    {user.role}
+                                    {getRoleName(user.role)}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4">
@@ -417,17 +467,33 @@ const ProjectDetails = () => {
                     rows={3}
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Documentation File</label>
+                  <div className="border border-input rounded-md flex items-center bg-card pr-2 overflow-hidden">
+                    <input 
+                      type="file" 
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt,image/*" 
+                      onChange={handleFileChange} 
+                      ref={fileInputRef}
+                      className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                    {formData.documentation && !formData.documentation.startsWith('data:') && (
+                      <a href={formData.documentation} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap">View Current</a>
+                    )}
+                  </div>
+                </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1 flex justify-between">
-                    <span>Assign Engineers</span>
+                    <span>Assign {getRoleNamePlural('engineer')}</span>
                     <span className="text-primary bg-primary/10 px-2 rounded-full text-xs py-0.5 flex items-center">
                       {formData.users_ids.length} selected
                     </span>
                   </label>
                   <div className="border border-input rounded-md h-60 overflow-y-auto bg-muted p-3 flex flex-col gap-2 custom-scrollbar shadow-inner">
                     {engineersList.length === 0 ? (
-                      <p className="text-sm text-muted-foreground p-2 text-center h-full flex items-center justify-center">No engineers available.</p>
+                      <p className="text-sm text-muted-foreground p-2 text-center h-full flex items-center justify-center">No {getRoleNamePlural('engineer').toLowerCase()} available.</p>
                     ) : (
                       engineersList.map(engineer => {
                         const isSelected = formData.users_ids.includes(engineer.id);
@@ -457,7 +523,7 @@ const ProjectDetails = () => {
                   {formData.users_ids.length === 0 && (
                     <p className="text-xs text-red-500 mt-2 flex items-center">
                       <span className="material-symbols-outlined text-[14px] mr-1">error</span>
-                      Please select at least one engineer.
+                      Please select at least one {getRoleName('engineer').toLowerCase()}.
                     </p>
                   )}
                 </div>

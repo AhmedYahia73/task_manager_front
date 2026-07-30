@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Search, Plus, Edit, Trash2, X, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
+import { useRoleNames } from '@/context/RoleNameContext';
 
 const Projects = () => {
+  const { getRoleName, getRoleNamePlural } = useRoleNames();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -209,11 +211,16 @@ const Projects = () => {
                 
                 <div className="mb-4">
                   <div className="flex justify-between text-sm font-medium mb-2">
-                    <span>Progress</span>
-                    <span>{project.progress}%</span>
+                    <span>Approved: {project.progress}%</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2 mb-3">
                     <div className={`${colorTheme.bg} h-2 rounded-full transition-all duration-500`} style={{ width: `${project.progress}%` }}></div>
+                  </div>
+                  <div className="flex justify-between text-sm font-medium mb-2 text-red-600">
+                    <span>Done: {project.done_progress || 0}%</span>
+                  </div>
+                  <div className="w-full bg-red-100 rounded-full h-2">
+                    <div className="bg-red-500 h-2 rounded-full transition-all duration-500" style={{ width: `${project.done_progress || 0}%` }}></div>
                   </div>
                 </div>
 
@@ -232,7 +239,7 @@ const Projects = () => {
 
                 <div className="flex items-center mb-6">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground font-medium">Lead Tester:</span>
+                    <span className="text-xs text-muted-foreground font-medium">Lead {getRoleName('tester')}:</span>
                     {project.tester_name ? (
                       <div className="flex items-center gap-2 bg-muted px-2 py-1 rounded-md">
                         {project.tester_image ? (
@@ -325,7 +332,7 @@ const Projects = () => {
                   <div className="border border-input rounded-md flex items-center bg-card pr-2 overflow-hidden">
                     <input 
                       type="file" 
-                      accept="image/*,.pdf" 
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt,image/*" 
                       onChange={handleFileChange} 
                       ref={fileInputRef}
                       className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
@@ -336,7 +343,7 @@ const Projects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Assign Tester</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Assign {getRoleName('tester')}</label>
                   <select 
                     name="tester_id" 
                     value={formData.tester_id} 
@@ -344,7 +351,7 @@ const Projects = () => {
                     required
                     className="flex w-full items-center justify-between rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    <option value="">Select a Tester</option>
+                    <option value="">Select a {getRoleName('tester')}</option>
                     {testersList.map(tester => (
                       <option key={tester.id} value={tester.id}>{tester.name}</option>
                     ))}
@@ -353,12 +360,12 @@ const Projects = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1 flex justify-between">
-                    <span>Assign Engineers</span>
+                    <span>Assign {getRoleNamePlural('engineer')}</span>
                     <span className="text-primary">{formData.users_ids.length} selected</span>
                   </label>
                   <div className="border border-input rounded-md max-h-40 overflow-y-auto bg-card p-2 flex flex-col gap-1">
                     {engineersList.length === 0 ? (
-                      <p className="text-sm text-muted-foreground p-2 text-center">No engineers available.</p>
+                      <p className="text-sm text-muted-foreground p-2 text-center">No {getRoleNamePlural('engineer').toLowerCase()} available.</p>
                     ) : (
                       engineersList.map(engineer => (
                         <div 
@@ -381,7 +388,7 @@ const Projects = () => {
                     )}
                   </div>
                   {formData.users_ids.length === 0 && (
-                    <p className="text-xs text-red-500 mt-1">Please select at least one engineer.</p>
+                    <p className="text-xs text-red-500 mt-1">Please select at least one {getRoleName('engineer').toLowerCase()}.</p>
                   )}
                 </div>
               </form>

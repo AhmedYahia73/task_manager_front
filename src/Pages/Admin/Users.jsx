@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search, Plus, Edit, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRoleNames } from '@/context/RoleNameContext';
 
 const Users = () => {
+  const { getRoleName, getRoleNamePlural } = useRoleNames();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -120,8 +122,8 @@ const Users = () => {
       {/* Header & Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">Users</h1>
-          <p className="text-muted-foreground mt-1">Manage engineers and testers</p>
+          <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{getRoleNamePlural('engineer')} & {getRoleNamePlural('tester')}</h1>
+          <p className="text-muted-foreground mt-1">Manage {getRoleNamePlural('engineer').toLowerCase()} and {getRoleNamePlural('tester').toLowerCase()}</p>
         </div>
         <Button onClick={() => openModal()} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
           <Plus className="w-4 h-4" />
@@ -151,19 +153,20 @@ const Users = () => {
                 <th className="px-6 py-4">CONTACT</th>
                 <th className="px-6 py-4">ROLE</th>
                 <th className="px-6 py-4">STATUS</th>
+                <th className="px-6 py-4">PROGRESS</th>
                 <th className="px-6 py-4 text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#edeeef]">
               {loading && usersList.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center">
+                  <td colSpan="6" className="px-6 py-8 text-center">
                     <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
                   </td>
                 </tr>
               ) : usersList.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-muted-foreground">
+                  <td colSpan="6" className="px-6 py-8 text-center text-muted-foreground">
                     No users found.
                   </td>
                 </tr>
@@ -196,7 +199,7 @@ const Users = () => {
                           ? 'bg-primary-light text-primary' 
                           : 'bg-[#fff0e0] text-[#ba5a00]'
                       }`}>
-                        {userItem.role.charAt(0).toUpperCase() + userItem.role.slice(1)}
+                        {getRoleName(userItem.role)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -207,6 +210,28 @@ const Users = () => {
                       }`}>
                         {userItem.status === 'active' ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-2 w-32">
+                        <div className="flex flex-col gap-1" title={`Approved: ${userItem.progress || 0}%`}>
+                          <div className="flex justify-between text-[10px] font-medium text-[#006c49]">
+                            <span>Approve</span>
+                            <span>{userItem.progress || 0}%</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-[#006c49] h-full" style={{ width: `${userItem.progress || 0}%` }}></div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1" title={`Done: ${userItem.done_progress || 0}%`}>
+                          <div className="flex justify-between text-[10px] font-medium text-red-600">
+                            <span>Done</span>
+                            <span>{userItem.done_progress || 0}%</span>
+                          </div>
+                          <div className="w-full bg-red-100 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-red-500 h-full" style={{ width: `${userItem.done_progress || 0}%` }}></div>
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -315,8 +340,8 @@ const Users = () => {
                     onChange={handleInputChange}
                     className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="engineer">Engineer</option>
-                    <option value="tester">Tester</option>
+                    <option value="engineer">{getRoleName('engineer')}</option>
+                    <option value="tester">{getRoleName('tester')}</option>
                   </select>
                 </div>
                 

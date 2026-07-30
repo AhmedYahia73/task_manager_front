@@ -6,8 +6,10 @@ import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Loader2, Search, Plus, Edit, Trash2, X, Calendar } from 'lucide-react';
 import dayjs from 'dayjs';
+import { useRoleNames } from '@/context/RoleNameContext';
 
 const Tasks = () => {
+  const { getRoleName, getRoleNamePlural } = useRoleNames();
   const { projectId, groupId } = useParams();
   
   const [page, setPage] = useState(1);
@@ -43,8 +45,23 @@ const Tasks = () => {
     delivery_date: '',
     status: 'pending',
     tester_note: '',
+    documentation: '',
     users_ids: []
   });
+  const fileInputRef = React.useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, documentation: reader.result });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData({ ...formData, documentation: '' });
+    }
+  };
 
   const openModal = async (task = null) => {
     if (task) {
@@ -55,13 +72,16 @@ const Tasks = () => {
         delivery_date: task.delivery_date ? dayjs(task.delivery_date).format('YYYY-MM-DD') : '',
         status: task.status,
         tester_note: task.tester_note || '',
+        documentation: task.documentation || '',
         users_ids: task.user_id ? [task.user_id] : []
       });
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } else {
       setEditingId(null);
       setFormData({ 
-        name: '', description: '', delivery_date: '', status: 'pending', tester_note: '', users_ids: [] 
+        name: '', description: '', delivery_date: '', status: 'pending', tester_note: '', documentation: '', users_ids: [] 
       });
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
     setIsModalOpen(true);
   };
@@ -227,8 +247,14 @@ const Tasks = () => {
                           {task.tester_note && (
                             <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-700 border border-amber-100">
                               <span className="material-symbols-outlined text-[14px]">speaker_notes</span>
-                              {task.tester_note}
+                              <span className="font-semibold">{getRoleName('tester')}:</span> {task.tester_note}
                             </span>
+                          )}
+                          {task.documentation && (
+                            <a href={task.documentation} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors">
+                              <span className="material-symbols-outlined text-[14px]">link</span>
+                              Documentation
+                            </a>
                           )}
                         </div>
                       </td>
@@ -247,7 +273,7 @@ const Tasks = () => {
                           )}
                           <div className="flex flex-col">
                             <span className="font-semibold text-foreground">{task.user_name || 'Unassigned'}</span>
-                            <span className="text-xs text-muted-foreground">{task.user_phone || 'Engineer'}</span>
+                            <span className="text-xs text-muted-foreground">{task.user_phone || getRoleName('engineer')}</span>
                           </div>
                         </div>
                       </td>
@@ -391,6 +417,22 @@ const Tasks = () => {
                     />
                   </div>
 
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Documentation File</label>
+                    <div className="border border-input rounded-xl flex items-center bg-card pr-3 overflow-hidden">
+                      <input 
+                        type="file" 
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt,image/*" 
+                        onChange={handleFileChange} 
+                        ref={fileInputRef}
+                        className="w-full text-sm file:mr-4 file:py-2.5 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                      />
+                      {formData.documentation && !formData.documentation.startsWith('data:') && (
+                        <a href={formData.documentation} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap font-medium">View Current</a>
+                      )}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-1.5">Delivery Date</label>
                     <Input type="date" name="delivery_date" value={formData.delivery_date} onChange={handleInputChange} className="h-11" />
@@ -415,15 +457,15 @@ const Tasks = () => {
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-foreground mb-1.5 flex justify-between items-center">
-                      <span>Assign {editingId ? 'Engineer' : 'Engineers'}</span>
+                      <span>Assign {editingId ? getRoleName('engineer') : getRoleNamePlural('engineer')}</span>
                       <span className="text-primary bg-primary/10 px-2.5 rounded-full text-xs py-1 font-bold">
                         {formData.users_ids.length} selected
                       </span>
                     </label>
-                    {editingId && <p className="text-xs text-muted-foreground mb-2">Since you are editing a specific user's task, select only one engineer.</p>}
+                    {editingId && <p className="text-xs text-muted-foreground mb-2">Since you are editing a specific user's task, select only one {getRoleName('engineer').toLowerCase()}.</p>}
                     <div className="border border-input rounded-xl h-48 overflow-y-auto bg-muted p-3 flex flex-col gap-2 custom-scrollbar shadow-inner">
                       {engineersList.length === 0 ? (
-                        <p className="text-sm text-muted-foreground p-2 text-center h-full flex items-center justify-center">No engineers available.</p>
+                        <p className="text-sm text-muted-foreground p-2 text-center h-full flex items-center justify-center">No {getRoleNamePlural('engineer').toLowerCase()} available.</p>
                       ) : (
                         engineersList.map(engineer => {
                           const isSelected = formData.users_ids.includes(engineer.id);
@@ -458,19 +500,19 @@ const Tasks = () => {
                     {formData.users_ids.length === 0 && (
                       <p className="text-xs text-red-500 mt-2 flex items-center font-medium">
                         <span className="material-symbols-outlined text-[16px] mr-1">error</span>
-                        Please assign at least one engineer.
+                        Please assign at least one {getRoleName('engineer').toLowerCase()}.
                       </p>
                     )}
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-foreground mb-1.5">Tester Note (Optional)</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">{getRoleName('tester')} Note (Optional)</label>
                     <textarea 
                       name="tester_note"
                       value={formData.tester_note}
                       onChange={handleInputChange}
                       className="w-full flex min-h-[80px] rounded-xl border border-input bg-amber-50/50 px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      placeholder="Add any QA or tester feedback here..."
+                      placeholder={`Add any QA or ${getRoleName('tester').toLowerCase()} feedback here...`}
                       rows={2}
                     />
                   </div>

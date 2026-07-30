@@ -6,8 +6,10 @@ import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Loader2, Search, Calendar, ChevronLeft } from 'lucide-react';
 import dayjs from 'dayjs';
+import { useRoleNames } from '@/context/RoleNameContext';
 
 const FilteredTasks = () => {
+  const { getRoleName } = useRoleNames();
   const { type } = useParams(); // 'pending' or 'delay'
   
   const [page, setPage] = useState(1);
@@ -122,7 +124,7 @@ const FilteredTasks = () => {
                           {task.tester_note && (
                             <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-700 border border-amber-100">
                               <span className="material-symbols-outlined text-[14px]">speaker_notes</span>
-                              {task.tester_note}
+                              <span className="font-semibold">{getRoleName('tester')}:</span> {task.tester_note}
                             </span>
                           )}
                         </div>
@@ -148,7 +150,7 @@ const FilteredTasks = () => {
                           )}
                           <div className="flex flex-col">
                             <span className="font-semibold text-foreground">{task.user_name || 'Unassigned'}</span>
-                            <span className="text-xs text-muted-foreground">{task.user_phone || 'Engineer'}</span>
+                            <span className="text-xs text-muted-foreground">{task.user_phone || getRoleName('engineer')}</span>
                           </div>
                         </div>
                       </td>
