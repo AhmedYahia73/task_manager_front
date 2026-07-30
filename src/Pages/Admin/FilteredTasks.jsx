@@ -7,6 +7,7 @@ import { useMutation } from '@/hooks/useMutation';
 import { Loader2, Search, Calendar, ChevronLeft } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
+import { toast } from 'sonner';
 
 const FilteredTasks = () => {
   const { getRoleName } = useRoleNames();
@@ -53,10 +54,74 @@ const FilteredTasks = () => {
       data: { status: newStatus }
     });
     if (response?.success) {
-      // Trigger a refresh (since useGet doesn't expose refresh here directly, we can force a re-render or we can expose refresh from useGet)
-      setPage(prev => prev); // This might not trigger a refresh if page is the same. Let's trigger a search trigger instead.
+      setPage(prev => prev);
       setSearch(prev => prev + ' '); 
       setTimeout(() => setSearch(prev => prev.trim()), 10);
+    }
+  };
+
+  const handleViewDoc = (e, docString) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!docString) return;
+    
+    try {
+      if (docString.startsWith('data:')) {
+        const arr = docString.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const url = URL.createObjectURL(blob);
+        
+        if (mime.includes('image') || mime.includes('pdf')) {
+          window.open(url, '_blank');
+        } else {
+          const link = document.createElement('a');
+          link.href = url;
+          let ext = 'file';
+          if(mime.includes('word')) ext = 'docx';
+          if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
+          if(mime.includes('zip')) ext = 'zip';
+          link.download = `document_${Date.now()}.${ext}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } else {
+        window.open(docString, '_blank');
+      }
+    } catch(err) {
+      console.error("Error viewing document:", err);
+      toast.error("Could not open this document");
+    }
+  };
+
+  const handleImportanceChange = async (taskId, newImportance) => {
+    const response = await mutate({
+      method: 'PUT',
+      url: `/api/admin/tasks/${taskId}`,
+      data: { importanc_status: newImportance }
+    });
+    if (response?.success) {
+      setPage(prev => prev);
+      setSearch(prev => prev + ' '); 
+      setTimeout(() => setSearch(prev => prev.trim()), 10);
+    }
+  };
+
+  const getImportanceStyles = (importance) => {
+    switch(importance) {
+      case 'urgent': return 'bg-red-100 text-red-700 border-red-200 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'low': return 'bg-slate-100 text-slate-700 border-slate-200';
+      default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
 
@@ -98,6 +163,7 @@ const FilteredTasks = () => {
                 <th scope="col" className="px-6 py-5 font-semibold">Project & Group</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Assigned To</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Delivery Date</th>
+                <th scope="col" className="px-6 py-5 font-semibold">Importance</th>
                 <th scope="col" className="px-6 py-5 font-semibold rounded-tr-2xl">Status</th>
               </tr>
             </thead>
@@ -112,7 +178,7 @@ const FilteredTasks = () => {
                   return (
                     <tr 
                       key={task.id} 
-                      className="group bg-card hover:bg-muted transition-colors"
+                      className={`group transition-colors ${task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted'}`}
                     >
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
@@ -126,6 +192,12 @@ const FilteredTasks = () => {
                               <span className="material-symbols-outlined text-[14px]">speaker_notes</span>
                               <span className="font-semibold">{getRoleName('tester')}:</span> {task.tester_note}
                             </span>
+                          )}
+                          {task.documentation && (
+                            <button onClick={(e) => handleViewDoc(e, task.documentation)} className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors cursor-pointer border-none">
+                              <span className="material-symbols-outlined text-[14px]">link</span>
+                              Documentation
+                            </button>
                           )}
                         </div>
                       </td>
@@ -159,6 +231,19 @@ const FilteredTasks = () => {
                           <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                           {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
                         </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <select
+                          value={task.importanc_status || 'medium'}
+                          onChange={(e) => handleImportanceChange(task.id, e.target.value)}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
+                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                        >
+                          <option value="low" className="bg-card text-foreground">Low</option>
+                          <option value="medium" className="bg-card text-foreground">Medium</option>
+                          <option value="high" className="bg-card text-foreground">High</option>
+                          <option value="urgent" className="bg-card text-foreground">Urgent</option>
+                        </select>
                       </td>
                       <td className="px-6 py-5">
                         <select

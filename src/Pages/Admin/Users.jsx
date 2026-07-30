@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,9 @@ import { useRoleNames } from '@/context/RoleNameContext';
 
 const Users = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
+  const [searchParams] = useSearchParams();
+  const roleFilter = searchParams.get('role') || '';
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -22,7 +26,7 @@ const Users = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data, loading, refresh } = useGet(`/api/admin/user?page=${page}&limit=10&search=${debouncedSearch}`);
+  const { data, loading, refresh } = useGet(`/api/admin/user?page=${page}&limit=10&search=${debouncedSearch}${roleFilter ? `&role=${roleFilter}` : ''}`);
   const { mutate, loading: mutationLoading } = useMutation();
 
   const usersList = data?.Users || [];

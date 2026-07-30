@@ -164,6 +164,49 @@ const ProjectDetails = () => {
     }
   };
 
+  const handleViewDoc = (e, docString) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!docString) return;
+    
+    try {
+      if (docString.startsWith('data:')) {
+        const arr = docString.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const url = URL.createObjectURL(blob);
+        
+        if (mime.includes('image') || mime.includes('pdf')) {
+          window.open(url, '_blank');
+        } else {
+          const link = document.createElement('a');
+          link.href = url;
+          // Determine extension from mime
+          let ext = 'file';
+          if(mime.includes('word')) ext = 'docx';
+          if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
+          if(mime.includes('zip')) ext = 'zip';
+          link.download = `document_${Date.now()}.${ext}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } else {
+        window.open(docString, '_blank');
+      }
+    } catch(err) {
+      console.error("Error viewing document:", err);
+      toast.error("Could not open this document");
+    }
+  };
+
   if (projectLoading) {
     return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
   }
@@ -186,10 +229,10 @@ const ProjectDetails = () => {
             {project.documentation && (
               <>
                 <span className="hidden md:inline">•</span>
-                <a href={project.documentation} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center bg-primary/10 px-2 py-0.5 rounded-md">
+                <button onClick={(e) => handleViewDoc(e, project.documentation)} className="text-primary hover:underline flex items-center bg-primary/10 px-2 py-0.5 rounded-md border-none cursor-pointer">
                   <LinkIcon className="w-3 h-3 mr-1" />
                   Documentation
-                </a>
+                </button>
               </>
             )}
             <span className="hidden md:inline">•</span>
@@ -272,10 +315,10 @@ const ProjectDetails = () => {
                       </div>
 
                       {group.documentation && (
-                        <a href={group.documentation} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center text-xs text-primary bg-primary/10 px-2 py-1 rounded mb-2 hover:bg-primary/20 transition-colors">
+                        <button onClick={(e) => handleViewDoc(e, group.documentation)} className="inline-flex items-center text-xs text-primary bg-primary/10 px-2 py-1 rounded mb-2 hover:bg-primary/20 transition-colors cursor-pointer border-none">
                           <LinkIcon className="w-3 h-3 mr-1" />
                           Documentation
-                        </a>
+                        </button>
                       )}
                       
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-3 h-10 text-ellipsis">
@@ -340,10 +383,10 @@ const ProjectDetails = () => {
                              Part of <span className="font-semibold ml-1">{project.name}</span>
                           </p>
                           {activeGroup.documentation && (
-                            <a href={activeGroup.documentation} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline flex items-center bg-primary/10 px-2 py-0.5 rounded-md">
+                            <button onClick={(e) => handleViewDoc(e, activeGroup.documentation)} className="text-primary text-xs hover:underline flex items-center bg-primary/10 px-2 py-0.5 rounded-md cursor-pointer border-none">
                               <LinkIcon className="w-3 h-3 mr-1" />
                               Documentation
-                            </a>
+                            </button>
                           )}
                         </div>
                       </div>

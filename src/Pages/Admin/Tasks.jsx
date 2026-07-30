@@ -8,6 +8,8 @@ import { Loader2, Search, Plus, Edit, Trash2, X, Calendar } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
 
+import { toast } from 'sonner';
+
 const Tasks = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const { projectId, groupId } = useParams();
@@ -175,6 +177,69 @@ const Tasks = () => {
     }
   };
 
+  const handleViewDoc = (e, docString) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!docString) return;
+    
+    try {
+      if (docString.startsWith('data:')) {
+        const arr = docString.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const url = URL.createObjectURL(blob);
+        
+        if (mime.includes('image') || mime.includes('pdf')) {
+          window.open(url, '_blank');
+        } else {
+          const link = document.createElement('a');
+          link.href = url;
+          let ext = 'file';
+          if(mime.includes('word')) ext = 'docx';
+          if(mime.includes('excel') || mime.includes('spreadsheet')) ext = 'xlsx';
+          if(mime.includes('zip')) ext = 'zip';
+          link.download = `document_${Date.now()}.${ext}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } else {
+        window.open(docString, '_blank');
+      }
+    } catch(err) {
+      console.error("Error viewing document:", err);
+      toast.error("Could not open this document");
+    }
+  };
+
+  const handleImportanceChange = async (taskId, newImportance) => {
+    const response = await mutate({
+      method: 'PUT',
+      url: `/api/admin/tasks/${taskId}`,
+      data: { importanc_status: newImportance }
+    });
+    if (response?.success) {
+      refresh();
+    }
+  };
+
+  const getImportanceStyles = (importance) => {
+    switch(importance) {
+      case 'urgent': return 'bg-red-100 text-red-700 border-red-200 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'low': return 'bg-slate-100 text-slate-700 border-slate-200';
+      default: return 'bg-slate-100 text-slate-700 border-slate-200';
+    }
+  };
+
   // Compute stats for bottom cards
   const pendingCount = tasks.filter(t => t.status === 'pending').length;
   const inProgressCount = tasks.filter(t => t.status === 'inprogress').length;
@@ -222,6 +287,7 @@ const Tasks = () => {
                 <th scope="col" className="px-6 py-5 font-semibold rounded-tl-2xl">Task Details</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Assigned To</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Delivery Date</th>
+                <th scope="col" className="px-6 py-5 font-semibold">Importance</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Status</th>
                 <th scope="col" className="px-6 py-5 font-semibold text-right rounded-tr-2xl">Actions</th>
               </tr>
@@ -237,7 +303,7 @@ const Tasks = () => {
                   return (
                     <tr 
                       key={task.id} 
-                      className={`group bg-card hover:bg-muted transition-colors ${task.status === 'done' ? 'opacity-70' : ''}`}
+                      className={`group transition-colors ${task.status === 'done' ? 'opacity-70 bg-card hover:bg-muted' : (task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted')}`}
                     >
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
@@ -253,28 +319,12 @@ const Tasks = () => {
                             </span>
                           )}
                           {task.documentation && (
-                            <a href={task.documentation} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors">
+                            <button onClick={(e) => handleViewDoc(e, task.documentation)} className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors cursor-pointer border-none">
                               <span className="material-symbols-outlined text-[14px]">link</span>
                               Documentation
-                            </a>
+                            </button>
                           )}
                         </div>
-                        {task.importanc_status && (
-                          <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
-                            task.importanc_status === 'urgent' 
-                              ? 'bg-red-100 text-red-700 border border-red-200 animate-pulse' 
-                              : task.importanc_status === 'high'
-                                ? 'bg-orange-100 text-orange-700 border border-orange-200'
-                                : task.importanc_status === 'medium'
-                                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
-                          }`}>
-                            <span className="material-symbols-outlined text-[14px]">
-                              {task.importanc_status === 'urgent' ? 'warning' : task.importanc_status === 'high' ? 'priority_high' : 'info'}
-                            </span>
-                            <span className="uppercase tracking-wider">{task.importanc_status}</span>
-                          </div>
-                        )}
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
@@ -300,6 +350,19 @@ const Tasks = () => {
                           <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                           {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
                         </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <select
+                          value={task.importanc_status || 'medium'}
+                          onChange={(e) => handleImportanceChange(task.id, e.target.value)}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
+                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                        >
+                          <option value="low" className="bg-card text-foreground">Low</option>
+                          <option value="medium" className="bg-card text-foreground">Medium</option>
+                          <option value="high" className="bg-card text-foreground">High</option>
+                          <option value="urgent" className="bg-card text-foreground">Urgent</option>
+                        </select>
                       </td>
                       <td className="px-6 py-5">
                         <select
