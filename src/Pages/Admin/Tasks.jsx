@@ -44,6 +44,7 @@ const Tasks = () => {
     description: '',
     delivery_date: '',
     status: 'pending',
+    importanc_status: 'medium',
     tester_note: '',
     documentation: '',
     users_ids: []
@@ -71,6 +72,7 @@ const Tasks = () => {
         description: task.description || '',
         delivery_date: task.delivery_date ? dayjs(task.delivery_date).format('YYYY-MM-DD') : '',
         status: task.status,
+        importanc_status: task.importanc_status || 'medium',
         tester_note: task.tester_note || '',
         documentation: task.documentation || '',
         users_ids: task.user_id ? [task.user_id] : []
@@ -79,7 +81,7 @@ const Tasks = () => {
     } else {
       setEditingId(null);
       setFormData({ 
-        name: '', description: '', delivery_date: '', status: 'pending', tester_note: '', documentation: '', users_ids: [] 
+        name: '', description: '', delivery_date: '', status: 'pending', importanc_status: 'medium', tester_note: '', documentation: '', users_ids: [] 
       });
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -257,6 +259,22 @@ const Tasks = () => {
                             </a>
                           )}
                         </div>
+                        {task.importanc_status && (
+                          <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+                            task.importanc_status === 'urgent' 
+                              ? 'bg-red-100 text-red-700 border border-red-200 animate-pulse' 
+                              : task.importanc_status === 'high'
+                                ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                                : task.importanc_status === 'medium'
+                                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+                          }`}>
+                            <span className="material-symbols-outlined text-[14px]">
+                              {task.importanc_status === 'urgent' ? 'warning' : task.importanc_status === 'high' ? 'priority_high' : 'info'}
+                            </span>
+                            <span className="uppercase tracking-wider">{task.importanc_status}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
@@ -439,6 +457,22 @@ const Tasks = () => {
                   </div>
 
                   <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Importance</label>
+                    <select 
+                      name="importanc_status" 
+                      value={formData.importanc_status} 
+                      onChange={handleInputChange}
+                      required
+                      className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-foreground mb-1.5">Status</label>
                     <select 
                       name="status" 
