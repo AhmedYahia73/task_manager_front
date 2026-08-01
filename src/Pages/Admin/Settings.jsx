@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings2, Save, User, UserCog, Shield, Award } from 'lucide-react';
+import { Settings2, Save, User, UserCog, Shield, Award, Clock, CalendarDays, Timer, Map as MapIcon, Plus, Minus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { MapSelector } from '@/components/MapSelector';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { toast } from 'sonner';
+
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export const Settings = () => {
   const { data, loading: getLoading, refetch } = useGet('/api/admin/settings');
@@ -20,7 +23,11 @@ export const Settings = () => {
     admin: '',
     task_approve_points: 0,
     task_edit_points: 0,
-    task_delay_points: 0
+    task_delay_points: 0,
+    online_days: [],
+    delay_premission_minutes: 0,
+    shifts: [{ from: '09:00', to: '17:00' }],
+    locations: []
   });
 
   // Update local state when data is fetched
@@ -32,7 +39,21 @@ export const Settings = () => {
         admin: settingsData.admin || '',
         task_approve_points: settingsData.task_approve_points || 0,
         task_edit_points: settingsData.task_edit_points || 0,
-        task_delay_points: settingsData.task_delay_points || 0
+        task_delay_points: settingsData.task_delay_points || 0,
+        online_days: settingsData.online_days || [],
+        delay_premission_minutes: settingsData.delay_premission_minutes || 0,
+        shifts: settingsData.shifts?.length > 0 ? settingsData.shifts.map(s => {
+          if (s.hours === undefined && s.from && s.to) {
+            const [fromH, fromM] = s.from.split(':').map(Number);
+            const [toH, toM] = s.to.split(':').map(Number);
+            let fromTotal = fromH + (fromM / 60);
+            let toTotal = toH + (toM / 60);
+            if (toTotal < fromTotal) toTotal += 24;
+            s.hours = parseFloat((toTotal - fromTotal).toFixed(2));
+          }
+          return s;
+        }) : [{ from: '09:00', to: '17:00', hours: 8 }],
+        locations: settingsData.locations || []
       });
     }
   }, [data]);
@@ -43,6 +64,49 @@ export const Settings = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleDayToggle = (day) => {
+    setFormData(prev => {
+      const currentDays = prev.online_days || [];
+      const newDays = currentDays.includes(day)
+        ? currentDays.filter(d => d !== day)
+        : [...currentDays, day];
+      return { ...prev, online_days: newDays };
+    });
+  };
+
+  const addShift = () => {
+    setFormData(prev => ({
+      ...prev,
+      shifts: [...prev.shifts, { from: '09:00', to: '17:00', hours: 8 }]
+    }));
+  };
+
+  const removeShift = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      shifts: prev.shifts.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleShiftChange = (index, field, value) => {
+    setFormData(prev => {
+      const newShifts = [...prev.shifts];
+      newShifts[index][field] = value;
+      
+      const { from, to } = newShifts[index];
+      if (from && to) {
+        const [fromH, fromM] = from.split(':').map(Number);
+        const [toH, toM] = to.split(':').map(Number);
+        let fromTotal = fromH + (fromM / 60);
+        let toTotal = toH + (toM / 60);
+        if (toTotal < fromTotal) toTotal += 24;
+        newShifts[index].hours = parseFloat((toTotal - fromTotal).toFixed(2));
+      }
+      
+      return { ...prev, shifts: newShifts };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -200,6 +264,120 @@ export const Settings = () => {
                 />
               </div>
             </div>
+          </div>
+
+          <div className="pt-4 border-t border-border mt-8">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+              Attendance & Shifts
+            </h2>
+            <div className="space-y-6">
+              
+              {/* Online Days */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                  Online Days (Allowed to work remotely)
+                </label>
+                <div className="flex flex-wrap gap-2 max-w-2xl">
+                  {DAYS.map(day => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => handleDayToggle(day)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
+                        formData.online_days?.includes(day)
+                          ? 'bg-primary border-primary text-primary-foreground'
+                          : 'bg-background border-border text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {day.charAt(0).toUpperCase() + day.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Delay Permission Minutes */}
+              <div className="space-y-2">
+                <label htmlFor="delay_premission_minutes" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Timer className="w-4 h-4 text-muted-foreground" />
+                  Delay Permission (Minutes)
+                </label>
+                <Input
+                  id="delay_premission_minutes"
+                  name="delay_premission_minutes"
+                  type="number"
+                  value={formData.delay_premission_minutes}
+                  onChange={handleChange}
+                  placeholder="e.g. 15"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+
+              {/* Shifts */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  Work Shifts
+                </label>
+                <div className="space-y-3 max-w-2xl">
+                  {formData.shifts?.map((shift, idx) => (
+                    <div key={idx} className="flex items-center gap-3">
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground w-10">From</span>
+                        <Input
+                          type="time"
+                          value={shift.from}
+                          onChange={(e) => handleShiftChange(idx, 'from', e.target.value)}
+                          className="bg-background"
+                        />
+                      </div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground w-6">To</span>
+                        <Input
+                          type="time"
+                          value={shift.to}
+                          onChange={(e) => handleShiftChange(idx, 'to', e.target.value)}
+                          className="bg-background"
+                        />
+                      </div>
+                      <div className="flex items-center justify-end w-16">
+                        <span className="text-sm font-semibold text-primary">{shift.hours} hrs</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeShift(idx)}
+                        disabled={formData.shifts.length === 1}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addShift}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <Plus className="w-4 h-4" /> Add Another Shift
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border mt-8">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+              <MapIcon className="w-5 h-5 text-primary" />
+              Allowed Locations (Geofencing)
+            </h2>
+            <MapSelector
+              locations={formData.locations}
+              onChange={(newLocations) => setFormData(prev => ({ ...prev, locations: newLocations }))}
+            />
           </div>
 
           <div className="pt-4 flex items-center gap-4 border-t border-border mt-8">

@@ -8,6 +8,7 @@ import { Loader2, Search, Plus, Edit, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRoleNames } from '@/context/RoleNameContext';
 import UserPointsModal from './UserPointsModal';
+import UserAttendanceModal from './UserAttendanceModal';
 
 const Users = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
@@ -37,6 +38,8 @@ const Users = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pointsUserId, setPointsUserId] = useState(null);
   const [pointsUserName, setPointsUserName] = useState('');
+  const [attendanceUserId, setAttendanceUserId] = useState(null);
+  const [attendanceUserName, setAttendanceUserName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -45,6 +48,7 @@ const Users = () => {
     password: '',
     status: 'active',
     role: 'engineer',
+    yearly_holidays: false,
     image: null,
   });
 
@@ -58,11 +62,12 @@ const Users = () => {
         password: '', // Don't fill password on edit
         status: userItem.status,
         role: userItem.role,
+        yearly_holidays: userItem.yearly_holidays ?? false,
         image: userItem.image || null,
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', role: 'engineer', image: null });
+      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', role: 'engineer', yearly_holidays: false, image: null });
     }
     setIsModalOpen(true);
   };
@@ -242,6 +247,9 @@ const Users = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => { setAttendanceUserId(userItem.id); setAttendanceUserName(userItem.name); }} className="p-2 text-muted-foreground hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors" title="View Attendance">
+                          <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                        </button>
                         <button onClick={() => { setPointsUserId(userItem.id); setPointsUserName(userItem.name); }} className="p-2 text-muted-foreground hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="View Points">
                           <span className="material-symbols-outlined text-[18px]">analytics</span>
                         </button>
@@ -367,6 +375,19 @@ const Users = () => {
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="yearly_holidays"
+                    checked={formData.yearly_holidays}
+                    onChange={(e) => setFormData({ ...formData, yearly_holidays: e.target.checked })}
+                    className="w-4 h-4 text-primary rounded border-zinc-300 focus:ring-primary"
+                  />
+                  <label htmlFor="yearly_holidays" className="text-sm font-semibold text-foreground cursor-pointer">
+                    Yearly Holidays Eligibility
+                  </label>
+                </div>
               </form>
             </div>
 
@@ -388,6 +409,15 @@ const Users = () => {
           userId={pointsUserId} 
           userName={pointsUserName} 
           onClose={() => setPointsUserId(null)} 
+        />
+      )}
+
+      {/* User Attendance Modal */}
+      {attendanceUserId && (
+        <UserAttendanceModal 
+          userId={attendanceUserId} 
+          userName={attendanceUserName} 
+          onClose={() => setAttendanceUserId(null)} 
         />
       )}
 

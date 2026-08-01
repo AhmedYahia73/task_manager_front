@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { removeAuthToken } from '@/utils/auth';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -10,6 +10,7 @@ export const AdminSidebar = () => {
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = userData?.name || 'Admin User';
   const userRole = userData?.role || 'Admin';
+  const [isHrmOpen, setIsHrmOpen] = useState(false);
 
   const handleLogout = () => {
     removeAuthToken();
@@ -35,21 +36,70 @@ export const AdminSidebar = () => {
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: getRoleNamePlural('engineer') + ' & ' + getRoleNamePlural('tester'), path: '/admin/users', icon: 'group', adminOnly: true },
+          { 
+            name: 'HRM', 
+            icon: 'manage_accounts', 
+            adminOnly: true,
+            subItems: [
+              { name: 'Holiday Requests', path: '/admin/holiday-requests', icon: 'beach_access' },
+              { name: 'Online Requests', path: '/admin/online-requests', icon: 'home_work' },
+              { name: 'Attendance', path: '/admin/attendance', icon: 'how_to_reg' },
+              { name: 'Holidays System', path: '/admin/holidays-system', icon: 'event_available' },
+              { name: 'Permissions', path: '/admin/permissions', icon: 'verified_user' },
+            ]
+          },
           { name: 'Settings', path: '/admin/settings', icon: 'settings', adminOnly: true },
         ]
         .filter(item => !item.adminOnly || userRole === 'admin')
-        .map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            className={({ isActive }) =>
-              `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-            }
-          >
-            <span className="material-symbols-outlined">{item.icon}</span>
-            <span className="admin-sidebar__link-text">{item.name}</span>
-          </NavLink>
-        ))}
+        .map((item) => {
+          if (item.subItems) {
+            return (
+              <div key={item.name}>
+                <button
+                  onClick={() => setIsHrmOpen(!isHrmOpen)}
+                  className={`admin-sidebar__link w-full text-left justify-between ${isHrmOpen ? 'bg-muted/50' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined">{item.icon}</span>
+                    <span className="admin-sidebar__link-text">{item.name}</span>
+                  </div>
+                  <span className="material-symbols-outlined transition-transform duration-200" style={{ transform: isHrmOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
+                    expand_more
+                  </span>
+                </button>
+                {isHrmOpen && (
+                  <div className="pl-6 pr-4 flex flex-col gap-1 overflow-hidden transition-all duration-300">
+                    {item.subItems.map(sub => (
+                      <NavLink
+                        key={sub.name}
+                        to={sub.path}
+                        className={({ isActive }) =>
+                          `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''} text-sm py-2 px-3 rounded-lg flex items-center gap-3 hover:text-foreground`
+                        }
+                      >
+                        <span className="material-symbols-outlined text-[18px]">{sub.icon}</span>
+                        <span>{sub.name}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          
+          return (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="material-symbols-outlined">{item.icon}</span>
+              <span className="admin-sidebar__link-text">{item.name}</span>
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* Footer */}

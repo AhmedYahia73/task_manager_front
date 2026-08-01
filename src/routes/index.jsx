@@ -14,6 +14,12 @@ import Tasks from '@/Pages/Admin/Tasks';
 import Admins from '@/Pages/Admin/Admins';
 import Users from '@/Pages/Admin/Users';
 import { Settings } from '@/Pages/Admin/Settings';
+import HolidayRequests from '@/Pages/Admin/HRM/HolidayRequests';
+import OnlineRequests from '@/Pages/Admin/HRM/OnlineRequests';
+import Attendance from '@/Pages/Admin/HRM/Attendance';
+import HolidaysSystem from '@/Pages/Admin/HRM/HolidaysSystem';
+import Permissions from '@/Pages/Admin/HRM/Permissions';
+
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {
@@ -83,6 +89,11 @@ export const router = createBrowserRouter([
       { path: 'admins', element: <Admins /> },
       { path: 'users', element: <Users /> },
       { path: 'settings', element: <Settings /> },
+      { path: 'holiday-requests', element: <HolidayRequests /> },
+      { path: 'online-requests', element: <OnlineRequests /> },
+      { path: 'attendance', element: <Attendance /> },
+      { path: 'holidays-system', element: <HolidaysSystem /> },
+      { path: 'permissions', element: <Permissions /> },
     ],
   },
 
