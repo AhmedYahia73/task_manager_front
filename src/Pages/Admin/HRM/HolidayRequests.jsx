@@ -8,9 +8,16 @@ import RequestAdminModal from './RequestAdminModal';
 
 export default function HolidayRequests() {
   const [activeTab, setActiveTab] = useState('pending');
+  const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
-  const { data, loading, refetch } = useGet('/api/admin/hrm/holiday-requests');
+  
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
+
+  const limit = 10;
+  const { data, loading, refresh } = useGet(`/api/admin/hrm/holiday-requests?status=${activeTab}&page=${page}&limit=${limit}`);
   const { mutate, loading: actionLoading } = useMutation();
 
   const handleAction = async (id, status) => {
@@ -20,7 +27,7 @@ export default function HolidayRequests() {
         url: `/api/admin/hrm/holiday-requests/${id}/status`,
         data: { status }
       });
-      refetch();
+      refresh();
     } catch (error) {
       console.error(error);
     }
@@ -33,42 +40,47 @@ export default function HolidayRequests() {
         method: 'DELETE',
         url: `/api/admin/hrm/holiday-requests/${id}`
       });
-      refetch();
+      refresh();
     } catch (error) {
       console.error(error);
     }
   };
 
-  const pendingRequests = data?.pending || [];
-  const historyRequests = data?.history || [];
+  const currentData = data?.data || [];
+  const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
 
-  const currentData = activeTab === 'pending' ? pendingRequests : historyRequests;
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold flex items-center gap-2 text-foreground">
           <Calendar className="w-8 h-8 text-primary" />
           Holiday Requests
         </h1>
-        <Button onClick={() => { setEditData(null); setModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Request
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => { setEditData(null); setModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Request
+          </Button>
+        )}
       </div>
 
       <div className="flex border-b border-border">
         <button
           className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'pending' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-          onClick={() => setActiveTab('pending')}
+          onClick={() => handleTabChange('pending')}
         >
-          Pending ({pendingRequests.length})
+          Pending
         </button>
         <button
           className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'history' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-          onClick={() => setActiveTab('history')}
+          onClick={() => handleTabChange('history')}
         >
-          History ({historyRequests.length})
+          History
         </button>
       </div>
 
@@ -130,7 +142,7 @@ export default function HolidayRequests() {
                   </button>
               </div>
 
-              {activeTab === 'pending' && (
+              {activeTab === 'pending' && isAdmin && (
                 <div className="flex gap-2 pt-2">
                   <Button
                     variant="default"
@@ -157,10 +169,30 @@ export default function HolidayRequests() {
         </div>
       )}
 
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 pt-4">
+          <Button 
+            variant="outline" 
+            disabled={page === 1} 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-sm font-medium">Page {page} of {pagination.totalPages}</span>
+          <Button 
+            variant="outline" 
+            disabled={page === pagination.totalPages} 
+            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       <RequestAdminModal 
         isOpen={modalOpen} 
         onClose={() => setModalOpen(false)}
-        onSuccess={() => { setModalOpen(false); refetch(); }}
+        onSuccess={() => { setModalOpen(false); refresh(); }}
         initialData={editData}
         type="holiday"
       />

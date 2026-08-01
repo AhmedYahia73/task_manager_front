@@ -7,11 +7,17 @@ import { toast } from 'sonner';
 import RequestAdminModal from './RequestAdminModal';
 
 export default function Permissions() {
-  const { data, loading, refetch } = useGet('/api/admin/hrm/permissions');
-  const { mutate } = useMutation();
   const [activeTab, setActiveTab] = useState('pending');
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const { data, loading, refresh } = useGet(`/api/admin/hrm/permissions?status=${activeTab}&page=${page}&limit=${limit}`);
+  const { mutate } = useMutation();
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
+
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
 
   const handleStatusUpdate = async (id, status) => {
     const res = await mutate({
@@ -21,7 +27,7 @@ export default function Permissions() {
     });
     if (res?.success) {
       toast.success('Status updated successfully');
-      refetch();
+      refresh();
     }
   };
 
@@ -33,12 +39,18 @@ export default function Permissions() {
       });
       if (res?.success) {
         toast.success('Deleted successfully');
-        refetch();
+        refresh();
       }
     }
   };
 
-  const requests = data?.[activeTab] || [];
+  const requests = data?.data || [];
+  const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
 
   if (loading) {
     return <div className="flex justify-center p-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -48,22 +60,24 @@ export default function Permissions() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Permissions</h1>
-        <Button onClick={() => { setEditData(null); setModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Request
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => { setEditData(null); setModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Request
+          </Button>
+        )}
       </div>
       
-      <div className="flex gap-4 border-b mb-6">
+      <div className="flex border-b border-border mb-6">
         <button 
-          className={`pb-2 ${activeTab === 'pending' ? 'border-b-2 border-primary text-primary font-bold' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'pending' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          onClick={() => handleTabChange('pending')}
         >
           Pending
         </button>
         <button 
-          className={`pb-2 ${activeTab === 'history' ? 'border-b-2 border-primary text-primary font-bold' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('history')}
+          className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'history' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          onClick={() => handleTabChange('history')}
         >
           History
         </button>
@@ -94,7 +108,7 @@ export default function Permissions() {
             </div>
 
             <div className="flex gap-2 justify-end mt-auto pt-4 border-t">
-              {req.status === 'pending' && (
+              {req.status === 'pending' && isAdmin && (
                 <>
                   <Button variant="outline" className="text-green-600 h-8 text-xs px-2" onClick={() => handleStatusUpdate(req.id, 'approve')}>Approve</Button>
                   <Button variant="outline" className="text-red-600 h-8 text-xs px-2" onClick={() => handleStatusUpdate(req.id, 'reject')}>Reject</Button>
@@ -112,10 +126,30 @@ export default function Permissions() {
         {requests.length === 0 && <p className="text-gray-500">No requests found.</p>}
       </div>
 
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 pt-4">
+          <Button 
+            variant="outline" 
+            disabled={page === 1} 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-sm font-medium">Page {page} of {pagination.totalPages}</span>
+          <Button 
+            variant="outline" 
+            disabled={page === pagination.totalPages} 
+            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       <RequestAdminModal 
         isOpen={modalOpen} 
         onClose={() => setModalOpen(false)}
-        onSuccess={() => { setModalOpen(false); refetch(); }}
+        onSuccess={() => { setModalOpen(false); refresh(); }}
         initialData={editData}
         type="permission"
       />

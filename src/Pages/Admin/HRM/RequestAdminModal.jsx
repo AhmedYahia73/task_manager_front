@@ -108,7 +108,14 @@ export default function RequestAdminModal({ isOpen, onClose, onSuccess, initialD
 
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-foreground">Date</label>
-              <Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required className="h-11" />
+              <Input 
+                type="date" 
+                value={formData.date} 
+                onChange={e => setFormData({ ...formData, date: e.target.value })} 
+                required 
+                className="h-11" 
+                min={new Date().toISOString().split('T')[0]}
+              />
             </div>
 
             {type === 'permission' && (

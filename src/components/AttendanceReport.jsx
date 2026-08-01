@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGet } from '@/hooks/useGet';
 import { Loader2, Calendar, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,42 @@ export default function AttendanceReport({ userId }) {
 
   const [from, setFrom] = useState(firstDay);
   const [to, setTo] = useState(lastDay);
+  const [page, setPage] = useState(1);
+  const [allReports, setAllReports] = useState([]);
+  const loaderRef = useRef(null);
 
   const endpoint = userId ? `/api/admin/users/${userId}/attendance-report` : `/api/user/attendance/report`;
-  const { data, loading } = useGet(`${endpoint}?from=${from}&to=${to}`);
+  const { data, loading } = useGet(`${endpoint}?from=${from}&to=${to}&page=${page}&limit=15`);
+
+  useEffect(() => {
+    setAllReports([]);
+    setPage(1);
+  }, [from, to, userId]);
+
+  useEffect(() => {
+    if (data?.report) {
+      if (page === 1) {
+        setAllReports(data.report);
+      } else {
+        setAllReports(prev => {
+          const newDates = new Set(data.report.map(r => r.date));
+          const filteredPrev = prev.filter(r => !newDates.has(r.date));
+          return [...filteredPrev, ...data.report];
+        });
+      }
+    }
+  }, [data?.report, page]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !loading && data?.pagination && page < data.pagination.totalPages) {
+        setPage(p => p + 1);
+      }
+    }, { threshold: 0.1 });
+    
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [loading, data?.pagination, page]);
 
   return (
     <div className="space-y-6">
@@ -29,7 +62,7 @@ export default function AttendanceReport({ userId }) {
         </div>
       </div>
 
-      {loading ? (
+      {loading && page === 1 ? (
         <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
       ) : (
         <>
@@ -94,7 +127,7 @@ export default function AttendanceReport({ userId }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {data?.report?.map((row, idx) => (
+                  {allReports.map((row, idx) => (
                     <tr key={idx} className={`${row.color || 'bg-background hover:bg-muted/30'}`}>
                       <td className="px-4 py-3 font-medium">{row.date}</td>
                       <td className="px-4 py-3">{row.day}</td>
@@ -116,7 +149,7 @@ export default function AttendanceReport({ userId }) {
                       </td>
                     </tr>
                   ))}
-                  {(!data?.report || data.report.length === 0) && (
+                  {allReports.length === 0 && (
                     <tr>
                       <td colSpan="8" className="px-4 py-8 text-center text-muted-foreground">
                         No data available for this date range.
@@ -126,6 +159,13 @@ export default function AttendanceReport({ userId }) {
                 </tbody>
               </table>
             </div>
+          </div>
+          
+          <div ref={loaderRef} className="py-4 flex justify-center">
+            {loading && page > 1 && <Loader2 className="w-6 h-6 animate-spin text-primary" />}
+            {!loading && data?.pagination && page === data.pagination.totalPages && (
+              <span className="text-sm text-muted-foreground">No more records</span>
+            )}
           </div>
         </>
       )}

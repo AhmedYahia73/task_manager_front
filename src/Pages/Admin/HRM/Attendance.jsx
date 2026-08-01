@@ -7,12 +7,19 @@ import AttendanceAdminModal from './AttendanceAdminModal';
 import { useMutation } from '@/hooks/useMutation';
 
 export default function Attendance() {
-  const { data, loading, refetch } = useGet('/api/admin/hrm/attendance');
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const { data, loading, refresh } = useGet(`/api/admin/hrm/attendance?page=${page}&limit=${limit}`);
   const { mutate } = useMutation();
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
 
-  const attendanceRecords = data?.attendance || [];
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
+
+  const attendanceRecords = data?.data || [];
+  const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this record?')) return;
@@ -20,7 +27,7 @@ export default function Attendance() {
       method: 'DELETE',
       url: `/api/admin/hrm/attendance/${id}`
     });
-    if (res?.success) refetch();
+    if (res?.success) refresh();
   };
 
   return (
@@ -30,10 +37,12 @@ export default function Attendance() {
           <Clock className="w-8 h-8 text-primary" />
           Employee Attendance
         </h1>
-        <Button onClick={() => { setEditData(null); setModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Record
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => { setEditData(null); setModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Record
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -100,23 +109,45 @@ export default function Attendance() {
                 </div>
               </div>
 
-              <div className="absolute bottom-2 right-2 flex gap-1 z-10">
-                  <button onClick={() => { setEditData(record); setModalOpen(true); }} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors bg-card shadow-sm border border-border/50" title="Edit">
-                    <Edit className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => handleDelete(record.id)} className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors bg-card shadow-sm border border-border/50" title="Delete">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-              </div>
+              {isAdmin && (
+                <div className="absolute bottom-2 right-2 flex gap-1 z-10">
+                    <button onClick={() => { setEditData(record); setModalOpen(true); }} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors bg-card shadow-sm border border-border/50" title="Edit">
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => handleDelete(record.id)} className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors bg-card shadow-sm border border-border/50" title="Delete">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+              )}
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 pt-4">
+          <Button 
+            variant="outline" 
+            disabled={page === 1} 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-sm font-medium">Page {page} of {pagination.totalPages}</span>
+          <Button 
+            variant="outline" 
+            disabled={page === pagination.totalPages} 
+            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+          >
+            Next
+          </Button>
         </div>
       )}
 
       <AttendanceAdminModal 
         isOpen={modalOpen} 
         onClose={() => setModalOpen(false)}
-        onSuccess={() => { setModalOpen(false); refetch(); }}
+        onSuccess={() => { setModalOpen(false); refresh(); }}
         initialData={editData}
       />
     </div>

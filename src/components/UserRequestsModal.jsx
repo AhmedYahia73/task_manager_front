@@ -87,7 +87,14 @@ export default function UserRequestsModal({ onClose }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-foreground">Select Date</label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} required className="h-11" />
+              <Input 
+                type="date" 
+                value={date} 
+                onChange={e => setDate(e.target.value)} 
+                required 
+                className="h-11" 
+                min={new Date().toISOString().split('T')[0]}
+              />
             </div>
 
             {requestType === 'permission' && (
