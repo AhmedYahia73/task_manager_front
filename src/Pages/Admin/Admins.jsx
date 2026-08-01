@@ -35,6 +35,7 @@ const Admins = () => {
     phone: '',
     password: '',
     status: 'active',
+    image: null,
   });
 
   const openModal = (admin = null) => {
@@ -46,10 +47,11 @@ const Admins = () => {
         phone: admin.phone,
         password: '', // Don't fill password on edit
         status: admin.status,
+        image: admin.image || null,
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', password: '', status: 'active' });
+      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', image: null });
     }
     setIsModalOpen(true);
   };
@@ -61,6 +63,19 @@ const Admins = () => {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData({ ...formData, image: null });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -98,23 +113,23 @@ const Admins = () => {
   };
 
   return (
-    <div className="p-6 md:p-8 space-y-6 bg-[#f8f9fa] min-h-screen relative text-[#191c1d]">
+    <div className="p-6 md:p-8 space-y-6 bg-background min-h-screen relative text-foreground">
       
       {/* Header & Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-[#191c1d]">Admins</h1>
-          <p className="text-[#464555] mt-1">Manage system administrators and their access</p>
+          <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">Admins</h1>
+          <p className="text-muted-foreground mt-1">Manage system administrators and their access</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#3525cd] hover:bg-[#2b1da8] text-white flex items-center gap-2">
+        <Button onClick={() => openModal()} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Add Admin
         </Button>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-[#edeeef] flex items-center gap-3">
-        <Search className="text-[#464555] w-5 h-5" />
+      <div className="bg-card p-4 rounded-xl shadow-sm border border-border flex items-center gap-3">
+        <Search className="text-muted-foreground w-5 h-5" />
         <Input 
           type="text" 
           placeholder="Search by name, email or phone..." 
@@ -125,10 +140,10 @@ const Admins = () => {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#edeeef] overflow-hidden">
+      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-[#f8f9fa] text-[#464555] font-semibold border-b border-[#edeeef]">
+            <thead className="bg-background text-muted-foreground font-semibold border-b border-border">
               <tr>
                 <th className="px-6 py-4">ADMIN</th>
                 <th className="px-6 py-4">PHONE</th>
@@ -140,28 +155,36 @@ const Admins = () => {
               {loading && admins.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="px-6 py-8 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-[#3525cd] mx-auto" />
+                    <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
                   </td>
                 </tr>
               ) : admins.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-[#464555]">
+                  <td colSpan="4" className="px-6 py-8 text-center text-muted-foreground">
                     No admins found.
                   </td>
                 </tr>
               ) : (
                 admins.map((admin) => (
-                  <tr key={admin.id} className="hover:bg-[#f8f9fa] transition-colors">
+                  <tr key={admin.id} className="hover:bg-background transition-colors">
                     <td className="px-6 py-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#f3f4f5] text-[#3525cd] flex items-center justify-center font-bold text-lg border border-[#edeeef]">
-                        {admin.name.charAt(0).toUpperCase()}
-                      </div>
+                      {admin.image ? (
+                        <img 
+                          src={admin.image} 
+                          alt={admin.name} 
+                          className="w-10 h-10 rounded-full object-cover border border-border" 
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-muted text-primary flex items-center justify-center font-bold text-lg border border-border">
+                          {admin.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div>
-                        <p className="font-semibold text-[#191c1d]">{admin.name}</p>
-                        <p className="text-[#464555] text-xs mt-0.5">{admin.email}</p>
+                        <p className="font-semibold text-foreground">{admin.name}</p>
+                        <p className="text-muted-foreground text-xs mt-0.5">{admin.email}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-[#464555]">{admin.phone}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{admin.phone}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                         admin.status === 'active' 
@@ -173,10 +196,10 @@ const Admins = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => openModal(admin)} className="p-2 text-[#464555] hover:text-[#3525cd] hover:bg-[#f3f4f5] rounded-lg transition-colors">
+                        <button onClick={() => openModal(admin)} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(admin.id)} className="p-2 text-[#464555] hover:text-[#ba1a1a] hover:bg-[#fef2f2] rounded-lg transition-colors">
+                        <button onClick={() => handleDelete(admin.id)} className="p-2 text-muted-foreground hover:text-[#ba1a1a] hover:bg-[#fef2f2] rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -190,17 +213,17 @@ const Admins = () => {
         
         {/* Pagination Controls */}
         {pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-[#edeeef] flex justify-between items-center bg-[#f8f9fa]">
+          <div className="p-4 border-t border-border flex justify-between items-center bg-background">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="text-[#464555]"
+              className="text-muted-foreground"
             >
               Previous
             </Button>
-            <span className="text-sm text-[#464555] font-medium">
+            <span className="text-sm text-muted-foreground font-medium">
               Page {page} of {pagination.totalPages}
             </span>
             <Button 
@@ -208,7 +231,7 @@ const Admins = () => {
               size="sm" 
               onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
               disabled={page === pagination.totalPages}
-              className="text-[#464555]"
+              className="text-muted-foreground"
             >
               Next
             </Button>
@@ -218,43 +241,64 @@ const Admins = () => {
 
       {/* Admin Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="flex justify-between items-center p-5 border-b border-[#edeeef]">
-              <h2 className="text-lg font-bold text-[#191c1d]">{editingId ? 'Edit Admin' : 'Add New Admin'}</h2>
-              <button onClick={closeModal} className="text-[#464555] hover:bg-[#f3f4f5] p-1.5 rounded-lg transition-colors">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={closeModal}>
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground">{editingId ? 'Edit Admin' : 'Add New Admin'}</h2>
+              <button onClick={closeModal} className="text-muted-foreground hover:bg-muted p-1.5 rounded-lg transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  {formData.image ? (
+                    <img 
+                      src={formData.image}
+                      alt="Profile" 
+                      className="w-24 h-24 rounded-full object-cover border-2 border-border shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-muted text-muted-foreground flex items-center justify-center border-2 border-border shadow-sm">
+                      <span className="material-symbols-outlined text-3xl">person</span>
+                    </div>
+                  )}
+                  <label className="absolute bottom-0 right-0 bg-card p-1.5 rounded-full border border-border shadow-sm cursor-pointer hover:bg-muted transition-colors">
+                    <span className="material-symbols-outlined text-[16px] text-primary">edit</span>
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  </label>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-[#191c1d]">Name</label>
+                <label className="text-sm font-semibold text-foreground">Name</label>
                 <Input name="name" value={formData.name} onChange={handleInputChange} required className="h-11" placeholder="Admin Name" />
               </div>
               
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-[#191c1d]">Email Address</label>
+                <label className="text-sm font-semibold text-foreground">Email Address</label>
                 <Input name="email" type="email" value={formData.email} onChange={handleInputChange} required className="h-11" placeholder="admin@example.com" />
               </div>
               
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-[#191c1d]">Phone Number</label>
+                <label className="text-sm font-semibold text-foreground">Phone Number</label>
                 <Input name="phone" value={formData.phone} onChange={handleInputChange} required className="h-11" placeholder="+1234567890" />
               </div>
               
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-[#191c1d]">{editingId ? 'New Password (Optional)' : 'Password'}</label>
+                <label className="text-sm font-semibold text-foreground">{editingId ? 'New Password (Optional)' : 'Password'}</label>
                 <Input name="password" type="password" value={formData.password} onChange={handleInputChange} required={!editingId} className="h-11" placeholder="••••••••" />
               </div>
               
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-[#191c1d]">Status</label>
+                <label className="text-sm font-semibold text-foreground">Status</label>
                 <select 
                   name="status" 
                   value={formData.status} 
                   onChange={handleInputChange}
-                  className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -265,7 +309,7 @@ const Admins = () => {
                 <Button type="button" variant="outline" onClick={closeModal} className="h-11 px-6">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={mutationLoading} className="h-11 px-6 bg-[#3525cd] hover:bg-[#2b1da8] text-white">
+                <Button type="submit" disabled={mutationLoading} className="h-11 px-6 bg-primary hover:bg-primary-hover text-white">
                   {mutationLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Admin'}
                 </Button>
               </div>

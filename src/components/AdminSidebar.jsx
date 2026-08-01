@@ -1,16 +1,11 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { removeAuthToken } from '@/utils/auth';
-
-const navItems = [
-  { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
-  { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
-  { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings' },
-  { name: 'Users', path: '/admin/users', icon: 'group' },
-  { name: 'Settings', path: '/admin/settings', icon: 'settings' },
-];
+import { ThemeSwitcher } from './ThemeSwitcher';
+import { useRoleNames } from '@/context/RoleNameContext';
 
 export const AdminSidebar = () => {
+  const { getRoleNamePlural } = useRoleNames();
   const navigate = useNavigate();
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = userData?.name || 'Admin User';
@@ -26,13 +21,24 @@ export const AdminSidebar = () => {
     <aside className="admin-sidebar">
       {/* Brand */}
       <div className="admin-sidebar__brand">
-        <h1 className="admin-sidebar__title">TaskFlow Pro</h1>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Taskito Logo" className="w-8 h-8 object-contain" />
+          <h1 className="admin-sidebar__title">Taskito</h1>
+        </div>
         <p className="admin-sidebar__subtitle">Enterprise Admin</p>
       </div>
 
       {/* Navigation */}
       <nav className="admin-sidebar__nav">
-        {navItems.map((item) => (
+        {[
+          { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
+          { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
+          { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
+          { name: getRoleNamePlural('engineer') + ' & ' + getRoleNamePlural('tester'), path: '/admin/users', icon: 'group', adminOnly: true },
+          { name: 'Settings', path: '/admin/settings', icon: 'settings', adminOnly: true },
+        ]
+        .filter(item => !item.adminOnly || userRole === 'admin')
+        .map((item) => (
           <NavLink
             key={item.name}
             to={item.path}
@@ -48,6 +54,9 @@ export const AdminSidebar = () => {
 
       {/* Footer */}
       <div className="admin-sidebar__footer">
+        <div className="mb-4">
+          <ThemeSwitcher />
+        </div>
         <button
           onClick={handleLogout}
           className="admin-sidebar__link"

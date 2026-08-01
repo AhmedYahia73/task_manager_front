@@ -21,13 +21,13 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="h-16 flex items-center justify-between px-6 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+    <nav className="h-16 flex items-center justify-between px-6 bg-card border-b border-zinc-200 ">
       {/* زر الرجوع */}
       <Button 
         variant="ghost" 
         size="icon" 
         onClick={() => navigate(-1)}
-        className="text-zinc-600 hover:text-primary dark:text-zinc-400"
+        className="text-zinc-600 hover:text-primary "
       >
         <ChevronLeft className="w-6 h-6" />
       </Button>

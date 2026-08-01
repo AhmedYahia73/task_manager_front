@@ -104,7 +104,7 @@ const MapComponent = ({
                         />
                     </MapContainer>
                 ) : (
-                    <div className="flex items-center justify-center w-full h-full bg-gray-200 text-gray-500">
+                    <div className="flex items-center justify-center w-full h-full bg-gray-200 text-muted-foreground">
                         Loading Map...
                     </div>
                 )}
