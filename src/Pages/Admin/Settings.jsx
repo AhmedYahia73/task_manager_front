@@ -12,7 +12,8 @@ const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 
 
 export const Settings = () => {
   const { data, loading: getLoading, refetch } = useGet('/api/admin/settings');
-  // The response data contains a "Names" object
+  
+  // The response data contains a "Names" object based on your API response
   const settingsData = data?.Names || (Array.isArray(data) ? data[0] : data);
   const settingId = settingsData?.id || 1; 
   const { mutate, loading: updateLoading } = useMutation();
@@ -26,13 +27,48 @@ export const Settings = () => {
     task_delay_points: 0,
     online_days: [],
     delay_premission_minutes: 0,
-    shifts: [{ from: '09:00', to: '17:00' }],
+    shifts: [{ from: '09:00', to: '17:00', hours: 8 }],
     locations: []
   });
 
   // Update local state when data is fetched
   useEffect(() => {
     if (settingsData) {
+      let parsedShifts = [];
+      
+      // 1. تحويل النص القادم من الـ API إلى مصفوفة فعلية
+      if (settingsData.shifts) {
+        try {
+          parsedShifts = typeof settingsData.shifts === 'string' 
+            ? JSON.parse(settingsData.shifts) 
+            : settingsData.shifts;
+        } catch (error) {
+          console.error("Error parsing shifts:", error);
+        }
+      }
+
+      // 2. معالجة المصفوفة لحساب الساعات وضبط صيغة الوقت (إزالة الثواني)
+      const formattedShifts = Array.isArray(parsedShifts) && parsedShifts.length > 0
+        ? parsedShifts.map(s => {
+            // أخذ أول 5 حروف فقط ليكون بصيغة "HH:mm" لتجنب مشاكل حقل الوقت
+            const fromTime = s.from ? s.from.substring(0, 5) : '09:00';
+            const toTime = s.to ? s.to.substring(0, 5) : '17:00';
+
+            let calculatedHours = s.hours;
+
+            if (calculatedHours === undefined) {
+              const [fromH, fromM] = fromTime.split(':').map(Number);
+              const [toH, toM] = toTime.split(':').map(Number);
+              let fromTotal = fromH + (fromM / 60);
+              let toTotal = toH + (toM / 60);
+              if (toTotal < fromTotal) toTotal += 24;
+              calculatedHours = parseFloat((toTotal - fromTotal).toFixed(2));
+            }
+
+            return { ...s, from: fromTime, to: toTime, hours: calculatedHours };
+          })
+        : [{ from: '09:00', to: '17:00', hours: 8 }];
+
       setFormData({
         user: settingsData.user || '',
         leader: settingsData.leader || '',
@@ -40,19 +76,9 @@ export const Settings = () => {
         task_approve_points: settingsData.task_approve_points || 0,
         task_edit_points: settingsData.task_edit_points || 0,
         task_delay_points: settingsData.task_delay_points || 0,
-        online_days: settingsData.online_days || [],
+        online_days: settingsData.online_days || [], // fallback empty array if null
         delay_premission_minutes: settingsData.delay_premission_minutes || 0,
-        shifts: settingsData.shifts?.length > 0 ? settingsData.shifts.map(s => {
-          if (s.hours === undefined && s.from && s.to) {
-            const [fromH, fromM] = s.from.split(':').map(Number);
-            const [toH, toM] = s.to.split(':').map(Number);
-            let fromTotal = fromH + (fromM / 60);
-            let toTotal = toH + (toM / 60);
-            if (toTotal < fromTotal) toTotal += 24;
-            s.hours = parseFloat((toTotal - fromTotal).toFixed(2));
-          }
-          return s;
-        }) : [{ from: '09:00', to: '17:00', hours: 8 }],
+        shifts: formattedShifts,
         locations: settingsData.locations || []
       });
     }
@@ -111,15 +137,27 @@ export const Settings = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // إذا كان الباك إند يتطلب إرسال الـ shifts كنص وليس كمصفوفة كما وردت، 
+    // يمكنك عمل payload هنا قبل الإرسال كالتالي:
+    /*
+    const payload = {
+      ...formData,
+      shifts: JSON.stringify(formData.shifts)
+    };
+    */
+    
     try {
       await mutate({
         method: 'PUT',
         url: `/api/admin/settings/${settingId}`,
-        data: formData
+        data: formData // بدّلها بـ payload لو الباك إند بيطلبها string
       });
+      toast.success("Settings updated successfully!");
       refetch();
     } catch (error) {
       console.error(error);
+      toast.error("Failed to update settings");
     }
   };
 
@@ -375,7 +413,7 @@ export const Settings = () => {
               Allowed Locations (Geofencing)
             </h2>
             <MapSelector
-              locations={formData.locations}
+              locations={formData.locations || []}
               onChange={(newLocations) => setFormData(prev => ({ ...prev, locations: newLocations }))}
             />
           </div>
