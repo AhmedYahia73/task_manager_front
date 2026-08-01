@@ -270,14 +270,26 @@ const FilteredTasks = () => {
                         <select
                           value={task.status}
                           onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
+                          disabled={task.status === 'approve' && userRole === 'engineer'}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${task.status === 'approve' && userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
                           style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
                         >
-                          <option value="pending" className="bg-card text-foreground">Pending</option>
-                          <option value="inprogress" className="bg-card text-foreground">In Progress</option>
-                          <option value="done" className="bg-card text-foreground">Done</option>
-                          <option value="edit" className="bg-card text-foreground">Needs Revision</option>
-                          <option value="approve" className="bg-card text-foreground">Approve</option>
+                          {task.status === 'approve' ? (
+                            <>
+                              <option value="approve" className="bg-card text-foreground">Approve</option>
+                              {userRole !== 'engineer' && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
+                            </>
+                          ) : (
+                            <>
+                              <option value="pending" className="bg-card text-foreground">Pending</option>
+                              <option value="inprogress" className="bg-card text-foreground">In Progress</option>
+                              <option value="done" className="bg-card text-foreground">Done</option>
+                              {(task.status === 'edit' || userRole !== 'engineer') && (
+                                <option value="edit" className="bg-card text-foreground">Needs Revision</option>
+                              )}
+                              {userRole !== 'engineer' && <option value="approve" className="bg-card text-foreground">Approve</option>}
+                            </>
+                          )}
                         </select>
                       </td>
                     </tr>

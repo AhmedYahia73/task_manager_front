@@ -273,6 +273,7 @@ const Tasks = () => {
   const inProgressCount = tasks.filter(t => t.status === 'inprogress').length;
   const doneCount = tasks.filter(t => t.status === 'done').length;
   const editCount = tasks.filter(t => t.status === 'edit').length;
+  const approveCount = tasks.filter(t => t.status === 'approve').length;
 
   return (
     <div className="admin-tasks-page min-h-screen bg-background p-4 md:p-8 font-inter text-foreground">
@@ -413,14 +414,26 @@ const Tasks = () => {
                         <select
                           value={task.status}
                           onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
+                          disabled={task.status === 'approve' && userRole === 'engineer'}
+                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${task.status === 'approve' && userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
                           style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
                         >
-                          <option value="pending" className="bg-card text-foreground">Pending</option>
-                          <option value="inprogress" className="bg-card text-foreground">In Progress</option>
-                          <option value="done" className="bg-card text-foreground">Done</option>
-                          <option value="edit" className="bg-card text-foreground">Needs Revision</option>
-                          {userRole !== 'engineer' && <option value="approve" className="bg-card text-foreground">Approve</option>}
+                          {task.status === 'approve' ? (
+                            <>
+                              <option value="approve" className="bg-card text-foreground">Approve</option>
+                              {userRole !== 'engineer' && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
+                            </>
+                          ) : (
+                            <>
+                              <option value="pending" className="bg-card text-foreground">Pending</option>
+                              <option value="inprogress" className="bg-card text-foreground">In Progress</option>
+                              <option value="done" className="bg-card text-foreground">Done</option>
+                              {(task.status === 'edit' || userRole !== 'engineer') && (
+                                <option value="edit" className="bg-card text-foreground">Needs Revision</option>
+                              )}
+                              {userRole !== 'engineer' && <option value="approve" className="bg-card text-foreground">Approve</option>}
+                            </>
+                          )}
                         </select>
                       </td>
                       <td className="px-6 py-5 text-right">
@@ -470,7 +483,7 @@ const Tasks = () => {
       </div>
 
       {/* Bottom Stats - Only showing counts for current page as a quick summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
             <span className="material-symbols-outlined">pending_actions</span>
@@ -508,6 +521,16 @@ const Tasks = () => {
           <div>
             <p className="text-sm font-medium text-muted-foreground">Needs Revision</p>
             <p className="text-2xl font-bold text-foreground">{editCount}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
+            <span className="material-symbols-outlined">verified</span>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Approved</p>
+            <p className="text-2xl font-bold text-foreground">{approveCount}</p>
           </div>
         </div>
       </div>
@@ -613,13 +636,25 @@ const Tasks = () => {
                       value={formData.status} 
                       onChange={handleInputChange}
                       required
-                      className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      disabled={formData.status === 'approve' && userRole === 'engineer'}
+                      className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-75"
                     >
-                      <option value="pending">Pending</option>
-                      <option value="inprogress">In Progress</option>
-                      <option value="done">Done</option>
-                      <option value="edit">Edit (Needs Revision)</option>
-                      {userRole !== 'engineer' && <option value="approve">Approve</option>}
+                      {formData.status === 'approve' ? (
+                        <>
+                          <option value="approve">Approve</option>
+                          {userRole !== 'engineer' && <option value="edit">Edit (Needs Revision)</option>}
+                        </>
+                      ) : (
+                        <>
+                          <option value="pending">Pending</option>
+                          <option value="inprogress">In Progress</option>
+                          <option value="done">Done</option>
+                          {(formData.status === 'edit' || userRole !== 'engineer') && (
+                            <option value="edit">Edit (Needs Revision)</option>
+                          )}
+                          {userRole !== 'engineer' && <option value="approve">Approve</option>}
+                        </>
+                      )}
                     </select>
                   </div>
 

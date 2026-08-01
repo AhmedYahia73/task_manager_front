@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Search, Plus, Edit, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRoleNames } from '@/context/RoleNameContext';
+import UserPointsModal from './UserPointsModal';
 
 const Users = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
@@ -34,6 +35,8 @@ const Users = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pointsUserId, setPointsUserId] = useState(null);
+  const [pointsUserName, setPointsUserName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -239,7 +242,10 @@ const Users = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => openModal(userItem)} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors">
+                        <button onClick={() => { setPointsUserId(userItem.id); setPointsUserName(userItem.name); }} className="p-2 text-muted-foreground hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="View Points">
+                          <span className="material-symbols-outlined text-[18px]">analytics</span>
+                        </button>
+                        <button onClick={() => openModal(userItem)} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors" title="Edit User">
                           <Edit className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleDelete(userItem.id)} className="p-2 text-muted-foreground hover:text-[#ba1a1a] hover:bg-[#fef2f2] rounded-lg transition-colors">
@@ -374,6 +380,15 @@ const Users = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* User Points Modal */}
+      {pointsUserId && (
+        <UserPointsModal 
+          userId={pointsUserId} 
+          userName={pointsUserName} 
+          onClose={() => setPointsUserId(null)} 
+        />
       )}
 
     </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { Loader2, Users } from 'lucide-react';
@@ -50,6 +50,22 @@ const Dashboard = () => {
   const { getRoleNamePlural } = useRoleNames();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const { data, loading } = useGet('/api/admin/dashboard');
+  
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  // Need to adjust for timezone offset to prevent picking the wrong day locally
+  const offset = now.getTimezoneOffset() * 60000;
+  const defaultFrom = new Date(firstDay.getTime() - offset).toISOString().split('T')[0];
+  const defaultTo = new Date(lastDay.getTime() - offset).toISOString().split('T')[0];
+
+  const [fromDate, setFromDate] = useState(defaultFrom);
+  const [toDate, setToDate] = useState(defaultTo);
+
+  const { data: leaderboardRes, loading: leaderboardLoading } = useGet(`/api/admin/dashboard/leaderboard?from=${fromDate}&to=${toDate}`);
+  const leaderboardList = leaderboardRes?.leaderboard || [];
+
   const navigate = useNavigate();
 
   if (user?.role === 'engineer') {
@@ -148,6 +164,97 @@ const Dashboard = () => {
 
         </div>
       )}
+
+      {/* Leaderboard Section */}
+      {!loading && user?.role !== 'engineer' && (
+        <div className="mt-8 bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+          <div className="p-6 border-b border-border bg-muted/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="text-2xl font-bold font-['Plus_Jakarta_Sans'] text-foreground flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-500 text-3xl">emoji_events</span>
+                Top Performers
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">Ranking based on completed tasks points</p>
+            </div>
+            
+            <div className="flex items-center gap-3 bg-background p-2 rounded-xl border border-input shadow-sm w-full md:w-auto">
+              <div className="flex items-center gap-2 px-2">
+                <span className="text-xs font-semibold text-muted-foreground">From:</span>
+                <input 
+                  type="date" 
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 text-foreground"
+                />
+              </div>
+              <div className="w-px h-6 bg-border"></div>
+              <div className="flex items-center gap-2 px-2">
+                <span className="text-xs font-semibold text-muted-foreground">To:</span>
+                <input 
+                  type="date" 
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 text-foreground"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-0">
+            {leaderboardLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : leaderboardList.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <span className="material-symbols-outlined text-4xl mb-2 text-muted-foreground/50">sentiment_dissatisfied</span>
+                <p>No points recorded for this period.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {leaderboardList.map((usr, index) => (
+                  <div key={usr.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-4">
+                      {/* Rank Badge */}
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${
+                        index === 0 ? 'bg-amber-100 text-amber-600 border border-amber-200' : 
+                        index === 1 ? 'bg-slate-200 text-slate-600 border border-slate-300' :
+                        index === 2 ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                        'bg-background text-muted-foreground border border-border'
+                      }`}>
+                        #{index + 1}
+                      </div>
+                      
+                      {/* User Info */}
+                      <div className="flex items-center gap-3">
+                        {usr.image ? (
+                          <img src={usr.image} alt={usr.name} className="w-10 h-10 rounded-full object-cover border border-border shadow-sm" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold border border-primary/20 shadow-sm">
+                            {usr.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-foreground">{usr.name}</p>
+                          <p className="text-xs text-muted-foreground">{usr.phone}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Points */}
+                    <div className="flex items-center gap-1.5 bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
+                      <span className="material-symbols-outlined text-primary text-[18px]">workspace_premium</span>
+                      <span className="font-black text-primary">{usr.total_points}</span>
+                      <span className="text-xs font-semibold text-primary/70 uppercase">pts</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

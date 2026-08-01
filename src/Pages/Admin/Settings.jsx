@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings2, Save, User, UserCog, Shield } from 'lucide-react';
+import { Settings2, Save, User, UserCog, Shield, Award } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useGet } from '@/hooks/useGet';
@@ -17,7 +17,10 @@ export const Settings = () => {
   const [formData, setFormData] = useState({
     user: '',
     leader: '',
-    admin: ''
+    admin: '',
+    task_approve_points: 0,
+    task_edit_points: 0,
+    task_delay_points: 0
   });
 
   // Update local state when data is fetched
@@ -26,7 +29,10 @@ export const Settings = () => {
       setFormData({
         user: settingsData.user || '',
         leader: settingsData.leader || '',
-        admin: settingsData.admin || ''
+        admin: settingsData.admin || '',
+        task_approve_points: settingsData.task_approve_points || 0,
+        task_edit_points: settingsData.task_edit_points || 0,
+        task_delay_points: settingsData.task_delay_points || 0
       });
     }
   }, [data]);
@@ -136,6 +142,64 @@ export const Settings = () => {
               />
             </div>
 
+          </div>
+
+          <div className="pt-4 border-t border-border mt-8">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+              Points Settings
+            </h2>
+            <div className="space-y-4">
+              {/* Task Approve Points */}
+              <div className="space-y-2">
+                <label htmlFor="task_approve_points" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Award className="w-4 h-4 text-muted-foreground" />
+                  Task Approve Points
+                </label>
+                <Input
+                  id="task_approve_points"
+                  name="task_approve_points"
+                  type="number"
+                  value={formData.task_approve_points}
+                  onChange={handleChange}
+                  placeholder="e.g. 10"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+
+              {/* Task Edit Points */}
+              <div className="space-y-2">
+                <label htmlFor="task_edit_points" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Award className="w-4 h-4 text-muted-foreground" />
+                  Task Edit Points
+                </label>
+                <Input
+                  id="task_edit_points"
+                  name="task_edit_points"
+                  type="number"
+                  value={formData.task_edit_points}
+                  onChange={handleChange}
+                  placeholder="e.g. -5"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+
+              {/* Task Delay Points */}
+              <div className="space-y-2">
+                <label htmlFor="task_delay_points" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Award className="w-4 h-4 text-muted-foreground" />
+                  Task Delay Points
+                </label>
+                <Input
+                  id="task_delay_points"
+                  name="task_delay_points"
+                  type="number"
+                  value={formData.task_delay_points}
+                  onChange={handleChange}
+                  placeholder="e.g. -10"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="pt-4 flex items-center gap-4 border-t border-border mt-8">
