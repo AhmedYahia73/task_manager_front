@@ -15,7 +15,7 @@ export default function AttendanceReport({ userId }) {
   const [allReports, setAllReports] = useState([]);
   const loaderRef = useRef(null);
 
-  const endpoint = userId ? `/api/admin/users/${userId}/attendance-report` : `/api/user/attendance/report`;
+  const endpoint = userId ? `/api/admin/user/${userId}/attendance-report` : `/api/user/attendance/report`;
   const { data, loading } = useGet(`${endpoint}?from=${from}&to=${to}&page=${page}&limit=15`);
 
   useEffect(() => {
@@ -67,46 +67,46 @@ export default function AttendanceReport({ userId }) {
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
             <Card className="bg-blue-50 border-blue-200">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm text-blue-800">Total Delay (Hrs)</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold text-blue-900">{data?.summary?.totalDelay?.toFixed(2) || 0}</p>
-              </CardContent>
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-blue-800">Total Delay (Hrs)</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-blue-900">{data?.summary?.totalDelay?.toFixed(2) || 0}</p></CardContent>
             </Card>
-            <Card className="bg-green-50 border-green-200">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm text-green-800">Onsite Days</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold text-green-900">{data?.summary?.onsiteDays || 0}</p>
-              </CardContent>
+            <Card className="bg-emerald-50 border-emerald-200">
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-emerald-800">Onsite Days</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-emerald-900">{data?.summary?.onsiteDays || 0}</p></CardContent>
             </Card>
             <Card className="bg-purple-50 border-purple-200">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm text-purple-800">Online Days (Req)</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold text-purple-900">{data?.summary?.onlineWithRequest || 0}</p>
-              </CardContent>
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-purple-800">Online (w/ Permission)</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-purple-900">{data?.summary?.onlineWithRequest || 0}</p></CardContent>
             </Card>
-            <Card className="bg-orange-50 border-orange-200">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm text-orange-800">Unexcused Absences</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold text-orange-900">{data?.summary?.unexcusedAbsence || 0}</p>
-              </CardContent>
+            <Card className="bg-amber-50 border-amber-300">
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-amber-800">Online (No Permission)</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-amber-900">{data?.summary?.onlineWithoutRequest || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-rose-50 border-rose-300">
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-rose-800">Online (Rejected)</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-rose-900">{data?.summary?.onlineRejected || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-green-50 border-green-300">
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-green-800">Holiday (Approved)</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-green-900">{data?.summary?.holidayApproved || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-red-50 border-red-300">
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-red-800">Holiday (Rejected)</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-red-900">{data?.summary?.holidayRejected || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-slate-100 border-slate-300">
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-slate-700">Standard Holidays</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-slate-800">{data?.summary?.holidayStandard || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-orange-50 border-orange-400">
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-orange-900">Unexcused Absences</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-orange-900">{data?.summary?.unexcusedAbsence || 0}</p></CardContent>
             </Card>
             <Card className="bg-pink-50 border-pink-200">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm text-pink-800">Permission Hrs Taken</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold text-pink-900">{data?.summary?.totalPermissionHours || 0}</p>
-              </CardContent>
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-pink-800">Permission Hrs Taken</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-pink-900">{data?.summary?.totalPermissionHours || 0}</p></CardContent>
             </Card>
           </div>
 
