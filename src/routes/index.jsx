@@ -19,6 +19,7 @@ import OnlineRequests from '@/Pages/Admin/HRM/OnlineRequests';
 import Attendance from '@/Pages/Admin/HRM/Attendance';
 import HolidaysSystem from '@/Pages/Admin/HRM/HolidaysSystem';
 import Permissions from '@/Pages/Admin/HRM/Permissions';
+import MyHRM from '@/Pages/Admin/MyHRM';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -94,6 +95,7 @@ export const router = createBrowserRouter([
       { path: 'attendance', element: <Attendance /> },
       { path: 'holidays-system', element: <HolidaysSystem /> },
       { path: 'permissions', element: <Permissions /> },
+      { path: 'my-hrm', element: <MyHRM /> },
     ],
   },
 

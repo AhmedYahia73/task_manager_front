@@ -4,10 +4,6 @@ import { useGet } from '@/hooks/useGet';
 import { Loader2, Users, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { UserAttendance } from '@/components/UserAttendance';
-import AttendanceReport from '@/components/AttendanceReport';
-import UserRequestsModal from '@/components/UserRequestsModal';
-import { Button } from '@/components/ui/button';
 
 const CircularProgress = ({ value, total, colorClass, label }) => {
   const radius = 32;
@@ -56,7 +52,6 @@ const EngineerDashboard = () => {
   const [year, setYear] = useState(new Date().getFullYear());
   const { data: pointsData, loading: pointsLoading } = useGet(`/api/admin/dashboard/points-chart?year=${year}`);
   const navigate = useNavigate();
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   return (
     <div className="p-6 md:p-8 space-y-8 bg-gradient-to-br from-background to-muted/20 min-h-screen relative text-foreground">
@@ -69,13 +64,6 @@ const EngineerDashboard = () => {
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">Welcome back! Here's your task overview.</p>
         </div>
-        <Button 
-          onClick={() => setIsRequestModalOpen(true)}
-          className="bg-primary hover:bg-primary/90 text-white shadow-md flex items-center gap-2"
-        >
-          <span className="material-symbols-outlined text-[20px]">add_task</span>
-          New Request
-        </Button>
       </div>
 
       {loading ? (
@@ -84,8 +72,6 @@ const EngineerDashboard = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Attendance Section */}
-          <UserAttendance />
 
           {/* My Pending Tasks */}
           <div 
@@ -267,21 +253,9 @@ const EngineerDashboard = () => {
             </div>
           </div>
 
-          {/* User Attendance Report Section */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-3 group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 overflow-hidden transition-all duration-300 mt-2">
-            <h3 className="text-xl font-bold text-foreground font-['Plus_Jakarta_Sans'] flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-teal-500">calendar_month</span>
-              My Monthly Attendance Report
-            </h3>
-            <AttendanceReport userId={null} />
-          </div>
-
         </div>
       )}
 
-      {isRequestModalOpen && (
-        <UserRequestsModal onClose={() => setIsRequestModalOpen(false)} />
-      )}
     </div>
   );
 };

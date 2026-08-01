@@ -36,6 +36,7 @@ export const AdminSidebar = () => {
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: getRoleNamePlural('engineer') + ' & ' + getRoleNamePlural('tester'), path: '/admin/users', icon: 'group', adminOnly: true },
+          { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note' },
           { 
             name: 'HRM', 
             icon: 'manage_accounts', 

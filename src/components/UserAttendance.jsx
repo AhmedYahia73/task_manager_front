@@ -6,7 +6,7 @@ import { Loader2, MapPin, LogIn, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const UserAttendance = () => {
-  const { data, loading, refetch } = useGet('/api/user/attendance/status');
+  const { data, loading, refresh } = useGet('/api/user/attendance/status');
   const { mutate } = useMutation();
   const [checking, setChecking] = useState(false);
 
@@ -33,7 +33,7 @@ export const UserAttendance = () => {
 
         if (res?.success) {
           toast.success(res.message || `Successfully ${type === 'check-in' ? 'checked in' : 'checked out'}!`);
-          refetch();
+          refresh();
         }
         setChecking(false);
       },
