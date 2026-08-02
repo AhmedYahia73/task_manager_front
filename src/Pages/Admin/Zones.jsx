@@ -30,16 +30,16 @@ const Zones = () => {
   const openEditModal = (zone) => {
     setEditingId(zone.id);
     let parsedLocations = zone.locations;
-    if (typeof parsedLocations === 'string') {
+    while (typeof parsedLocations === 'string') {
       try {
         parsedLocations = JSON.parse(parsedLocations);
       } catch (e) {
-        parsedLocations = [];
+        break;
       }
     }
     setFormData({
       name: zone.name,
-      locations: parsedLocations || [],
+      locations: Array.isArray(parsedLocations) ? parsedLocations : [],
       status: zone.status
     });
     setIsModalOpen(true);
@@ -52,17 +52,18 @@ const Zones = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('SUBMIT formData:', JSON.stringify(formData));
     if (!formData.name) return toast.error('Name is required');
 
     if (editingId) {
-      const res = await mutate(`/api/admin/zones/${editingId}`, 'PUT', formData);
+      const res = await mutate({ url: `/api/admin/zones/${editingId}`, method: 'PUT', data: formData });
       if (res?.success) {
         toast.success(res.message || 'Zone updated successfully');
         refresh();
         closeModal();
       }
     } else {
-      const res = await mutate(`/api/admin/zones`, 'POST', formData);
+      const res = await mutate({ url: `/api/admin/zones`, method: 'POST', data: formData });
       if (res?.success) {
         toast.success(res.message || 'Zone created successfully');
         refresh();
@@ -73,7 +74,7 @@ const Zones = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this zone?')) return;
-    const res = await mutate(`/api/admin/zones/${id}`, 'DELETE');
+    const res = await mutate({ url: `/api/admin/zones/${id}`, method: 'DELETE' });
     if (res?.success) {
       toast.success(res.message || 'Zone deleted successfully');
       refresh();
@@ -123,8 +124,11 @@ const Zones = () => {
                 zonesList.map((zone) => {
                   let hasLocations = false;
                   try {
-                    const locs = typeof zone.locations === 'string' ? JSON.parse(zone.locations) : zone.locations;
-                    hasLocations = locs && locs.length >= 3;
+                    let locs = zone.locations;
+                    while (typeof locs === 'string') {
+                      locs = JSON.parse(locs);
+                    }
+                    hasLocations = Array.isArray(locs) && locs.length >= 3;
                   } catch (e) {}
                   return (
                   <tr key={zone.id} className="hover:bg-muted/30 transition-colors">
@@ -185,7 +189,7 @@ const Zones = () => {
                   <Input 
                     required 
                     value={formData.name} 
-                    onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} 
                     placeholder="e.g. Cairo Main Office"
                   />
                 </div>
@@ -194,7 +198,7 @@ const Zones = () => {
                   <label className="text-sm font-semibold">Perimeter (Map)</label>
                   <MapSelector 
                     locations={formData.locations}
-                    onChange={(newPoly) => setFormData({ ...formData, locations: newPoly })}
+                    onChange={(newPoly) => setFormData(prev => ({ ...prev, locations: newPoly }))}
                   />
                 </div>
 
@@ -203,7 +207,7 @@ const Zones = () => {
                     type="checkbox" 
                     id="status"
                     checked={formData.status} 
-                    onChange={e => setFormData({ ...formData, status: e.target.checked })} 
+                    onChange={e => setFormData(prev => ({ ...prev, status: e.target.checked }))} 
                     className="rounded border-input text-primary focus:ring-primary"
                   />
                   <label htmlFor="status" className="text-sm font-semibold cursor-pointer">Active</label>

@@ -36,7 +36,7 @@ export const AdminSidebar = () => {
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: getRoleNamePlural('engineer') + ' & ' + getRoleNamePlural('tester'), path: '/admin/users', icon: 'group', adminOnly: true },
-          { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note' },
+          { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true },
           { 
             name: 'HRM', 
             icon: 'manage_accounts', 
@@ -51,9 +51,14 @@ export const AdminSidebar = () => {
           },
           { name: 'Zones', path: '/admin/zones', icon: 'map', adminOnly: true },
           { name: 'Shifts', path: '/admin/shifts', icon: 'schedule', adminOnly: true },
+          { name: 'Salaries', path: '/admin/salaries', icon: 'payments', adminOnly: true },
           { name: 'Settings', path: '/admin/settings', icon: 'settings', adminOnly: true },
         ]
-        .filter(item => !item.adminOnly || userRole === 'admin')
+        .filter(item => {
+          if (item.adminOnly && userRole !== 'admin') return false;
+          if (item.notAdmin && userRole === 'admin') return false;
+          return true;
+        })
         .map((item) => {
           if (item.subItems) {
             return (

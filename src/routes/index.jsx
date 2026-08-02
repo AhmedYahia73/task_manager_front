@@ -22,6 +22,7 @@ import Permissions from '@/Pages/Admin/HRM/Permissions';
 import MyHRM from '@/Pages/Admin/MyHRM';
 import Zones from '@/Pages/Admin/Zones';
 import Shifts from '@/Pages/Admin/Shifts';
+import Salaries from '@/Pages/Admin/Salaries';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -40,7 +41,7 @@ const AdminRoute = ({ children }) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user?.role?.toLowerCase?.() || '';
-    if (role !== 'admin' && role !== 'tester' && role !== 'engineer') {
+    if (role !== 'admin' && role !== 'superadmin' && role !== 'tester' && role !== 'engineer') {
       return <Navigate to="/home" replace />;
     }
   } catch {
@@ -54,7 +55,7 @@ const SmartRedirect = () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const role = user?.role?.toLowerCase?.() || '';
-    if (role === 'admin' || role === 'tester' || role === 'engineer') {
+    if (role === 'admin' || role === 'superadmin' || role === 'tester' || role === 'engineer') {
       return <Navigate to="/admin/dashboard" replace />;
     }
   } catch { /* fallback to login */ }
@@ -93,6 +94,7 @@ export const router = createBrowserRouter([
       { path: 'users', element: <Users /> },
       { path: 'zones', element: <Zones /> },
       { path: 'shifts', element: <Shifts /> },
+      { path: 'salaries', element: <Salaries /> },
       { path: 'settings', element: <Settings /> },
       { path: 'holiday-requests', element: <HolidayRequests /> },
       { path: 'online-requests', element: <OnlineRequests /> },

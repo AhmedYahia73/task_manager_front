@@ -64,14 +64,14 @@ const Shifts = () => {
     if (!formData.from || !formData.to) return toast.error('Time range is required');
 
     if (editingId) {
-      const res = await mutate(`/api/admin/shifts/${editingId}`, 'PUT', formData);
+      const res = await mutate({ url: `/api/admin/shifts/${editingId}`, method: 'PUT', data: formData });
       if (res?.success) {
         toast.success(res.message || 'Shift updated successfully');
         refresh();
         closeModal();
       }
     } else {
-      const res = await mutate(`/api/admin/shifts`, 'POST', formData);
+      const res = await mutate({ url: `/api/admin/shifts`, method: 'POST', data: formData });
       if (res?.success) {
         toast.success(res.message || 'Shift created successfully');
         refresh();
@@ -82,7 +82,7 @@ const Shifts = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this shift?')) return;
-    const res = await mutate(`/api/admin/shifts/${id}`, 'DELETE');
+    const res = await mutate({ url: `/api/admin/shifts/${id}`, method: 'DELETE' });
     if (res?.success) {
       toast.success(res.message || 'Shift deleted successfully');
       refresh();

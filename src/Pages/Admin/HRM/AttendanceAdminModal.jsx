@@ -14,8 +14,6 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
     userId: '',
     from: '',
     to: '',
-    hours: '',
-    delay: '',
     onsite: false,
     isRequestOnline: false
   });
@@ -31,8 +29,6 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
         userId: initialData.user?.id || '',
         from: formatDatetime(initialData.from),
         to: formatDatetime(initialData.to),
-        hours: initialData.hours || '',
-        delay: initialData.delay || '',
         onsite: !!initialData.onsite,
         isRequestOnline: !!initialData.isRequestOnline
       });
@@ -41,8 +37,6 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
         userId: '',
         from: '',
         to: '',
-        hours: '',
-        delay: '',
         onsite: false,
         isRequestOnline: false
       });
@@ -60,8 +54,6 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
       userId: formData.userId,
       from: formData.from,
       to: formData.to || null,
-      hours: formData.hours ? Number(formData.hours) : 0,
-      delay: formData.delay ? Number(formData.delay) : 0,
       onsite: formData.onsite,
       isRequestOnline: formData.isRequestOnline
     };
@@ -119,17 +111,6 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-foreground">Check-out (To)</label>
               <Input type="datetime-local" value={formData.to} onChange={e => setFormData({ ...formData, to: e.target.value })} className="h-11" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-foreground">Total Hours</label>
-                <Input type="number" step="0.01" value={formData.hours} onChange={e => setFormData({ ...formData, hours: e.target.value })} className="h-11" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-foreground">Delay (Penalty)</label>
-                <Input type="number" step="0.01" value={formData.delay} onChange={e => setFormData({ ...formData, delay: e.target.value })} className="h-11" />
-              </div>
             </div>
 
             <div className="flex gap-4 pt-2">

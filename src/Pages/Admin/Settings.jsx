@@ -32,6 +32,14 @@ export const Settings = () => {
   // Update local state when data is fetched
   useEffect(() => {
     if (settingsData) {
+      setFormData({
+        user: settingsData.user || '',
+        leader: settingsData.leader || '',
+        admin: settingsData.admin || '',
+        task_approve_points: settingsData.task_approve_points || 0,
+        task_edit_points: settingsData.task_edit_points || 0,
+        task_delay_points: settingsData.task_delay_points || 0,
+        online_days: settingsData.online_days || [],
         delay_premission_minutes: settingsData.delay_premission_minutes || 0
       });
     }

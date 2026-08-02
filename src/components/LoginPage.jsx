@@ -18,7 +18,7 @@ export const LoginPage = () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const role = user?.role?.toLowerCase?.() || '';
-        if (role === 'admin' || role === 'tester' || role === 'engineer') {
+        if (role === 'admin' || role === 'superadmin' || role === 'tester' || role === 'engineer') {
           navigate('/admin/dashboard', { replace: true });
         } else {
           navigate('/home', { replace: true });
@@ -58,7 +58,7 @@ export const LoginPage = () => {
         localStorage.setItem('user', JSON.stringify(user));
         
         const userRole = user?.role?.toLowerCase?.() || '';
-        if (userRole === 'admin' || userRole === 'tester' || userRole === 'engineer') {
+        if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'tester' || userRole === 'engineer') {
           navigate('/admin/dashboard', { replace: true });
         } else {
           navigate('/home', { replace: true });
