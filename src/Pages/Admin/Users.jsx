@@ -28,6 +28,10 @@ const Users = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const { data: listsData } = useGet('/api/admin/user/lists');
+  const zonesList = listsData?.zones || [];
+  const shiftsList = listsData?.shifts || [];
+  
   const { data, loading, refresh } = useGet(`/api/admin/user?page=${page}&limit=10&search=${debouncedSearch}${roleFilter ? `&role=${roleFilter}` : ''}`);
   const { mutate, loading: mutationLoading } = useMutation();
 
@@ -49,6 +53,8 @@ const Users = () => {
     status: 'active',
     role: 'engineer',
     yearly_holidays: false,
+    zone_id: '',
+    shift_id: '',
     image: null,
   });
 
@@ -63,11 +69,13 @@ const Users = () => {
         status: userItem.status,
         role: userItem.role,
         yearly_holidays: userItem.yearly_holidays ?? false,
+        zone_id: userItem.zone_id || '',
+        shift_id: userItem.shift_id || '',
         image: userItem.image || null,
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', role: 'engineer', yearly_holidays: false, image: null });
+      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', role: 'engineer', yearly_holidays: false, zone_id: '', shift_id: '', image: null });
     }
     setIsModalOpen(true);
   };
@@ -373,6 +381,48 @@ const Users = () => {
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Zone</label>
+                  <select 
+                    name="zone_id" 
+                    value={formData.zone_id} 
+                    onChange={(e) => {
+                      setFormData({ ...formData, zone_id: e.target.value, shift_id: '' });
+                    }}
+                    required
+                    className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="" disabled>Select Zone</option>
+                    {zonesList.map(zone => (
+                      <option key={zone.id} value={zone.id}>{zone.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Shift</label>
+                  <select 
+                    name="shift_id" 
+                    value={formData.shift_id} 
+                    onChange={handleInputChange}
+                    required
+                    disabled={!formData.zone_id}
+                    className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="" disabled>Select Shift</option>
+                    {shiftsList.filter(s => s.zone_id === formData.zone_id).map(shift => {
+                      // Handle potential different formats of time from DB
+                      const fromTime = typeof shift.from === 'string' ? shift.from.substring(0,5) : (shift.from ? new Date(shift.from).toTimeString().substring(0,5) : '00:00');
+                      const toTime = typeof shift.to === 'string' ? shift.to.substring(0,5) : (shift.to ? new Date(shift.to).toTimeString().substring(0,5) : '00:00');
+                      return (
+                        <option key={shift.id} value={shift.id}>
+                          {shift.name} ({fromTime} - {toTime})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 

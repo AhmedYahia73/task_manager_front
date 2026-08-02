@@ -26,60 +26,13 @@ export const Settings = () => {
     task_edit_points: 0,
     task_delay_points: 0,
     online_days: [],
-    delay_premission_minutes: 0,
-    shifts: [{ from: '09:00', to: '17:00', hours: 8 }],
-    locations: []
+    delay_premission_minutes: 0
   });
 
   // Update local state when data is fetched
   useEffect(() => {
     if (settingsData) {
-      let parsedShifts = [];
-      
-      // 1. تحويل النص القادم من الـ API إلى مصفوفة فعلية
-      if (settingsData.shifts) {
-        try {
-          parsedShifts = typeof settingsData.shifts === 'string' 
-            ? JSON.parse(settingsData.shifts) 
-            : settingsData.shifts;
-        } catch (error) {
-          console.error("Error parsing shifts:", error);
-        }
-      }
-
-      // 2. معالجة المصفوفة لحساب الساعات وضبط صيغة الوقت (إزالة الثواني)
-      const formattedShifts = Array.isArray(parsedShifts) && parsedShifts.length > 0
-        ? parsedShifts.map(s => {
-            // أخذ أول 5 حروف فقط ليكون بصيغة "HH:mm" لتجنب مشاكل حقل الوقت
-            const fromTime = s.from ? s.from.substring(0, 5) : '09:00';
-            const toTime = s.to ? s.to.substring(0, 5) : '17:00';
-
-            let calculatedHours = s.hours;
-
-            if (calculatedHours === undefined) {
-              const [fromH, fromM] = fromTime.split(':').map(Number);
-              const [toH, toM] = toTime.split(':').map(Number);
-              let fromTotal = fromH + (fromM / 60);
-              let toTotal = toH + (toM / 60);
-              if (toTotal < fromTotal) toTotal += 24;
-              calculatedHours = parseFloat((toTotal - fromTotal).toFixed(2));
-            }
-
-            return { ...s, from: fromTime, to: toTime, hours: calculatedHours };
-          })
-        : [{ from: '09:00', to: '17:00', hours: 8 }];
-
-      setFormData({
-        user: settingsData.user || '',
-        leader: settingsData.leader || '',
-        admin: settingsData.admin || '',
-        task_approve_points: settingsData.task_approve_points || 0,
-        task_edit_points: settingsData.task_edit_points || 0,
-        task_delay_points: settingsData.task_delay_points || 0,
-        online_days: settingsData.online_days || [], // fallback empty array if null
-        delay_premission_minutes: settingsData.delay_premission_minutes || 0,
-        shifts: formattedShifts,
-        locations: settingsData.locations || []
+        delay_premission_minutes: settingsData.delay_premission_minutes || 0
       });
     }
   }, [data]);
@@ -102,38 +55,6 @@ export const Settings = () => {
     });
   };
 
-  const addShift = () => {
-    setFormData(prev => ({
-      ...prev,
-      shifts: [...prev.shifts, { from: '09:00', to: '17:00', hours: 8 }]
-    }));
-  };
-
-  const removeShift = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      shifts: prev.shifts.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleShiftChange = (index, field, value) => {
-    setFormData(prev => {
-      const newShifts = [...prev.shifts];
-      newShifts[index][field] = value;
-      
-      const { from, to } = newShifts[index];
-      if (from && to) {
-        const [fromH, fromM] = from.split(':').map(Number);
-        const [toH, toM] = to.split(':').map(Number);
-        let fromTotal = fromH + (fromM / 60);
-        let toTotal = toH + (toM / 60);
-        if (toTotal < fromTotal) toTotal += 24;
-        newShifts[index].hours = parseFloat((toTotal - fromTotal).toFixed(2));
-      }
-      
-      return { ...prev, shifts: newShifts };
-    });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -350,72 +271,7 @@ export const Settings = () => {
                   className="max-w-md bg-background border-border focus-visible:ring-primary"
                 />
               </div>
-
-              {/* Shifts */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  Work Shifts
-                </label>
-                <div className="space-y-3 max-w-2xl">
-                  {formData.shifts?.map((shift, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="flex-1 flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground w-10">From</span>
-                        <Input
-                          type="time"
-                          value={shift.from}
-                          onChange={(e) => handleShiftChange(idx, 'from', e.target.value)}
-                          className="bg-background"
-                        />
-                      </div>
-                      <div className="flex-1 flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground w-6">To</span>
-                        <Input
-                          type="time"
-                          value={shift.to}
-                          onChange={(e) => handleShiftChange(idx, 'to', e.target.value)}
-                          className="bg-background"
-                        />
-                      </div>
-                      <div className="flex items-center justify-end w-16">
-                        <span className="text-sm font-semibold text-primary">{shift.hours} hrs</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeShift(idx)}
-                        disabled={formData.shifts.length === 1}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addShift}
-                    className="flex items-center gap-2 text-sm"
-                  >
-                    <Plus className="w-4 h-4" /> Add Another Shift
-                  </Button>
-                </div>
-              </div>
-
             </div>
-          </div>
-
-          <div className="pt-4 border-t border-border mt-8">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-              <MapIcon className="w-5 h-5 text-primary" />
-              Allowed Locations (Geofencing)
-            </h2>
-            <MapSelector
-              locations={formData.locations || []}
-              onChange={(newLocations) => setFormData(prev => ({ ...prev, locations: newLocations }))}
-            />
           </div>
 
           <div className="pt-4 flex items-center gap-4 border-t border-border mt-8">

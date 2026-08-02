@@ -68,7 +68,7 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
 
-  if (user?.role === 'engineer') {
+  if (user?.role === 'engineer' || user?.role === 'tester') {
     return <EngineerDashboard />;
   }
 

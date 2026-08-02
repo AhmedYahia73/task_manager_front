@@ -20,6 +20,8 @@ import Attendance from '@/Pages/Admin/HRM/Attendance';
 import HolidaysSystem from '@/Pages/Admin/HRM/HolidaysSystem';
 import Permissions from '@/Pages/Admin/HRM/Permissions';
 import MyHRM from '@/Pages/Admin/MyHRM';
+import Zones from '@/Pages/Admin/Zones';
+import Shifts from '@/Pages/Admin/Shifts';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -89,6 +91,8 @@ export const router = createBrowserRouter([
       { path: 'tasks/:type', element: <FilteredTasks /> },
       { path: 'admins', element: <Admins /> },
       { path: 'users', element: <Users /> },
+      { path: 'zones', element: <Zones /> },
+      { path: 'shifts', element: <Shifts /> },
       { path: 'settings', element: <Settings /> },
       { path: 'holiday-requests', element: <HolidayRequests /> },
       { path: 'online-requests', element: <OnlineRequests /> },

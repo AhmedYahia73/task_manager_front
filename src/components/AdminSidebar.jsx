@@ -49,6 +49,8 @@ export const AdminSidebar = () => {
               { name: 'Permissions', path: '/admin/permissions', icon: 'verified_user' },
             ]
           },
+          { name: 'Zones', path: '/admin/zones', icon: 'map', adminOnly: true },
+          { name: 'Shifts', path: '/admin/shifts', icon: 'schedule', adminOnly: true },
           { name: 'Settings', path: '/admin/settings', icon: 'settings', adminOnly: true },
         ]
         .filter(item => !item.adminOnly || userRole === 'admin')

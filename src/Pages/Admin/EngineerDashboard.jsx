@@ -148,7 +148,7 @@ const EngineerDashboard = () => {
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Team Members</h3>
                 <div className="flex items-baseline gap-2 mt-1">
                   <p className="text-3xl font-black font-['Plus_Jakarta_Sans'] text-foreground">{data?.engineers_count ?? 0}</p>
-                  <span className="text-muted-foreground text-sm font-medium capitalize">{getRoleNamePlural('engineer')} in system</span>
+                  <span className="text-muted-foreground text-sm font-medium capitalize">{getRoleNamePlural('engineer')} & {getRoleNamePlural('tester')} in system</span>
                 </div>
               </div>
           </div>

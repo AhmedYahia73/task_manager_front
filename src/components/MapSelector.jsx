@@ -22,13 +22,18 @@ export const MapSelector = ({ locations = [], onChange }) => {
   // Default center (Cairo, Egypt) if no locations exist
   const defaultCenter = [30.0444, 31.2357];
   
+  // Calculate center of existing polygon if it exists
+  const center = locations && locations.length > 0 
+    ? locations[0] 
+    : defaultCenter;
+
   const handleAddPoint = (point) => {
     setCurrentPolygon((prev) => [...prev, point]);
   };
 
   const finishDrawing = () => {
     if (currentPolygon.length >= 3) {
-      onChange([...(locations || []), currentPolygon]);
+      onChange(currentPolygon);
     }
     setCurrentPolygon([]);
     setIsDrawing(false);
@@ -39,10 +44,8 @@ export const MapSelector = ({ locations = [], onChange }) => {
     setIsDrawing(false);
   };
 
-  const removeLocation = (index) => {
-    const newLocations = [...(locations || [])];
-    newLocations.splice(index, 1);
-    onChange(newLocations);
+  const removeLocation = () => {
+    onChange([]);
   };
 
   return (
@@ -52,11 +55,14 @@ export const MapSelector = ({ locations = [], onChange }) => {
           <Button 
             type="button" 
             variant="outline" 
-            onClick={() => setIsDrawing(true)}
+            onClick={() => {
+              setCurrentPolygon([]);
+              setIsDrawing(true);
+            }}
             className="flex items-center gap-2 border-primary text-primary hover:bg-primary/10"
           >
             <MapPin className="w-4 h-4" />
-            Add New Location Perimeter
+            {locations && locations.length > 0 ? 'Draw New Perimeter (Overwrites current)' : 'Add Perimeter'}
           </Button>
         ) : (
           <div className="flex items-center gap-2">
@@ -87,17 +93,17 @@ export const MapSelector = ({ locations = [], onChange }) => {
       </div>
 
       <div className="border border-border rounded-lg overflow-hidden h-[400px] w-full relative z-0">
-        <MapContainer center={defaultCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+        <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <LocationClicker isDrawing={isDrawing} onAddPoint={handleAddPoint} />
           
-          {/* Render existing locations */}
-          {(locations || []).map((poly, idx) => (
-            <Polygon key={idx} positions={poly} color="blue" />
-          ))}
+          {/* Render existing single polygon if not drawing a new one */}
+          {(!isDrawing && locations && locations.length >= 3) && (
+            <Polygon positions={locations} color="blue" />
+          )}
 
           {/* Render currently drawing polygon */}
           {currentPolygon.length > 0 && (
@@ -106,25 +112,21 @@ export const MapSelector = ({ locations = [], onChange }) => {
         </MapContainer>
       </div>
 
-      {/* List of saved locations */}
-      {(locations || []).length > 0 && (
+      {/* Info of saved location */}
+      {(!isDrawing && locations && locations.length >= 3) && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium">Saved Perimeters</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {(locations || []).map((poly, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2 border border-border rounded-md bg-muted/30">
-                <span className="text-sm">Location #{idx + 1} ({poly.length} points)</span>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => removeLocation(idx)}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
+          <h3 className="text-sm font-medium">Saved Perimeter</h3>
+          <div className="flex items-center justify-between p-2 border border-border rounded-md bg-muted/30">
+            <span className="text-sm">Polygon ({locations.length} points)</span>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={removeLocation}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       )}
