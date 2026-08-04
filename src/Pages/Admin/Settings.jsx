@@ -26,7 +26,8 @@ export const Settings = () => {
     task_edit_points: 0,
     task_delay_points: 0,
     online_days: [],
-    delay_premission_minutes: 0
+    delay_premission_minutes: 0,
+    yearly_holidays: 0
   });
 
   // Update local state when data is fetched
@@ -40,7 +41,8 @@ export const Settings = () => {
         task_edit_points: settingsData.task_edit_points || 0,
         task_delay_points: settingsData.task_delay_points || 0,
         online_days: settingsData.online_days || [],
-        delay_premission_minutes: settingsData.delay_premission_minutes || 0
+        delay_premission_minutes: settingsData.delay_premission_minutes || 0,
+        yearly_holidays: settingsData.yearly_holidays || 0
       });
     }
   }, [data]);
@@ -276,6 +278,23 @@ export const Settings = () => {
                   value={formData.delay_premission_minutes}
                   onChange={handleChange}
                   placeholder="e.g. 15"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+
+              {/* Yearly Holidays */}
+              <div className="space-y-2">
+                <label htmlFor="yearly_holidays" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                  Yearly Holidays Balance
+                </label>
+                <Input
+                  id="yearly_holidays"
+                  name="yearly_holidays"
+                  type="number"
+                  value={formData.yearly_holidays}
+                  onChange={handleChange}
+                  placeholder="e.g. 21"
                   className="max-w-md bg-background border-border focus-visible:ring-primary"
                 />
               </div>

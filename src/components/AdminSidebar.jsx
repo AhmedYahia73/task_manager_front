@@ -45,8 +45,11 @@ export const AdminSidebar = () => {
               { name: 'Holiday Requests', path: '/admin/holiday-requests', icon: 'beach_access' },
               { name: 'Online Requests', path: '/admin/online-requests', icon: 'home_work' },
               { name: 'Attendance', path: '/admin/attendance', icon: 'how_to_reg' },
+              { name: 'Payroll', path: '/admin/payroll', icon: 'account_balance_wallet' },
               { name: 'Holidays System', path: '/admin/holidays-system', icon: 'event_available' },
               { name: 'Permissions', path: '/admin/permissions', icon: 'verified_user' },
+              { name: 'Bonuses', path: '/admin/bonuses', icon: 'payments' },
+              { name: 'Deductions', path: '/admin/deductions', icon: 'money_off' },
             ]
           },
           { name: 'Zones', path: '/admin/zones', icon: 'map', adminOnly: true },

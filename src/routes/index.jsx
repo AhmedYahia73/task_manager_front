@@ -23,7 +23,9 @@ import MyHRM from '@/Pages/Admin/MyHRM';
 import Zones from '@/Pages/Admin/Zones';
 import Shifts from '@/Pages/Admin/Shifts';
 import Salaries from '@/Pages/Admin/Salaries';
-
+import Payroll from '@/Pages/Admin/HRM/Payroll';
+import Bonuses from '@/Pages/Admin/HRM/Bonuses';
+import Deductions from '@/Pages/Admin/HRM/Deductions';
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {
@@ -95,6 +97,9 @@ export const router = createBrowserRouter([
       { path: 'zones', element: <Zones /> },
       { path: 'shifts', element: <Shifts /> },
       { path: 'salaries', element: <Salaries /> },
+      { path: 'payroll', element: <Payroll /> },
+      { path: 'bonuses', element: <Bonuses /> },
+      { path: 'deductions', element: <Deductions /> },
       { path: 'settings', element: <Settings /> },
       { path: 'holiday-requests', element: <HolidayRequests /> },
       { path: 'online-requests', element: <OnlineRequests /> },

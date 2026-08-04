@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGet } from '@/hooks/useGet';
-import { Loader2, Calendar, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, Calendar, Clock, CheckCircle, AlertTriangle, Gift, FileMinus, Palmtree } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { motion } from 'framer-motion';
 
 export default function AttendanceReport({ userId }) {
   const today = new Date();
@@ -61,6 +62,107 @@ export default function AttendanceReport({ userId }) {
           <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border rounded p-2 text-sm" />
         </div>
       </div>
+
+      {/* Premium Highlight Cards */}
+      {!loading && data && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Yearly Holidays Card */}
+          {data.yearlyHolidaysSummary?.isActive && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 p-6 text-white shadow-xl shadow-blue-900/20"
+            >
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+              <div className="relative z-10 flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">الإجازات السنوية</h3>
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                  <Palmtree className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div className="relative z-10 grid grid-cols-3 gap-4 text-center divide-x divide-white/20">
+                <div>
+                  <p className="text-sm text-blue-100 mb-1">المتبقي</p>
+                  <p className="text-2xl font-black">{data.yearlyHolidaysSummary.remaining}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-blue-100 mb-1">المستهلك</p>
+                  <p className="text-2xl font-black">{data.yearlyHolidaysSummary.used}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-blue-100 mb-1">الرصيد الكلي</p>
+                  <p className="text-2xl font-black">{data.yearlyHolidaysSummary.totalAllowed}</p>
+                </div>
+              </div>
+              {data.yearlyHolidaysSummary.exceeded > 0 && (
+                <div className="relative z-10 mt-4 bg-red-500/20 text-red-100 text-sm py-2 px-3 rounded-lg border border-red-500/30 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  تجاوزت رصيد الإجازات بمقدار {data.yearlyHolidaysSummary.exceeded} أيام (محسوبة كغياب)
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Bonuses Card */}
+          {data.financials?.bonuses && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 p-6 text-white shadow-xl shadow-teal-900/20"
+            >
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+              <div className="relative z-10 flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">المكافآت</h3>
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                  <Gift className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div className="relative z-10 grid grid-cols-2 gap-4 divide-x divide-white/20 text-center">
+                <div>
+                  <p className="text-sm text-emerald-100 mb-1">مبلغ ثابت</p>
+                  <p className="text-2xl font-black">
+                    ${data.financials.bonuses.filter(b => b.type === 'amount').reduce((acc, curr) => acc + Number(curr.amount), 0).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-emerald-100 mb-1">أجر أيام</p>
+                  <p className="text-2xl font-black">
+                    {data.financials.bonuses.filter(b => b.type === 'days').reduce((acc, curr) => acc + Number(curr.amount), 0)} يوم
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Deductions Card */}
+          {data.financials?.deductions && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 to-red-700 p-6 text-white shadow-xl shadow-red-900/20"
+            >
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+              <div className="relative z-10 flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">الخصومات</h3>
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                  <FileMinus className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div className="relative z-10 grid grid-cols-2 gap-4 divide-x divide-white/20 text-center">
+                <div>
+                  <p className="text-sm text-rose-100 mb-1">مبلغ ثابت</p>
+                  <p className="text-2xl font-black">
+                    ${data.financials.deductions.filter(d => d.type === 'amount').reduce((acc, curr) => acc + Number(curr.amount), 0).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-rose-100 mb-1">خصم أيام</p>
+                  <p className="text-2xl font-black">
+                    {data.financials.deductions.filter(d => d.type === 'days').reduce((acc, curr) => acc + Number(curr.amount), 0)} يوم
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      )}
 
       {loading && page === 1 ? (
         <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
