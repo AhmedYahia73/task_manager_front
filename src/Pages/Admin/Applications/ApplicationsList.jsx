@@ -3,7 +3,7 @@ import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Star, Eye, Download, FileText, Phone, X } from 'lucide-react';
+import { Loader2, Star, Eye, Download, FileText, Phone, X, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ApplicationsList = () => {
@@ -22,7 +22,7 @@ const ApplicationsList = () => {
   );
 
   const handleToggleFavourite = async (app) => {
-    const res = await mutate(`/api/admin/applications/${app.id}/favourite`, 'PATCH', { favourite: !app.favourite });
+    const res = await mutate({ url: `/api/admin/applications/${app.id}/favourite`, method: 'PATCH', data: { favourite: !app.favourite }, showToast: false });
     if (res.success) {
       toast.success(res.message || 'Favourite status updated');
       refresh();
@@ -31,29 +31,49 @@ const ApplicationsList = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this application? This action will also delete the CV file and cannot be undone.')) return;
+    const res = await mutate({ url: `/api/admin/applications/${id}`, method: 'DELETE' });
+    if (res.success) {
+      toast.success(res.message || 'Application deleted successfully');
+      refresh();
+      if (selectedApp === id) setSelectedApp(null);
+    } else {
+      toast.error(res.message || 'An error occurred');
+    }
+  };
+
   return (
     <div className="p-6 max-w-[1600px] mx-auto w-full">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Applications</h1>
           <p className="text-muted-foreground mt-1 text-sm">Review and manage candidate applications</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 w-full md:w-auto">
           <Input 
             placeholder="Search by name..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full md:w-64"
           />
-          <Button 
-            variant={filterFavourite ? 'default' : 'outline'} 
-            onClick={() => setFilterFavourite(!filterFavourite)}
-            className="flex items-center gap-2"
-          >
-            <Star size={16} className={filterFavourite ? 'fill-current' : ''} />
-            <span>Favourites</span>
-          </Button>
         </div>
+      </div>
+
+      <div className="flex border-b border-border mb-6">
+        <button
+          onClick={() => { setFilterFavourite(false); setPage(1); }}
+          className={`pb-3 px-6 text-sm font-medium transition-colors ${!filterFavourite ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          All Applications
+        </button>
+        <button
+          onClick={() => { setFilterFavourite(true); setPage(1); }}
+          className={`pb-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 ${filterFavourite ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          <Star size={14} className={filterFavourite ? 'fill-current' : ''} />
+          Favourites
+        </button>
       </div>
 
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
@@ -122,7 +142,7 @@ const ApplicationsList = () => {
                             asChild
                             className="text-primary hover:text-primary hover:bg-primary/10"
                           >
-                            <a href={app.upload_cv} target="_blank" rel="noopener noreferrer">
+                            <a href={app.upload_cv?.startsWith('http') ? app.upload_cv : `${import.meta.env.VITE_API_BASE_URL || ''}${app.upload_cv}`} target="_blank" rel="noopener noreferrer">
                               <FileText size={16} />
                             </a>
                           </Button>
@@ -134,6 +154,15 @@ const ApplicationsList = () => {
                             className="text-foreground hover:bg-muted"
                           >
                             <Eye size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Delete"
+                            onClick={() => handleDelete(app.id)}
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 size={16} />
                           </Button>
                         </div>
                       </td>
@@ -245,9 +274,9 @@ const ApplicationsList = () => {
                 )}
 
                 <div className="border-t border-border pt-4 flex gap-3">
-                  <Button asChild className="flex-1 flex items-center gap-2 justify-center">
-                    <a href={detailsData.application.upload_cv} target="_blank" rel="noopener noreferrer">
-                      <FileText size={16} /> Open CV
+                  <Button asChild className="w-full sm:w-auto min-w-[140px]">
+                    <a href={detailsData.application.upload_cv?.startsWith('http') ? detailsData.application.upload_cv : `${import.meta.env.VITE_API_BASE_URL || ''}${detailsData.application.upload_cv}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                      <FileText size={16} className="shrink-0" /> <span className="whitespace-nowrap">Open CV</span>
                     </a>
                   </Button>
                   {detailsData.application.link && (

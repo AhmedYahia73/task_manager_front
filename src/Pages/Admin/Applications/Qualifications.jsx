@@ -43,10 +43,10 @@ const Qualifications = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const endpoint = editingId ? `/api/admin/qualifications/${editingId}` : '/api/admin/qualifications';
+    const url = editingId ? `/api/admin/qualifications/${editingId}` : '/api/admin/qualifications';
     const method = editingId ? 'PUT' : 'POST';
 
-    const res = await mutate(endpoint, method, formData);
+    const res = await mutate({ url, method, data: formData });
     if (res.success) {
       toast.success(res.message || (editingId ? 'Qualification updated successfully' : 'Qualification added successfully'));
       closeModal();
@@ -58,7 +58,7 @@ const Qualifications = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this qualification?')) return;
-    const res = await mutate(`/api/admin/qualifications/${id}`, 'DELETE');
+    const res = await mutate({ url: `/api/admin/qualifications/${id}`, method: 'DELETE' });
     if (res.success) {
       toast.success(res.message || 'Qualification deleted successfully');
       refresh();
@@ -68,7 +68,7 @@ const Qualifications = () => {
   };
 
   const handleToggleStatus = async (qualification) => {
-    const res = await mutate(`/api/admin/qualifications/${qualification.id}`, 'PUT', { status: !qualification.status });
+    const res = await mutate({ url: `/api/admin/qualifications/${qualification.id}`, method: 'PUT', data: { status: !qualification.status }, showToast: false });
     if (res.success) {
       toast.success('Status updated');
       refresh();

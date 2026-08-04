@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useGet } from '@/hooks/useGet';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { apiClient } from '@/lib/axios';
 
 const Apply = () => {
   const navigate = useNavigate();
@@ -63,29 +64,20 @@ const Apply = () => {
       });
       data.append('upload_cv', file);
 
-      // We use fetch directly here because useMutation usually expects JSON
-      const token = localStorage.getItem('token'); // In case we need it, though this is public
-      const headers = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
-      const response = await fetch(`${baseUrl}/api/public/careers/apply`, {
-        method: 'POST',
-        headers,
-        body: data,
+      const response = await apiClient.post('/api/public/careers/apply', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
+      if (response.data?.success || response.status === 201) {
         toast.success('Application submitted successfully!');
         navigate('/careers');
       } else {
-        toast.error(result.message || 'Error submitting application');
+        toast.error(response.data?.message || 'Error submitting application');
       }
     } catch (error) {
-      toast.error('Network error occurred');
+      toast.error(error.response?.data?.error?.message || error.response?.data?.message || 'Network error occurred');
     } finally {
       setLoading(false);
     }

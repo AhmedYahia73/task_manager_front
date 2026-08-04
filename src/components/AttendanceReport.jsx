@@ -67,7 +67,7 @@ export default function AttendanceReport({ userId }) {
       {!loading && data && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Yearly Holidays Card */}
-          {data.yearlyHolidaysSummary?.isActive && (
+          {data.yearlyHolidaysSummary && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 p-6 text-white shadow-xl shadow-blue-900/20"

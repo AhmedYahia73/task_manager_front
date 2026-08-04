@@ -43,10 +43,10 @@ const Jobs = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const endpoint = editingId ? `/api/admin/jobs/${editingId}` : '/api/admin/jobs';
+    const url = editingId ? `/api/admin/jobs/${editingId}` : '/api/admin/jobs';
     const method = editingId ? 'PUT' : 'POST';
 
-    const res = await mutate(endpoint, method, formData);
+    const res = await mutate({ url, method, data: formData });
     if (res.success) {
       toast.success(res.message || (editingId ? 'Job updated successfully' : 'Job added successfully'));
       closeModal();
@@ -58,7 +58,7 @@ const Jobs = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this job?')) return;
-    const res = await mutate(`/api/admin/jobs/${id}`, 'DELETE');
+    const res = await mutate({ url: `/api/admin/jobs/${id}`, method: 'DELETE' });
     if (res.success) {
       toast.success(res.message || 'Job deleted successfully');
       refresh();
@@ -68,7 +68,7 @@ const Jobs = () => {
   };
 
   const handleToggleStatus = async (job) => {
-    const res = await mutate(`/api/admin/jobs/${job.id}`, 'PUT', { status: !job.status });
+    const res = await mutate({ url: `/api/admin/jobs/${job.id}`, method: 'PUT', data: { status: !job.status }, showToast: false });
     if (res.success) {
       toast.success('Status updated');
       refresh();

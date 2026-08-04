@@ -43,10 +43,10 @@ const Cities = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const endpoint = editingId ? `/api/admin/cities/${editingId}` : '/api/admin/cities';
+    const url = editingId ? `/api/admin/cities/${editingId}` : '/api/admin/cities';
     const method = editingId ? 'PUT' : 'POST';
 
-    const res = await mutate(endpoint, method, formData);
+    const res = await mutate({ url, method, data: formData });
     if (res.success) {
       toast.success(res.message || (editingId ? 'City updated successfully' : 'City added successfully'));
       closeModal();
@@ -58,7 +58,7 @@ const Cities = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this city?')) return;
-    const res = await mutate(`/api/admin/cities/${id}`, 'DELETE');
+    const res = await mutate({ url: `/api/admin/cities/${id}`, method: 'DELETE' });
     if (res.success) {
       toast.success(res.message || 'City deleted successfully');
       refresh();
@@ -68,7 +68,7 @@ const Cities = () => {
   };
 
   const handleToggleStatus = async (city) => {
-    const res = await mutate(`/api/admin/cities/${city.id}`, 'PUT', { status: !city.status });
+    const res = await mutate({ url: `/api/admin/cities/${city.id}`, method: 'PUT', data: { status: !city.status }, showToast: false });
     if (res.success) {
       toast.success('Status updated');
       refresh();
