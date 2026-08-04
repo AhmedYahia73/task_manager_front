@@ -19,6 +19,7 @@ const FilteredTasks = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [projectId, setProjectId] = useState('');
   
   // Debounce search
   useEffect(() => {
@@ -33,9 +34,13 @@ const FilteredTasks = () => {
   const pageTitle = type === 'pending' ? 'Pending Tasks' : 'Delayed Tasks';
 
   // Fetch Tasks Data
-  const { data: tasksData, loading: tasksLoading } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}`);
+  const { data: tasksData, loading: tasksLoading } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}&project_id=${projectId}`);
   const tasks = tasksData?.tasks || [];
   const pagination = tasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
+
+  // Fetch Projects List
+  const { data: listsData } = useGet('/api/admin/tasks/lists');
+  const projectsList = listsData?.projects_list || [];
 
   const getStatusStyles = (status) => {
     switch(status) {
@@ -160,8 +165,20 @@ const FilteredTasks = () => {
           <h1 className="font-plus-jakarta text-4xl font-bold tracking-tight text-primary">{pageTitle}</h1>
           <p className="mt-2 text-muted-foreground">View all {pageTitle.toLowerCase()} across all projects.</p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-48">
+            <select
+              value={projectId}
+              onChange={(e) => { setProjectId(e.target.value); setPage(1); }}
+              className="w-full h-11 px-3 border border-border focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none bg-card rounded-xl shadow-sm text-sm font-medium text-foreground cursor-pointer"
+            >
+              <option value="">All Projects</option>
+              {projectsList.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input 
               value={search}
@@ -284,10 +301,15 @@ const FilteredTasks = () => {
                               <option value="pending" className="bg-card text-foreground">Pending</option>
                               <option value="inprogress" className="bg-card text-foreground">In Progress</option>
                               <option value="done" className="bg-card text-foreground">Done</option>
-                              {(task.status === 'edit' || userRole !== 'engineer') && (
-                                <option value="edit" className="bg-card text-foreground">Needs Revision</option>
+                              {userRole === 'engineer' && task.status === 'edit' && (
+                                <option value="edit" disabled hidden className="bg-card text-foreground">Needs Revision</option>
                               )}
-                              {userRole !== 'engineer' && <option value="approve" className="bg-card text-foreground">Approve</option>}
+                              {userRole !== 'engineer' && (
+                                <>
+                                  <option value="edit" className="bg-card text-foreground">Needs Revision</option>
+                                  <option value="approve" className="bg-card text-foreground">Approve</option>
+                                </>
+                              )}
                             </>
                           )}
                         </select>

@@ -87,65 +87,46 @@ const Dashboard = () => {
         </div>
       ) : (
         /* Stats Overview */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           
           {/* Pending Tasks */}
           <div 
             onClick={() => navigate('/admin/tasks/pending')}
-            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-[#684000] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
+            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-[#684000] flex flex-col justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
           >
-            <div className="bg-muted p-3 rounded-lg text-[#684000]">
-              <span className="material-symbols-outlined text-3xl">assignment_late</span>
+            <div className="flex items-start gap-4">
+              <div className="bg-muted p-3 rounded-lg text-[#684000]">
+                <span className="material-symbols-outlined text-3xl">assignment_late</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Tasks</h3>
+                <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.pending_tasks ?? 0}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Tasks</h3>
-              <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.pending_tasks ?? 0}</p>
+            <div className="flex justify-center items-end pt-3 border-t border-border mt-auto">
+              <CircularProgress 
+                value={data?.done_tasks ?? 0} 
+                total={data?.pending_tasks ?? 0} 
+                colorClass="stroke-blue-500" 
+                label="Done / Pending" 
+              />
             </div>
           </div>
 
           {/* Active Projects */}
           <div 
             onClick={() => navigate('/admin/projects')}
-            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-var(--primary) flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
+            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-var(--primary) flex flex-col justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
           >
-            <div className="bg-muted p-3 rounded-lg text-primary">
-              <span className="material-symbols-outlined text-3xl">rocket_launch</span>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Projects</h3>
-              <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.all_projects ?? 0}</p>
-            </div>
-          </div>
-
-          {/* Delay Tasks */}
-          <div 
-            onClick={() => navigate('/admin/tasks/delay')}
-            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-[#ba1a1a] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
-          >
-            <div className="bg-[#fef2f2] p-3 rounded-lg text-[#ba1a1a]">
-              <span className="material-symbols-outlined text-3xl">alarm</span>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Delay Tasks</h3>
-              <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.delay_tasks ?? 0}</p>
-            </div>
-          </div>
-
-          {/* Engineers & Progress */}
-          <div 
-            onClick={() => navigate('/admin/users?role=engineer')}
-            className="bg-card p-6 rounded-xl shadow-sm border border-border flex flex-col justify-between hover:shadow-md transition-shadow cursor-pointer"
-          >
-            <div className="flex items-start gap-4 mb-4">
+            <div className="flex items-start gap-4">
               <div className="bg-muted p-3 rounded-lg text-primary">
-                <Users className="w-8 h-8" />
+                <span className="material-symbols-outlined text-3xl">rocket_launch</span>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground capitalize">{getRoleNamePlural('engineer')}</h3>
-                <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.engineers_count ?? 0}</p>
+                <h3 className="text-sm font-medium text-muted-foreground">Projects</h3>
+                <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.all_projects ?? 0}</p>
               </div>
             </div>
-            
             <div className="flex justify-around items-end pt-3 border-t border-border mt-auto">
               <CircularProgress 
                 value={data?.done_tasks ?? 0} 
@@ -159,6 +140,76 @@ const Dashboard = () => {
                 colorClass="stroke-[#006c49]" 
                 label="Approved" 
               />
+            </div>
+          </div>
+
+          {/* Delay Tasks */}
+          <div 
+            onClick={() => navigate('/admin/tasks/delay')}
+            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-[#ba1a1a] flex flex-col justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="bg-[#fef2f2] p-3 rounded-lg text-[#ba1a1a]">
+                <span className="material-symbols-outlined text-3xl">alarm</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Delay Tasks</h3>
+                <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.delay_tasks ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex justify-center items-end pt-3 border-t border-border mt-auto">
+              <CircularProgress 
+                value={data?.done_tasks ?? 0} 
+                total={data?.delay_tasks ?? 0} 
+                colorClass="stroke-orange-500" 
+                label="Done / Delay" 
+              />
+            </div>
+          </div>
+
+          {/* Total Tasks */}
+          <div 
+            onClick={() => navigate('/admin/tasks')}
+            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-purple-600 flex flex-col justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="bg-purple-100 p-3 rounded-lg text-purple-600">
+                <span className="material-symbols-outlined text-3xl">task</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Total Tasks</h3>
+                <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.total_tasks ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex justify-around items-end pt-3 border-t border-border mt-auto">
+              <CircularProgress 
+                value={data?.done_tasks ?? 0} 
+                total={data?.total_tasks ?? 0} 
+                colorClass="stroke-red-500" 
+                label="Done" 
+              />
+              <CircularProgress 
+                value={data?.approve_tasks ?? 0} 
+                total={data?.total_tasks ?? 0} 
+                colorClass="stroke-[#006c49]" 
+                label="Approved" 
+              />
+            </div>
+          </div>
+
+          {/* Engineers */}
+          <div 
+            onClick={() => navigate('/admin/users?role=engineer')}
+            className="bg-card p-6 rounded-xl shadow-sm border border-border flex flex-col justify-center gap-4 hover:shadow-md transition-shadow cursor-pointer"
+          >
+            <div className="flex items-start gap-4">
+              <div className="bg-muted p-3 rounded-lg text-primary">
+                <Users className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground capitalize">{getRoleNamePlural('engineer')}</h3>
+                <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.engineers_count ?? 0}</p>
+              </div>
             </div>
           </div>
 

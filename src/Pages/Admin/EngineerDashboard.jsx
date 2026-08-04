@@ -79,7 +79,7 @@ const EngineerDashboard = () => {
             className="group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col justify-between overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
-            <div className="relative z-10 flex items-start gap-4 mb-6">
+            <div className="relative z-10 flex items-start gap-4 mb-2">
               <div className="bg-gradient-to-br from-amber-100 to-amber-200 p-3.5 rounded-xl text-amber-700 shadow-inner">
                 <Clock className="w-8 h-8" />
               </div>
@@ -88,7 +88,17 @@ const EngineerDashboard = () => {
                 <p className="text-4xl font-black font-['Plus_Jakarta_Sans'] mt-1 text-foreground">{data?.pending_tasks ?? 0}</p>
               </div>
             </div>
-            <div className="relative z-10 bg-amber-500/10 text-amber-700 text-sm py-2 px-4 rounded-lg font-medium flex items-center justify-between">
+            
+            <div className="relative z-10 flex justify-center py-2 border-t border-border/30 mt-auto">
+              <CircularProgress 
+                value={data?.done_tasks ?? 0} 
+                total={data?.pending_tasks ?? 0} 
+                colorClass="stroke-amber-500" 
+                label="Done / Pending" 
+              />
+            </div>
+
+            <div className="relative z-10 bg-amber-500/10 text-amber-700 text-sm py-2 px-4 rounded-lg font-medium flex items-center justify-between mt-4">
               View Tasks <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </div>
           </div>
@@ -99,7 +109,7 @@ const EngineerDashboard = () => {
             className="group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col justify-between overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
-            <div className="relative z-10 flex items-start gap-4 mb-6">
+            <div className="relative z-10 flex items-start gap-4 mb-2">
               <div className="bg-gradient-to-br from-red-100 to-red-200 p-3.5 rounded-xl text-red-700 shadow-inner">
                 <AlertCircle className="w-8 h-8" />
               </div>
@@ -108,7 +118,17 @@ const EngineerDashboard = () => {
                 <p className="text-4xl font-black font-['Plus_Jakarta_Sans'] mt-1 text-foreground">{data?.delay_tasks ?? 0}</p>
               </div>
             </div>
-            <div className="relative z-10 bg-red-500/10 text-red-700 text-sm py-2 px-4 rounded-lg font-medium flex items-center justify-between">
+            
+            <div className="relative z-10 flex justify-center py-2 border-t border-border/30 mt-auto">
+              <CircularProgress 
+                value={data?.done_tasks ?? 0} 
+                total={data?.delay_tasks ?? 0} 
+                colorClass="stroke-red-500" 
+                label="Done / Delay" 
+              />
+            </div>
+
+            <div className="relative z-10 bg-red-500/10 text-red-700 text-sm py-2 px-4 rounded-lg font-medium flex items-center justify-between mt-4">
               Action Required <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </div>
           </div>
@@ -118,7 +138,7 @@ const EngineerDashboard = () => {
             className="group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col justify-between overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
-            <div className="relative z-10 flex items-start gap-4 mb-4">
+            <div className="relative z-10 flex items-start gap-4 mb-2">
               <div className="bg-gradient-to-br from-primary/20 to-primary/30 p-3.5 rounded-xl text-primary shadow-inner">
                 <CheckCircle className="w-8 h-8" />
               </div>
@@ -127,12 +147,18 @@ const EngineerDashboard = () => {
                 <p className="text-sm text-muted-foreground mt-1">Completed tasks ratio</p>
               </div>
             </div>
-            <div className="relative z-10 flex justify-center items-end py-2">
+            <div className="relative z-10 flex justify-around py-2 border-t border-border/30 mt-auto">
               <CircularProgress 
                 value={data?.done_tasks ?? 0} 
                 total={data?.total_tasks ?? 0} 
                 colorClass="stroke-primary" 
                 label="Done Tasks" 
+              />
+              <CircularProgress 
+                value={data?.approve_tasks ?? 0} 
+                total={data?.total_tasks ?? 0} 
+                colorClass="stroke-[#006c49]" 
+                label="Approved" 
               />
             </div>
           </div>

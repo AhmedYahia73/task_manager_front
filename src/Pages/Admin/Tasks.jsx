@@ -428,10 +428,15 @@ const Tasks = () => {
                               <option value="pending" className="bg-card text-foreground">Pending</option>
                               <option value="inprogress" className="bg-card text-foreground">In Progress</option>
                               <option value="done" className="bg-card text-foreground">Done</option>
-                              {(task.status === 'edit' || userRole !== 'engineer') && (
-                                <option value="edit" className="bg-card text-foreground">Needs Revision</option>
+                              {userRole === 'engineer' && task.status === 'edit' && (
+                                <option value="edit" disabled hidden className="bg-card text-foreground">Needs Revision</option>
                               )}
-                              {userRole !== 'engineer' && <option value="approve" className="bg-card text-foreground">Approve</option>}
+                              {userRole !== 'engineer' && (
+                                <>
+                                  <option value="edit" className="bg-card text-foreground">Needs Revision</option>
+                                  <option value="approve" className="bg-card text-foreground">Approve</option>
+                                </>
+                              )}
                             </>
                           )}
                         </select>
@@ -649,10 +654,15 @@ const Tasks = () => {
                           <option value="pending">Pending</option>
                           <option value="inprogress">In Progress</option>
                           <option value="done">Done</option>
-                          {(formData.status === 'edit' || userRole !== 'engineer') && (
-                            <option value="edit">Edit (Needs Revision)</option>
+                          {userRole === 'engineer' && formData.status === 'edit' && (
+                            <option value="edit" disabled hidden>Edit (Needs Revision)</option>
                           )}
-                          {userRole !== 'engineer' && <option value="approve">Approve</option>}
+                          {userRole !== 'engineer' && (
+                            <>
+                              <option value="edit">Edit (Needs Revision)</option>
+                              <option value="approve">Approve</option>
+                            </>
+                          )}
                         </>
                       )}
                     </select>
