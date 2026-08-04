@@ -26,6 +26,12 @@ import Salaries from '@/Pages/Admin/Salaries';
 import Payroll from '@/Pages/Admin/HRM/Payroll';
 import Bonuses from '@/Pages/Admin/HRM/Bonuses';
 import Deductions from '@/Pages/Admin/HRM/Deductions';
+
+import Cities from '@/Pages/Admin/Applications/Cities';
+import Jobs from '@/Pages/Admin/Applications/Jobs';
+import Qualifications from '@/Pages/Admin/Applications/Qualifications';
+import ApplicationsList from '@/Pages/Admin/Applications/ApplicationsList';
+
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated()) {
@@ -107,6 +113,10 @@ export const router = createBrowserRouter([
       { path: 'holidays-system', element: <HolidaysSystem /> },
       { path: 'permissions', element: <Permissions /> },
       { path: 'my-hrm', element: <MyHRM /> },
+      { path: 'cities', element: <Cities /> },
+      { path: 'jobs', element: <Jobs /> },
+      { path: 'qualifications', element: <Qualifications /> },
+      { path: 'applications', element: <ApplicationsList /> },
     ],
   },
 

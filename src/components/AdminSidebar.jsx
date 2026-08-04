@@ -11,6 +11,7 @@ export const AdminSidebar = () => {
   const userName = userData?.name || 'Admin User';
   const userRole = userData?.role || 'Admin';
   const [isHrmOpen, setIsHrmOpen] = useState(false);
+  const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
 
   const handleLogout = () => {
     removeAuthToken();
@@ -55,6 +56,17 @@ export const AdminSidebar = () => {
           { name: 'Zones', path: '/admin/zones', icon: 'map', adminOnly: true },
           { name: 'Shifts', path: '/admin/shifts', icon: 'schedule', adminOnly: true },
           { name: 'Salaries', path: '/admin/salaries', icon: 'payments', adminOnly: true },
+          { 
+            name: 'Applications', 
+            icon: 'work', 
+            adminOnly: true,
+            subItems: [
+              { name: 'Applications List', path: '/admin/applications', icon: 'list_alt' },
+              { name: 'Jobs', path: '/admin/jobs', icon: 'work_outline' },
+              { name: 'Cities', path: '/admin/cities', icon: 'location_city' },
+              { name: 'Qualifications', path: '/admin/qualifications', icon: 'school' },
+            ]
+          },
           { name: 'Settings', path: '/admin/settings', icon: 'settings', adminOnly: true },
         ]
         .filter(item => {
@@ -64,21 +76,27 @@ export const AdminSidebar = () => {
         })
         .map((item) => {
           if (item.subItems) {
+            const isOpen = item.name === 'HRM' ? isHrmOpen : isApplicationsOpen;
+            const toggleOpen = () => {
+              if (item.name === 'HRM') setIsHrmOpen(!isHrmOpen);
+              else setIsApplicationsOpen(!isApplicationsOpen);
+            };
+
             return (
               <div key={item.name}>
                 <button
-                  onClick={() => setIsHrmOpen(!isHrmOpen)}
-                  className={`admin-sidebar__link w-full text-left justify-between ${isHrmOpen ? 'bg-muted/50' : ''}`}
+                  onClick={toggleOpen}
+                  className={`admin-sidebar__link w-full text-left justify-between ${isOpen ? 'bg-muted/50' : ''}`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="material-symbols-outlined">{item.icon}</span>
                     <span className="admin-sidebar__link-text">{item.name}</span>
                   </div>
-                  <span className="material-symbols-outlined transition-transform duration-200" style={{ transform: isHrmOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
+                  <span className="material-symbols-outlined transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
                     expand_more
                   </span>
                 </button>
-                {isHrmOpen && (
+                {isOpen && (
                   <div className="pl-6 pr-4 flex flex-col gap-1 overflow-hidden transition-all duration-300">
                     {item.subItems.map(sub => (
                       <NavLink
