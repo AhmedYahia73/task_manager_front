@@ -138,6 +138,10 @@ const ProjectDetails = () => {
     e.preventDefault();
     const payload = { ...formData, project_id: id };
 
+    if (!payload.documentation) {
+      delete payload.documentation;
+    }
+
     const response = await mutate({
       method: editingId ? 'PUT' : 'POST',
       url: editingId ? `/api/admin/projectGroup/${editingId}` : '/api/admin/projectGroup',

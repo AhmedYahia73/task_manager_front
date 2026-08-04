@@ -134,11 +134,14 @@ const Tasks = () => {
 
     if (!payload.delivery_date) delete payload.delivery_date;
 
+    if (!payload.documentation) {
+      delete payload.documentation;
+    }
+
     // If editing, the backend expects `user_id` not `users_ids` (as per updateTasksSchema).
     if (editingId) {
         payload.user_id = payload.users_ids[0]; // take the first one if multiple selected by accident
         delete payload.users_ids;
-        if (!payload.documentation) delete payload.documentation;
     }
 
     const response = await mutate({

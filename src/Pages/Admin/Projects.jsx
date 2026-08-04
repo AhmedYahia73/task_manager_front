@@ -115,7 +115,7 @@ const Projects = () => {
     e.preventDefault();
     const payload = { ...formData };
     
-    if (editingId && !payload.documentation) {
+    if (!payload.documentation) {
       delete payload.documentation;
     }
 
