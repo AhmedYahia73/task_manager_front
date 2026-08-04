@@ -80,8 +80,19 @@ const NotFoundRedirect = () => {
 // Import FilteredTasks
 import FilteredTasks from '@/Pages/Admin/FilteredTasks';
 
+import Careers from '@/Pages/Public/Careers';
+import Apply from '@/Pages/Public/Apply';
+
 // Router Configuration
 export const router = createBrowserRouter([
+  {
+    path: '/careers',
+    element: <Careers />,
+  },
+  {
+    path: '/careers/apply',
+    element: <Apply />,
+  },
   {
     path: '/login',
     element: <LoginPage />,
