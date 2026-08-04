@@ -169,7 +169,7 @@ const Dashboard = () => {
 
           {/* Total Tasks */}
           <div 
-            onClick={() => navigate('/admin/tasks')}
+            onClick={() => navigate('/admin/tasks/all')}
             className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-purple-600 flex flex-col justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
           >
             <div className="flex items-start gap-4">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import UserAttendanceModal from './UserAttendanceModal';
 
 const Users = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roleFilter = searchParams.get('role') || '';
 
@@ -260,6 +261,9 @@ const Users = () => {
                         </button>
                         <button onClick={() => { setPointsUserId(userItem.id); setPointsUserName(userItem.name); }} className="p-2 text-muted-foreground hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="View Points">
                           <span className="material-symbols-outlined text-[18px]">analytics</span>
+                        </button>
+                        <button onClick={() => navigate(`/admin/tasks/all?user_id=${userItem.id}`)} className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View Tasks">
+                          <span className="material-symbols-outlined text-[18px]">task</span>
                         </button>
                         <button onClick={() => openModal(userItem)} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors" title="Edit User">
                           <Edit className="w-4 h-4" />

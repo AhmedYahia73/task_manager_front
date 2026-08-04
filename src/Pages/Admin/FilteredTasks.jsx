@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
@@ -30,12 +30,21 @@ const FilteredTasks = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const endpoint = type === 'pending' ? '/api/admin/tasks/pendingTasks' : '/api/admin/tasks/delayTasks';
-  const pageTitle = type === 'pending' ? 'Pending Tasks' : 'Delayed Tasks';
+  const { search: querySearch } = useLocation();
+  const queryParams = new URLSearchParams(querySearch);
+  const filterUserId = queryParams.get('user_id') || '';
+
+  const endpoint = type === 'pending' ? '/api/admin/tasks/pendingTasks' 
+                 : type === 'delay' ? '/api/admin/tasks/delayTasks' 
+                 : '/api/admin/tasks';
+                 
+  const pageTitle = type === 'pending' ? 'Pending Tasks' 
+                  : type === 'delay' ? 'Delayed Tasks' 
+                  : 'All Tasks';
 
   // Fetch Tasks Data
-  const { data: tasksData, loading: tasksLoading } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}&project_id=${projectId}`);
-  const tasks = tasksData?.tasks || [];
+  const { data: tasksData, loading: tasksLoading } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}&project_id=${projectId}&user_id=${filterUserId}`);
+  const tasks = tasksData?.tasks || tasksData?.Tasks || [];
   const pagination = tasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
 
   // Fetch Projects List
