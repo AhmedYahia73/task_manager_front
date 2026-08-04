@@ -35,9 +35,9 @@ const Tasks = () => {
   const tasks = tasksData?.tasks || [];
   const pagination = tasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
 
-  // Fetch Lists for Dropdowns
-  const { data: listsData } = useGet('/api/admin/tasks/lists');
-  const engineersList = listsData?.users_list || [];
+  // Fetch Users assigned to the Group for the Dropdown
+  const { data: groupUsersData } = useGet(groupId ? `/api/admin/projectGroup/${groupId}/users` : null);
+  const engineersList = groupUsersData?.users || groupUsersData?.data?.users || [];
 
   // Fetch Project and Group details for documentation links
   const { data: projectRes } = useGet(`/api/admin/project/${projectId}`);

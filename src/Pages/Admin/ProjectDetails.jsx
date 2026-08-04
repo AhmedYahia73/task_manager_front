@@ -282,11 +282,11 @@ const ProjectDetails = () => {
       </div>
 
       {/* Main Layout - 12-column grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left (4 cols) - Groups Sidebar */}
-        <div className="lg:col-span-4 flex flex-col gap-4">
-          <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col h-[calc(100vh-280px)] min-h-[500px]">
+        <div className="lg:col-span-4 flex flex-col gap-4 sticky top-6">
+          <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col max-h-[calc(100vh-200px)] min-h-[500px]">
             <div className="p-4 border-b border-border">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">Groups</h2>

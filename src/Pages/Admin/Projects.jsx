@@ -300,9 +300,9 @@ const Projects = () => {
                   </div>
                 )}
 
-                <div className="flex items-center mb-6">
+                <div className="flex flex-col gap-3 mb-6">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground font-medium">Lead {getRoleName('tester')}:</span>
+                    <span className="text-xs text-muted-foreground font-medium w-24">Lead {getRoleName('tester')}:</span>
                     {project.tester_name ? (
                       <div className="flex items-center gap-2 bg-muted px-2 py-1 rounded-md">
                         {project.tester_image ? (
@@ -320,6 +320,35 @@ const Projects = () => {
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400">Unassigned</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground font-medium w-24">{getRoleNamePlural('engineer')}:</span>
+                    {project.users && project.users.length > 0 ? (
+                      <div className="flex items-center -space-x-2 overflow-hidden">
+                        {project.users.slice(0, 5).map((user, i) => (
+                          <div key={user.id || i} className="inline-block rounded-full ring-2 ring-card bg-muted text-primary w-7 h-7 flex items-center justify-center text-[10px] font-bold border border-border shrink-0 z-10">
+                            {user.image ? (
+                              <img 
+                                src={user.image.startsWith('http') ? user.image : `${import.meta.env.VITE_API_BASE_URL}${user.image.startsWith('/') ? '' : '/'}${user.image}`} 
+                                alt={user.name} 
+                                title={user.name}
+                                className="w-full h-full object-cover rounded-full" 
+                              />
+                            ) : (
+                              <span title={user.name}>{user.name ? user.name.charAt(0).toUpperCase() : '?'}</span>
+                            )}
+                          </div>
+                        ))}
+                        {project.users.length > 5 && (
+                          <div className="inline-block rounded-full ring-2 ring-card bg-background text-muted-foreground w-7 h-7 flex items-center justify-center text-[10px] font-bold border border-border z-0">
+                            +{project.users.length - 5}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">No {getRoleNamePlural('engineer').toLowerCase()} assigned</span>
                     )}
                   </div>
                 </div>
