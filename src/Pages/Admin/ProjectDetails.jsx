@@ -58,14 +58,16 @@ const ProjectDetails = () => {
   
   const assignedUsers = groupUsersData?.users || [];
 
-  // Fetch List for Modals
-  const { data: listsData } = useGet('/api/admin/projectGroup/lists');
-  const engineersList = listsData?.users_list || [];
+  // Fetch Project Users
+  const { data: projectUsersData, loading: projectUsersLoading } = useGet(`/api/admin/project/${id}/users`);
+  const projectUsers = projectUsersData?.users || [];
+  const engineersList = projectUsers; // Use project users for group assignment
 
   const { mutate, loading: mutationLoading } = useMutation();
 
   // Group Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -267,6 +269,10 @@ const ProjectDetails = () => {
         </div>
         {userRole !== 'engineer' && (
           <div className="flex gap-3 w-full md:w-auto">
+            <Button onClick={() => setIsTeamModalOpen(true)} variant="outline" className="border-border hover:bg-muted text-foreground w-full md:w-auto flex items-center justify-center gap-2">
+              <Users className="w-4 h-4" />
+              Project Team
+            </Button>
             <Button onClick={() => openModal()} className="bg-primary hover:bg-primary/90 text-white w-full md:w-auto flex items-center justify-center gap-2">
               <Plus className="w-4 h-4" />
               Create Group
@@ -605,6 +611,65 @@ const ProjectDetails = () => {
               </Button>
               <Button type="submit" form="group-form" disabled={mutationLoading || formData.users_ids.length === 0} className="bg-primary hover:bg-primary/90 text-white px-6 h-11">
                 {mutationLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingId ? 'Save Changes' : 'Create Group')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Team Modal */}
+      {isTeamModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsTeamModalOpen(false)}>
+          <div className="bg-card rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-border flex justify-between items-center bg-background rounded-t-2xl">
+              <div>
+                <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">Project Team</h2>
+                <p className="text-sm text-muted-foreground mt-1">Users assigned to this project</p>
+              </div>
+              <button type="button" onClick={() => setIsTeamModalOpen(false)} className="text-gray-400 hover:text-gray-700 bg-card p-1 rounded-md shadow-sm">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto p-6 flex flex-col gap-3 custom-scrollbar">
+              {projectUsersLoading ? (
+                <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+              ) : projectUsers.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground text-sm border-2 border-dashed border-border rounded-lg">
+                  No users assigned to this project.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {projectUsers.map(user => (
+                    <div key={user.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card shadow-sm hover:border-primary/50 transition-colors">
+                      <div className="w-10 h-10 rounded-full bg-muted text-primary flex items-center justify-center font-bold text-sm border border-border shrink-0 overflow-hidden">
+                        {user.image ? (
+                          <img 
+                            src={user.image.startsWith('http') ? user.image : `${import.meta.env.VITE_API_BASE_URL}${user.image.startsWith('/') ? '' : '/'}${user.image}`} 
+                            alt={user.name} 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          user.name.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="font-semibold text-foreground truncate">{user.name}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+                        </div>
+                        <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded-md text-[10px] font-semibold bg-primary-light text-primary w-fit capitalize">
+                          {getRoleName(user.role)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 border-t border-border bg-card rounded-b-2xl flex justify-end">
+              <Button type="button" onClick={() => setIsTeamModalOpen(false)} className="px-6 h-11 bg-primary hover:bg-primary/90 text-white">
+                Close
               </Button>
             </div>
           </div>

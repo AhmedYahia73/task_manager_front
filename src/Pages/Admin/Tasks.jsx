@@ -562,7 +562,7 @@ const Tasks = () => {
                     <Input 
                       name="name" 
                       value={formData.name} 
-                      onChange={handleChange} 
+                      onChange={handleInputChange} 
                       placeholder="e.g. Implement Login Page" 
                       required 
                       disabled={userRole === 'engineer' && editingId}
@@ -579,7 +579,7 @@ const Tasks = () => {
                       type="date" 
                       name="delivery_date" 
                       value={formData.delivery_date} 
-                      onChange={handleChange} 
+                      onChange={handleInputChange} 
                       required 
                       disabled={userRole === 'engineer' && editingId}
                       className="border-border bg-background focus-visible:ring-primary h-11"
@@ -594,7 +594,7 @@ const Tasks = () => {
                     <textarea 
                       name="description"
                       value={formData.description}
-                      onChange={handleChange}
+                      onChange={handleInputChange}
                       placeholder="Detailed explanation of the task..."
                       className="w-full min-h-[100px] p-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm custom-scrollbar text-foreground placeholder:text-muted-foreground"
                       disabled={userRole === 'engineer' && editingId}
