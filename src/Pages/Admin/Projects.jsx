@@ -428,7 +428,6 @@ const Projects = () => {
                       onChange={handleFileChange} 
                       ref={fileInputRef}
                       className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                      required={!editingId}
                     />
                   </div>
                   {editingId && <p className="text-xs text-muted-foreground mt-1">Leave empty to keep current documentation file.</p>}

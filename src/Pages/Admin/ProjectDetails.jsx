@@ -317,7 +317,7 @@ const ProjectDetails = () => {
                     <div 
                       key={group.id} 
                       onClick={() => setSelectedGroupId(group.id)}
-                      className={`cursor-pointer p-4 rounded-xl border transition-all duration-200 group relative overflow-hidden ${
+                      className={`cursor-pointer p-4 rounded-xl border transition-all duration-200 group relative overflow-hidden shrink-0 ${
                         isActive 
                           ? 'border-primary bg-primary/[0.02] shadow-sm' 
                           : 'border-border bg-card hover:border-primary/50 hover:bg-muted'
