@@ -107,7 +107,7 @@ const Dashboard = () => {
               <CircularProgress 
                 value={data?.done_tasks ?? 0} 
                 total={data?.pending_tasks ?? 0} 
-                colorClass="stroke-blue-500" 
+                colorClass="stroke-red-500" 
                 label="Done / Pending" 
               />
             </div>
@@ -161,7 +161,7 @@ const Dashboard = () => {
               <CircularProgress 
                 value={data?.done_tasks ?? 0} 
                 total={data?.delay_tasks ?? 0} 
-                colorClass="stroke-orange-500" 
+                colorClass="stroke-red-500" 
                 label="Done / Delay" 
               />
             </div>

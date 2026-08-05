@@ -231,6 +231,10 @@ const ApplicationsList = () => {
                     <h3 className="text-sm font-semibold text-muted-foreground mb-1">City</h3>
                     <p className="text-foreground">{detailsData.application.city_name}</p>
                   </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-1">Marital Status</h3>
+                    <p className="text-foreground">{detailsData.application.marital_status || '-'}</p>
+                  </div>
                 </div>
 
                 <div className="border-t border-border pt-4">

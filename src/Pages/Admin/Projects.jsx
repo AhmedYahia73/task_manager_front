@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, Plus, Edit, Trash2, X, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Search, Plus, Edit, Trash2, X, Link as LinkIcon, Image as ImageIcon, Users } from 'lucide-react';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { useRoleNames } from '@/context/RoleNameContext';
@@ -39,6 +39,8 @@ const Projects = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [membersModalOpen, setMembersModalOpen] = useState(false);
+  const [selectedProjectForMembers, setSelectedProjectForMembers] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -354,6 +356,17 @@ const Projects = () => {
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-border flex items-center justify-between gap-3">
+                  <Button 
+                    onClick={() => {
+                      setSelectedProjectForMembers(project);
+                      setMembersModalOpen(true);
+                    }} 
+                    variant="outline" 
+                    className="flex-1 border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-2"
+                  >
+                    <Users className="w-4 h-4" />
+                    Members
+                  </Button>
                   <Button onClick={() => navigate(`/admin/projects/${project.id}`)} variant="outline" className="flex-1 border-primary text-primary hover:bg-primary/5">
                     View Details
                   </Button>
@@ -494,6 +507,83 @@ const Projects = () => {
               <Button type="submit" form="project-form" disabled={mutationLoading || formData.users_ids.length === 0} className="bg-primary hover:bg-primary/90 text-white px-6">
                 {mutationLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? 'Update Project' : 'Create Project')}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Members Modal */}
+      {membersModalOpen && selectedProjectForMembers && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setMembersModalOpen(false)}>
+          <div className="bg-card rounded-2xl w-full max-w-md shadow-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-border flex justify-between items-center bg-background rounded-t-2xl">
+              <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] text-foreground flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Project Members
+              </h2>
+              <button type="button" onClick={() => setMembersModalOpen(false)} className="text-gray-400 hover:text-gray-700 bg-card p-1 rounded-md shadow-sm">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto p-6 flex flex-col gap-6">
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Lead {getRoleName('tester')}</h3>
+                {selectedProjectForMembers.tester_name ? (
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                    {selectedProjectForMembers.tester_image ? (
+                      <img 
+                        src={selectedProjectForMembers.tester_image.startsWith('http') ? selectedProjectForMembers.tester_image : `${import.meta.env.VITE_API_BASE_URL}${selectedProjectForMembers.tester_image.startsWith('/') ? '' : '/'}${selectedProjectForMembers.tester_image}`} 
+                        alt={selectedProjectForMembers.tester_name}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-background shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold border-2 border-background shadow-sm">
+                        {selectedProjectForMembers.tester_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">{selectedProjectForMembers.tester_name}</p>
+                      <p className="text-xs text-muted-foreground">{getRoleName('tester')}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No {getRoleName('tester').toLowerCase()} assigned.</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{getRoleNamePlural('engineer')} ({selectedProjectForMembers.users?.length || 0})</h3>
+                {selectedProjectForMembers.users && selectedProjectForMembers.users.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {selectedProjectForMembers.users.map((user, i) => (
+                      <div key={user.id || i} className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg hover:border-primary/30 transition-colors">
+                        {user.image ? (
+                          <img 
+                            src={user.image.startsWith('http') ? user.image : `${import.meta.env.VITE_API_BASE_URL}${user.image.startsWith('/') ? '' : '/'}${user.image}`} 
+                            alt={user.name} 
+                            className="w-10 h-10 rounded-full object-cover border-2 border-background shadow-sm" 
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-muted text-primary flex items-center justify-center text-sm font-bold border-2 border-background shadow-sm">
+                            {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">{user.name}</p>
+                          <p className="text-xs text-muted-foreground">{getRoleName('engineer')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No {getRoleNamePlural('engineer').toLowerCase()} assigned.</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-border bg-card rounded-b-2xl flex justify-end">
+              <Button onClick={() => setMembersModalOpen(false)} variant="outline" className="px-6">Close</Button>
             </div>
           </div>
         </div>
