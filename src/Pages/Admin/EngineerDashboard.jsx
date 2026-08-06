@@ -71,7 +71,7 @@ const EngineerDashboard = () => {
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
 
           {/* My Pending Tasks */}
           <div 
@@ -133,6 +133,42 @@ const EngineerDashboard = () => {
             </div>
           </div>
 
+          {/* My Today Tasks */}
+          <div 
+            onClick={() => navigate('/admin/tasks/today')}
+            className="group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col justify-between overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
+            <div className="relative z-10 flex items-start gap-4 mb-2">
+              <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-3.5 rounded-xl text-blue-700 shadow-inner flex items-center justify-center">
+                <span className="material-symbols-outlined text-[32px] w-8 h-8 flex items-center justify-center">today</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Today Tasks</h3>
+                <p className="text-4xl font-black font-['Plus_Jakarta_Sans'] mt-1 text-foreground">{data?.today_tasks ?? 0}</p>
+              </div>
+            </div>
+            
+            <div className="relative z-10 flex justify-around py-2 border-t border-border/30 mt-auto">
+              <CircularProgress 
+                value={data?.today_done_tasks ?? 0} 
+                total={data?.today_tasks ?? 0} 
+                colorClass="stroke-blue-500" 
+                label="Done" 
+              />
+              <CircularProgress 
+                value={data?.today_approve_tasks ?? 0} 
+                total={data?.today_tasks ?? 0} 
+                colorClass="stroke-[#006c49]" 
+                label="Approved" 
+              />
+            </div>
+
+            <div className="relative z-10 bg-blue-500/10 text-blue-700 text-sm py-2 px-4 rounded-lg font-medium flex items-center justify-between mt-4">
+              View Tasks <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </div>
+          </div>
+
           {/* My Progress */}
           <div 
             className="group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col justify-between overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
@@ -165,7 +201,7 @@ const EngineerDashboard = () => {
           
           {/* Team Members */}
           <div 
-            className="col-span-1 md:col-span-2 lg:col-span-3 group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex items-center gap-6 overflow-hidden cursor-default transition-all duration-300"
+            className="col-span-1 md:col-span-2 lg:col-span-2 xl:col-span-4 group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex items-center gap-6 overflow-hidden cursor-default transition-all duration-300"
           >
              <div className="bg-gradient-to-br from-indigo-100 to-indigo-200 p-4 rounded-xl text-indigo-700 shadow-inner">
                 <Users className="w-10 h-10" />
@@ -180,7 +216,7 @@ const EngineerDashboard = () => {
           </div>
 
           {/* Points Section */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-3 group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col gap-6 overflow-hidden transition-all duration-300 mt-2">
+          <div className="col-span-1 md:col-span-2 lg:col-span-2 xl:col-span-4 group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col gap-6 overflow-hidden transition-all duration-300 mt-2">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h3 className="text-xl font-bold text-foreground font-['Plus_Jakarta_Sans'] flex items-center gap-2">
