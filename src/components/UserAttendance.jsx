@@ -64,7 +64,19 @@ export const UserAttendance = () => {
     setChecking(true);
     toast.info('Scanning face...');
     try {
-      const detection = await faceapi.detectSingleFace(videoRef.current)
+      const video = videoRef.current;
+      
+      // Create a canvas and flip the image horizontally to match stored photo orientation
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Detect face from the flipped canvas
+      const detection = await faceapi.detectSingleFace(canvas)
         .withFaceLandmarks()
         .withFaceDescriptor();
 
@@ -76,6 +88,7 @@ export const UserAttendance = () => {
 
       stopCamera();
       const payload = Array.from(detection.descriptor);
+      console.log('[Face ID] Captured descriptor (first 5):', payload.slice(0, 5));
       await executeAction(pendingAction, 'face', payload);
     } catch (err) {
       console.error(err);
