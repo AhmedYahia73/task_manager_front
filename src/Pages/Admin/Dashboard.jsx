@@ -87,7 +87,7 @@ const Dashboard = () => {
         </div>
       ) : (
         /* Stats Overview */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-6">
           
           {/* Pending Tasks */}
           <div 
@@ -137,6 +137,36 @@ const Dashboard = () => {
               <CircularProgress 
                 value={data?.approve_tasks ?? 0} 
                 total={data?.total_tasks ?? 0} 
+                colorClass="stroke-[#006c49]" 
+                label="Approved" 
+              />
+            </div>
+          </div>
+
+          {/* Today Tasks */}
+          <div 
+            onClick={() => navigate('/admin/tasks/today')}
+            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-blue-500 flex flex-col justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="bg-blue-50 p-3 rounded-lg text-blue-500">
+                <span className="material-symbols-outlined text-3xl">today</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Today Tasks</h3>
+                <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.today_tasks ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex justify-around items-end pt-3 border-t border-border mt-auto">
+              <CircularProgress 
+                value={data?.today_done_tasks ?? 0} 
+                total={data?.today_tasks ?? 0} 
+                colorClass="stroke-blue-500" 
+                label="Done" 
+              />
+              <CircularProgress 
+                value={data?.today_approve_tasks ?? 0} 
+                total={data?.today_tasks ?? 0} 
                 colorClass="stroke-[#006c49]" 
                 label="Approved" 
               />

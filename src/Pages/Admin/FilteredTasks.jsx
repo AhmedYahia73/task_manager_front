@@ -36,14 +36,16 @@ const FilteredTasks = () => {
 
   const endpoint = type === 'pending' ? '/api/admin/tasks/pendingTasks' 
                  : type === 'delay' ? '/api/admin/tasks/delayTasks' 
+                 : type === 'today' ? '/api/admin/tasks/todayTasks'
                  : '/api/admin/tasks';
                  
   const pageTitle = type === 'pending' ? 'Pending Tasks' 
                   : type === 'delay' ? 'Delayed Tasks' 
+                  : type === 'today' ? 'Today\'s Tasks'
                   : 'All Tasks';
 
   // Fetch Tasks Data
-  const { data: tasksData, loading: tasksLoading } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}&project_id=${projectId}&user_id=${filterUserId}`);
+  const { data: tasksData, loading: tasksLoading, refresh: refreshTasks } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}&project_id=${projectId}&user_id=${filterUserId}`);
   const tasks = tasksData?.tasks || tasksData?.Tasks || [];
   const pagination = tasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
 
@@ -71,9 +73,7 @@ const FilteredTasks = () => {
       data: { status: newStatus }
     });
     if (response?.success) {
-      setPage(prev => prev);
-      setSearch(prev => prev + ' '); 
-      setTimeout(() => setSearch(prev => prev.trim()), 10);
+      refreshTasks();
     }
   };
 
@@ -143,9 +143,7 @@ const FilteredTasks = () => {
       data: { importanc_status: newImportance }
     });
     if (response?.success) {
-      setPage(prev => prev);
-      setSearch(prev => prev + ' '); 
-      setTimeout(() => setSearch(prev => prev.trim()), 10);
+      refreshTasks();
     }
   };
 
