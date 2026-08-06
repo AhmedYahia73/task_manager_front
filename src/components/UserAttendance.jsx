@@ -151,7 +151,7 @@ export const UserAttendance = () => {
         <div className="flex flex-col items-center gap-4 py-4">
           <div className="relative w-full max-w-sm rounded-xl overflow-hidden bg-black aspect-video flex justify-center items-center">
             {cameraLoading && <Loader2 className="absolute animate-spin text-white w-8 h-8" />}
-            <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+            <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover -scale-x-100" />
           </div>
           <div className="flex gap-2">
             <Button onClick={stopCamera} variant="outline" disabled={checking}>Cancel</Button>
