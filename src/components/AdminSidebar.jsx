@@ -4,7 +4,7 @@ import { removeAuthToken } from '@/utils/auth';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useRoleNames } from '@/context/RoleNameContext';
 
-export const AdminSidebar = () => {
+export const AdminSidebar = ({ isOpen, onClose }) => {
   const { getRoleNamePlural } = useRoleNames();
   const navigate = useNavigate();
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -20,12 +20,17 @@ export const AdminSidebar = () => {
   };
 
   return (
-    <aside className="admin-sidebar">
+    <aside className={`admin-sidebar ${isOpen ? 'admin-sidebar--mobile-open' : ''}`}>
       {/* Brand */}
       <div className="admin-sidebar__brand">
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Taskito Logo" className="w-8 h-8 object-contain" />
-          <h1 className="admin-sidebar__title">Taskito</h1>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Taskito Logo" className="w-8 h-8 object-contain" />
+            <h1 className="admin-sidebar__title">Taskito</h1>
+          </div>
+          <button className="md:hidden text-zinc-400 hover:text-white" onClick={onClose}>
+            <span className="material-symbols-outlined">close</span>
+          </button>
         </div>
         <p className="admin-sidebar__subtitle">Enterprise Admin</p>
       </div>

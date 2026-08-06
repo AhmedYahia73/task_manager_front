@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ChevronLeft, User } from 'lucide-react';
+import { LogOut, ChevronLeft, User, Menu } from 'lucide-react';
 import { removeAuthToken } from '@/utils/auth';
 import { Button } from '@/components/ui/button';
 
-export const Navbar = () => {
+export const Navbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
 
   // استرجاع بيانات المستخدم من LocalStorage
@@ -22,15 +22,28 @@ export const Navbar = () => {
 
   return (
     <nav className="h-16 flex items-center justify-between px-6 bg-card border-b border-zinc-200 ">
-      {/* زر الرجوع */}
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        onClick={() => navigate(-1)}
-        className="text-zinc-600 hover:text-primary "
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </Button>
+      <div className="flex items-center gap-2">
+        {/* زر فتح القائمة للموبايل */}
+        {toggleSidebar && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleSidebar}
+            className="md:hidden text-zinc-600 hover:text-primary"
+          >
+            <Menu className="w-6 h-6" />
+          </Button>
+        )}
+        {/* زر الرجوع */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate(-1)}
+          className="text-zinc-600 hover:text-primary hidden md:inline-flex"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </Button>
+      </div>
 
       {/* قسم المستخدم وتسجيل الخروج */}
       <div className="flex items-center gap-4">

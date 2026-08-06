@@ -315,6 +315,16 @@
     width: 0;
     padding: 0;
     overflow: hidden;
+    position: fixed;
+    z-index: 50;
+    left: -280px;
+    transition: all 0.3s ease;
+  }
+
+  .admin-sidebar--mobile-open {
+    width: 280px;
+    padding: 24px 16px;
+    left: 0;
   }
 
   .admin-topbar {

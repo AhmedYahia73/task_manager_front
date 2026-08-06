@@ -7,6 +7,7 @@ import { RoleNameProvider } from '@/context/RoleNameContext';
 export const AdminLayout = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = userData?.name || 'Admin';
   const userRole = userData?.role || 'Admin';
@@ -15,10 +16,25 @@ export const AdminLayout = () => {
     <RoleNameProvider>
       <div className="admin-shell">
         {/* Sidebar */}
-        <AdminSidebar />
+        <AdminSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+
+        {/* Overlay for mobile */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+            onClick={() => setIsMobileMenuOpen(false)}
+          ></div>
+        )}
 
         {/* Top App Bar */}
         <header className="admin-topbar">
+          <button 
+            className="admin-topbar__icon-btn md:hidden mr-2" 
+            onClick={() => setIsMobileMenuOpen(true)}
+            title="Menu"
+          >
+            <span className="material-symbols-outlined">menu</span>
+          </button>
           <div className="admin-topbar__search">
             <span className="material-symbols-outlined admin-topbar__search-icon">search</span>
             <input

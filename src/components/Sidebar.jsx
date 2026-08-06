@@ -46,7 +46,7 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
   };
 
   return (
-    <aside className={`h-screen bg-card border-r border-zinc-200 flex flex-col fixed left-0 top-0 transition-all duration-300 z-50 ${isOpen ? 'w-64' : 'w-20'}`}>
+    <aside className={`h-screen bg-card border-r border-zinc-200 flex flex-col fixed left-0 top-0 transition-all duration-300 z-50 ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0 md:w-20'}`}>
 
       {/* زر التبديل واللوجو */}
       <div className="p-6 flex items-center justify-between cursor-pointer" onClick={toggleSidebar}>
