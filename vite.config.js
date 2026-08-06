@@ -17,7 +17,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://sales.systego.net',
+        target: 'https://taskitobcknd.wegostation.com',
         changeOrigin: true,
         secure: false,
       }
