@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useRoleNames } from '@/context/RoleNameContext';
 import UserPointsModal from './UserPointsModal';
 import UserAttendanceModal from './UserAttendanceModal';
+import * as faceapi from 'face-api.js';
 
 const Users = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
@@ -110,6 +111,29 @@ const Users = () => {
     // Remove password from payload if it's empty during edit
     if (editingId && !payload.password) {
       delete payload.password;
+    }
+
+    if (payload.image && payload.image.startsWith('data:image')) {
+      toast.info('Processing Face ID...', { duration: 3000 });
+      try {
+        await faceapi.nets.ssdMobilenetv1.loadFromUri('/models/face-api');
+        await faceapi.nets.faceLandmark68Net.loadFromUri('/models/face-api');
+        await faceapi.nets.faceRecognitionNet.loadFromUri('/models/face-api');
+        
+        const img = new Image();
+        img.src = payload.image;
+        await new Promise((resolve) => { img.onload = resolve; });
+        
+        const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+        if (detection) {
+          payload.vector_image_array = Array.from(detection.descriptor);
+          toast.success('Face ID generated');
+        } else {
+          toast.warning('No face detected in the image. Face ID check-in might not work.', { duration: 5000 });
+        }
+      } catch (err) {
+        console.error('Face scanning failed:', err);
+      }
     }
 
     const response = await mutate({

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings2, Save, User, UserCog, Shield, Award, Clock, CalendarDays, Timer, Map as MapIcon, Plus, Minus } from 'lucide-react';
+import { Settings2, Save, User, UserCog, Shield, Award, Clock, CalendarDays, Timer, Map as MapIcon, Plus, Minus, Fingerprint, Wifi, Network } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { MapSelector } from '@/components/MapSelector';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
@@ -32,7 +33,10 @@ export const Settings = () => {
     rejected_holiday_deduction: 0,
     online_without_permission_deduction: 0,
     holiday_without_permission_deduction: 0,
-    delay_per_hour_deduction: 0
+    delay_per_hour_deduction: 0,
+    face_id: true,
+    router_ip_status: true,
+    router_ip: ''
   });
 
   // Update local state when data is fetched
@@ -52,7 +56,10 @@ export const Settings = () => {
         rejected_holiday_deduction: settingsData.rejected_holiday_deduction || 0,
         online_without_permission_deduction: settingsData.online_without_permission_deduction || 0,
         holiday_without_permission_deduction: settingsData.holiday_without_permission_deduction || 0,
-        delay_per_hour_deduction: settingsData.delay_per_hour_deduction || 0
+        delay_per_hour_deduction: settingsData.delay_per_hour_deduction || 0,
+        face_id: settingsData.face_id !== undefined ? settingsData.face_id : true,
+        router_ip_status: settingsData.router_ip_status !== undefined ? settingsData.router_ip_status : true,
+        router_ip: settingsData.router_ip || ''
       });
     }
   }, [data]);
@@ -63,6 +70,24 @@ export const Settings = () => {
       ...prev,
       [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value
     }));
+  };
+
+  const handleToggleAutoSave = async (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    try {
+      const res = await mutate({
+        method: 'PUT',
+        url: `/api/admin/settings/${settingId}`,
+        data: { ...formData, [name]: value }
+      });
+      if (res?.success) {
+        toast.success(`${name.replace(/_/g, ' ')} updated successfully!`);
+        refetch();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(`Failed to update ${name.replace(/_/g, ' ')}`);
+    }
   };
 
   const handleDayToggle = (day) => {
@@ -407,6 +432,65 @@ export const Settings = () => {
                   className="max-w-md bg-background border-border focus-visible:ring-primary"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Attendance Methods Section */}
+          <div className="pt-6 border-t border-border mt-8">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-6">
+              <Network className="w-5 h-5 text-primary" />
+              Attendance Methods
+            </h3>
+            
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Fingerprint className="w-4 h-4 text-primary" />
+                    Face ID Attendance
+                  </label>
+                  <p className="text-xs text-muted-foreground">Require face recognition for checking in</p>
+                </div>
+                <Switch 
+                  checked={formData.face_id} 
+                  onCheckedChange={(val) => handleToggleAutoSave('face_id', val)} 
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Wifi className="w-4 h-4 text-primary" />
+                    Router IP Validation
+                  </label>
+                  <p className="text-xs text-muted-foreground">Restrict attendance to a specific router IP</p>
+                </div>
+                <Switch 
+                  checked={formData.router_ip_status} 
+                  onCheckedChange={(val) => handleToggleAutoSave('router_ip_status', val)} 
+                />
+              </div>
+              
+              {formData.router_ip_status && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }} 
+                  animate={{ opacity: 1, height: 'auto' }} 
+                  className="space-y-2 px-4"
+                >
+                  <label htmlFor="router_ip" className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Network className="w-4 h-4 text-muted-foreground" />
+                    Router IP Address
+                  </label>
+                  <Input
+                    id="router_ip"
+                    name="router_ip"
+                    value={formData.router_ip}
+                    onChange={handleChange}
+                    placeholder="e.g. 192.168.1.1"
+                    className="max-w-md bg-background border-border focus-visible:ring-primary"
+                  />
+                </motion.div>
+              )}
             </div>
           </div>
 
