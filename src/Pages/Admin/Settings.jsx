@@ -27,7 +27,12 @@ export const Settings = () => {
     task_delay_points: 0,
     online_days: [],
     delay_premission_minutes: 0,
-    yearly_holidays: 0
+    yearly_holidays: 0,
+    rejected_online_deduction: 0,
+    rejected_holiday_deduction: 0,
+    online_without_permission_deduction: 0,
+    holiday_without_permission_deduction: 0,
+    delay_per_hour_deduction: 0
   });
 
   // Update local state when data is fetched
@@ -42,16 +47,21 @@ export const Settings = () => {
         task_delay_points: settingsData.task_delay_points || 0,
         online_days: settingsData.online_days || [],
         delay_premission_minutes: settingsData.delay_premission_minutes || 0,
-        yearly_holidays: settingsData.yearly_holidays || 0
+        yearly_holidays: settingsData.yearly_holidays || 0,
+        rejected_online_deduction: settingsData.rejected_online_deduction || 0,
+        rejected_holiday_deduction: settingsData.rejected_holiday_deduction || 0,
+        online_without_permission_deduction: settingsData.online_without_permission_deduction || 0,
+        holiday_without_permission_deduction: settingsData.holiday_without_permission_deduction || 0,
+        delay_per_hour_deduction: settingsData.delay_per_hour_deduction || 0
       });
     }
   }, [data]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value
     }));
   };
 
@@ -79,13 +89,15 @@ export const Settings = () => {
     */
     
     try {
-      await mutate({
+      const res = await mutate({
         method: 'PUT',
         url: `/api/admin/settings/${settingId}`,
-        data: formData // بدّلها بـ payload لو الباك إند بيطلبها string
+        data: formData
       });
-      toast.success("Settings updated successfully!");
-      refetch();
+      if (res?.success) {
+        toast.success("Settings updated successfully!");
+        refetch();
+      }
     } catch (error) {
       console.error(error);
       toast.error("Failed to update settings");
@@ -295,6 +307,103 @@ export const Settings = () => {
                   value={formData.yearly_holidays}
                   onChange={handleChange}
                   placeholder="e.g. 21"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border mt-8">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+              Attendance & Leaves Deductions
+            </h2>
+            <div className="space-y-4">
+              {/* Rejected Online Deduction */}
+              <div className="space-y-2">
+                <label htmlFor="rejected_online_deduction" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Minus className="w-4 h-4 text-muted-foreground" />
+                  Rejected Online Request Deduction
+                </label>
+                <Input
+                  id="rejected_online_deduction"
+                  name="rejected_online_deduction"
+                  type="number"
+                  step="any"
+                  value={formData.rejected_online_deduction}
+                  onChange={handleChange}
+                  placeholder="e.g. -50"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+
+              {/* Rejected Holiday Deduction */}
+              <div className="space-y-2">
+                <label htmlFor="rejected_holiday_deduction" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Minus className="w-4 h-4 text-muted-foreground" />
+                  Rejected Holiday Request Deduction
+                </label>
+                <Input
+                  id="rejected_holiday_deduction"
+                  name="rejected_holiday_deduction"
+                  type="number"
+                  step="any"
+                  value={formData.rejected_holiday_deduction}
+                  onChange={handleChange}
+                  placeholder="e.g. -50"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+
+              {/* Online Without Permission Deduction */}
+              <div className="space-y-2">
+                <label htmlFor="online_without_permission_deduction" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Minus className="w-4 h-4 text-muted-foreground" />
+                  Online Without Permission Deduction
+                </label>
+                <Input
+                  id="online_without_permission_deduction"
+                  name="online_without_permission_deduction"
+                  type="number"
+                  step="any"
+                  value={formData.online_without_permission_deduction}
+                  onChange={handleChange}
+                  placeholder="e.g. -100"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+
+              {/* Holiday Without Permission Deduction */}
+              <div className="space-y-2">
+                <label htmlFor="holiday_without_permission_deduction" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Minus className="w-4 h-4 text-muted-foreground" />
+                  Holiday Without Permission Deduction
+                </label>
+                <Input
+                  id="holiday_without_permission_deduction"
+                  name="holiday_without_permission_deduction"
+                  type="number"
+                  step="any"
+                  value={formData.holiday_without_permission_deduction}
+                  onChange={handleChange}
+                  placeholder="e.g. -100"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+              </div>
+
+              {/* Delay Per Hour Deduction */}
+              <div className="space-y-2">
+                <label htmlFor="delay_per_hour_deduction" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Minus className="w-4 h-4 text-muted-foreground" />
+                  Delay Per Hour Deduction
+                </label>
+                <Input
+                  id="delay_per_hour_deduction"
+                  name="delay_per_hour_deduction"
+                  type="number"
+                  step="any"
+                  value={formData.delay_per_hour_deduction}
+                  onChange={handleChange}
+                  placeholder="e.g. -20"
                   className="max-w-md bg-background border-border focus-visible:ring-primary"
                 />
               </div>

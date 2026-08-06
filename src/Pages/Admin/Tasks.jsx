@@ -110,14 +110,12 @@ const Tasks = () => {
   };
 
   const toggleUserSelection = (userId) => {
-    // If editing, they might only be allowed one user, but createTasks takes array.
-    // Let's support array selection for both, though edit only applies to the specific task record.
     setFormData(prev => {
       const isSelected = prev.users_ids.includes(userId);
       if (isSelected) {
-        return { ...prev, users_ids: prev.users_ids.filter(id => id !== userId) };
+        return { ...prev, users_ids: [] };
       } else {
-        return { ...prev, users_ids: [...prev.users_ids, userId] };
+        return { ...prev, users_ids: [userId] };
       }
     });
   };

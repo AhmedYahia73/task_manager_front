@@ -61,7 +61,7 @@ const ProjectDetails = () => {
   // Fetch Project Users
   const { data: projectUsersData, loading: projectUsersLoading } = useGet(`/api/admin/project/${id}/users`);
   const projectUsers = projectUsersData?.users || [];
-  const engineersList = projectUsers; // Use project users for group assignment
+  const engineersList = projectUsers.filter(u => u.role !== 'admin' && u.role !== 'tester' && u.role !== 'superadmin'); // Exclude admins and testers from group assignment
 
   const { mutate, loading: mutationLoading } = useMutation();
 
