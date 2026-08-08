@@ -4,6 +4,8 @@ import { AdminSidebar } from '@/components/AdminSidebar';
 import { removeAuthToken } from '@/utils/auth';
 import { RoleNameProvider } from '@/context/RoleNameContext';
 import { RoleSwitcherTabs } from '@/components/RoleSwitcherTabs';
+import { CompanyHeader } from '@/components/CompanyHeader';
+import { CompanyFooter } from '@/components/CompanyFooter';
 
 export const AdminLayout = () => {
   const navigate = useNavigate();
@@ -75,8 +77,18 @@ export const AdminLayout = () => {
         {/* Main Content */}
         <main className="admin-content flex flex-col h-full overflow-hidden">
           <RoleSwitcherTabs />
-          <div className="flex-1 overflow-auto">
-            <Outlet />
+          <div className="flex-1 overflow-auto flex flex-col">
+            <div className="px-6 md:px-8 pt-6 md:pt-8 w-full max-w-full">
+              <CompanyHeader />
+            </div>
+            
+            <div className="flex-1 w-full max-w-full">
+              <Outlet />
+            </div>
+            
+            <div className="px-6 md:px-8 pb-6 md:pb-8 w-full max-w-full mt-auto">
+              <CompanyFooter />
+            </div>
           </div>
         </main>
       </div>
