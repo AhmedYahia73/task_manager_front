@@ -34,7 +34,6 @@ export const Settings = () => {
     online_without_permission_deduction: 0,
     holiday_without_permission_deduction: 0,
     delay_per_hour_deduction: 0,
-    face_id: true,
     router_ip_status: true,
     router_ip: ''
   });
@@ -57,7 +56,6 @@ export const Settings = () => {
         online_without_permission_deduction: settingsData.online_without_permission_deduction || 0,
         holiday_without_permission_deduction: settingsData.holiday_without_permission_deduction || 0,
         delay_per_hour_deduction: settingsData.delay_per_hour_deduction || 0,
-        face_id: settingsData.face_id !== undefined ? settingsData.face_id : true,
         router_ip_status: settingsData.router_ip_status !== undefined ? settingsData.router_ip_status : true,
         router_ip: settingsData.router_ip || ''
       });
@@ -443,20 +441,6 @@ export const Settings = () => {
             </h3>
             
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
-                <div className="space-y-0.5">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Fingerprint className="w-4 h-4 text-primary" />
-                    Face ID Attendance
-                  </label>
-                  <p className="text-xs text-muted-foreground">Require face recognition for checking in</p>
-                </div>
-                <Switch 
-                  checked={formData.face_id} 
-                  onCheckedChange={(val) => handleToggleAutoSave('face_id', val)} 
-                />
-              </div>
-
               <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
                 <div className="space-y-0.5">
                   <label className="text-sm font-medium text-foreground flex items-center gap-2">

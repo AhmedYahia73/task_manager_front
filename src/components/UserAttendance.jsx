@@ -89,7 +89,7 @@ export const UserAttendance = () => {
       stopCamera();
       const payload = Array.from(detection.descriptor);
       console.log('[Face ID] Captured descriptor (first 5):', payload.slice(0, 5));
-      await executeAction(pendingAction, 'face', payload);
+      await executeAction(pendingAction, payload);
     } catch (err) {
       console.error(err);
       toast.error('Face scanning failed.');
@@ -97,11 +97,9 @@ export const UserAttendance = () => {
     }
   };
 
-  const handleRouterAction = (type) => {
-    executeAction(type, 'router', null);
-  };
 
-  const executeAction = async (type, method, payload) => {
+
+  const executeAction = async (type, payload) => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser');
       setChecking(false);
@@ -120,7 +118,7 @@ export const UserAttendance = () => {
         const res = await mutate({
           method: httpMethod,
           url: endpoint,
-          data: { lat, lng, method, payload }
+          data: { lat, lng, payload }
         });
 
         if (res?.success) {
@@ -144,7 +142,7 @@ export const UserAttendance = () => {
 
   const isCheckedIn = data?.isCheckedIn;
   const settings = data?.settings || {};
-  const requiresMethod = settings.face_id || settings.router_ip_status;
+  const requiresMethod = true; // Always requires Face ID now
 
   return (
     <div className="bg-card p-6 rounded-2xl shadow-sm border border-border/50 col-span-1 md:col-span-2 lg:col-span-3">
@@ -180,25 +178,14 @@ export const UserAttendance = () => {
             <>
               {requiresMethod ? (
                 <>
-                  {settings.face_id && (
+                  {true && (
                     <Button 
                       onClick={() => startCamera('check-in')}
-                      disabled={checking || (settings.face_id && !modelsLoaded)}
+                      disabled={checking || !modelsLoaded}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 rounded-xl flex items-center gap-2"
                     >
                       {checking ? <Loader2 className="animate-spin w-4 h-4" /> : <Camera className="w-4 h-4" />}
                       Face ID Check In
-                    </Button>
-                  )}
-                  {settings.router_ip_status && (
-                    <Button 
-                      onClick={() => handleRouterAction('check-in')}
-                      disabled={checking}
-                      variant="outline"
-                      className="border-primary text-primary hover:bg-primary/5 font-semibold px-6 rounded-xl flex items-center gap-2"
-                    >
-                      {checking ? <Loader2 className="animate-spin w-4 h-4" /> : <Wifi className="w-4 h-4" />}
-                      Router Check In
                     </Button>
                   )}
                 </>
@@ -217,26 +204,15 @@ export const UserAttendance = () => {
             <>
               {requiresMethod ? (
                 <>
-                  {settings.face_id && (
+                  {true && (
                     <Button 
                       onClick={() => startCamera('check-out')}
-                      disabled={checking || (settings.face_id && !modelsLoaded)}
+                      disabled={checking || !modelsLoaded}
                       variant="destructive"
                       className="font-semibold px-6 rounded-xl flex items-center gap-2 shadow-sm"
                     >
                       {checking ? <Loader2 className="animate-spin w-4 h-4" /> : <Camera className="w-4 h-4" />}
                       Face ID Check Out
-                    </Button>
-                  )}
-                  {settings.router_ip_status && (
-                    <Button 
-                      onClick={() => handleRouterAction('check-out')}
-                      disabled={checking}
-                      variant="outline"
-                      className="border-destructive text-destructive hover:bg-destructive/10 font-semibold px-6 rounded-xl flex items-center gap-2"
-                    >
-                      {checking ? <Loader2 className="animate-spin w-4 h-4" /> : <Wifi className="w-4 h-4" />}
-                      Router Check Out
                     </Button>
                   )}
                 </>
