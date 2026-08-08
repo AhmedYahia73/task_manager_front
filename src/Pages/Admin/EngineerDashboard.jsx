@@ -4,9 +4,6 @@ import { useGet } from '@/hooks/useGet';
 import { Loader2, Users, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useMutation } from '@/hooks/useMutation';
-import { setAuthToken } from '@/utils/auth';
-import { toast } from 'sonner';
 
 const CircularProgress = ({ value, total, colorClass, label }) => {
   const radius = 32;
@@ -54,72 +51,18 @@ const EngineerDashboard = () => {
   const { data, loading } = useGet('/api/admin/dashboard');
   const [year, setYear] = useState(new Date().getFullYear());
   const { data: pointsData, loading: pointsLoading } = useGet(`/api/admin/dashboard/points-chart?year=${year}`);
-  const { data: roleNamesData } = useGet('/api/admin/auth/settings/names');
-  const { mutate } = useMutation();
   const navigate = useNavigate();
-
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const currentRole = user?.role || 'engineer';
-
-  const handleRoleSwitch = async (newRole) => {
-    if (currentRole === newRole) return;
-    
-    const toastId = toast.loading('Switching workspace...');
-    try {
-      const res = await mutate({
-        method: 'POST',
-        url: '/api/admin/auth/switch-role',
-        data: { role: newRole }
-      });
-      
-      if (res?.data?.data) {
-        const { token, user: newUser } = res.data.data;
-        setAuthToken(token);
-        localStorage.setItem('user', JSON.stringify(newUser));
-        toast.success(`Switched to ${newRole === 'tester' ? (roleNamesData?.leader || 'Leader') : (roleNamesData?.user || 'Employee')} workspace`, { id: toastId });
-        window.location.reload();
-      } else {
-        toast.error('Failed to switch role', { id: toastId });
-      }
-    } catch (err) {
-      toast.error('Error switching role', { id: toastId });
-    }
-  };
 
   return (
     <div className="p-6 md:p-8 space-y-8 bg-gradient-to-br from-background to-muted/20 min-h-screen relative text-foreground">
       
-      {/* Header & Role Switcher */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-4xl font-black font-['Plus_Jakarta_Sans'] bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent pb-1">
             My Workspace
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">Welcome back! Here's your task overview.</p>
-        </div>
-        
-        {/* Role Tabs */}
-        <div className="flex p-1 bg-muted/50 rounded-xl border border-border/50">
-          <button
-            onClick={() => handleRoleSwitch('engineer')}
-            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
-              currentRole === 'engineer' 
-                ? 'bg-primary text-white shadow-md transform scale-[1.02]' 
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {roleNamesData?.user || 'Employee'} Dashboard
-          </button>
-          <button
-            onClick={() => handleRoleSwitch('tester')}
-            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
-              currentRole === 'tester' 
-                ? 'bg-amber-500 text-white shadow-md transform scale-[1.02]' 
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {roleNamesData?.leader || 'Leader'} Dashboard
-          </button>
         </div>
       </div>
 

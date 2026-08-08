@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { removeAuthToken } from '@/utils/auth';
 import { RoleNameProvider } from '@/context/RoleNameContext';
+import { RoleSwitcherTabs } from '@/components/RoleSwitcherTabs';
 
 export const AdminLayout = () => {
   const navigate = useNavigate();
@@ -72,8 +73,11 @@ export const AdminLayout = () => {
         </header>
 
         {/* Main Content */}
-        <main className="admin-content">
-          <Outlet />
+        <main className="admin-content flex flex-col h-full overflow-hidden">
+          <RoleSwitcherTabs />
+          <div className="flex-1 overflow-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </RoleNameProvider>
