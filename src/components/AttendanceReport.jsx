@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGet } from '@/hooks/useGet';
-import { Loader2, Calendar, Clock, CheckCircle, AlertTriangle, Gift, FileMinus, Palmtree } from 'lucide-react';
+import { Loader2, Calendar, Clock, CheckCircle, AlertTriangle, Gift, FileMinus, Palmtree, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
+import AttendanceAdminModal from '../Pages/Admin/HRM/AttendanceAdminModal';
 
 export default function AttendanceReport({ userId }) {
   const today = new Date();
@@ -14,6 +15,8 @@ export default function AttendanceReport({ userId }) {
   const [to, setTo] = useState(lastDay);
   const [page, setPage] = useState(1);
   const [allReports, setAllReports] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const loaderRef = useRef(null);
 
   const endpoint = userId ? `/api/admin/user/${userId}/attendance-report` : `/api/user/attendance/report`;
@@ -169,46 +172,69 @@ export default function AttendanceReport({ userId }) {
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            <Card className="bg-blue-50 border-blue-200">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-blue-800">Total Delay (Hrs)</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-blue-900">{data?.summary?.totalDelay?.toFixed(2) || 0}</p></CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 mb-6">
+            {/* New Cards */}
+            <Card className="bg-indigo-50 border-indigo-200 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-indigo-700 truncate">ساعات العمل</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-indigo-900">{data?.summary?.totalWorkingHours?.toFixed(2) || 0}</p></CardContent>
             </Card>
-            <Card className="bg-emerald-50 border-emerald-200">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-emerald-800">Onsite Days</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-emerald-900">{data?.summary?.onsiteDays || 0}</p></CardContent>
+            <Card className="bg-fuchsia-50 border-fuchsia-200 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-fuchsia-700 truncate">ساعات إضافية</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-fuchsia-900">{data?.summary?.totalOvertimeHours?.toFixed(2) || 0}</p></CardContent>
             </Card>
-            <Card className="bg-purple-50 border-purple-200">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-purple-800">Online (w/ Permission)</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-purple-900">{data?.summary?.onlineWithRequest || 0}</p></CardContent>
+            <Card className="bg-teal-50 border-teal-200 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-teal-700 truncate">أيام الحضور (كلي)</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-teal-900">
+                {(data?.summary?.onsiteDays || 0) + (data?.summary?.onlineWithRequest || 0) + (data?.summary?.onlineWithoutRequest || 0) + (data?.summary?.onlineRejected || 0)}
+              </p></CardContent>
             </Card>
-            <Card className="bg-amber-50 border-amber-300">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-amber-800">Online (No Permission)</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-amber-900">{data?.summary?.onlineWithoutRequest || 0}</p></CardContent>
+            <Card className="bg-cyan-50 border-cyan-200 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-cyan-700 truncate">أيام الإجازة (كلي)</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-cyan-900">
+                {(data?.summary?.holidayApproved || 0) + (data?.summary?.holidayStandard || 0) + (data?.summary?.holidayRejected || 0)}
+              </p></CardContent>
             </Card>
-            <Card className="bg-rose-50 border-rose-300">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-rose-800">Online (Rejected)</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-rose-900">{data?.summary?.onlineRejected || 0}</p></CardContent>
+
+            {/* Existing Cards (Resized) */}
+            <Card className="bg-blue-50 border-blue-200 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-blue-700 truncate">Total Delay (Hrs)</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-blue-900">{data?.summary?.totalDelay?.toFixed(2) || 0}</p></CardContent>
             </Card>
-            <Card className="bg-green-50 border-green-300">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-green-800">Holiday (Approved)</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-green-900">{data?.summary?.holidayApproved || 0}</p></CardContent>
+            <Card className="bg-emerald-50 border-emerald-200 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-emerald-700 truncate">Onsite Days</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-emerald-900">{data?.summary?.onsiteDays || 0}</p></CardContent>
             </Card>
-            <Card className="bg-red-50 border-red-300">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-red-800">Holiday (Rejected)</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-red-900">{data?.summary?.holidayRejected || 0}</p></CardContent>
+            <Card className="bg-purple-50 border-purple-200 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-purple-700 truncate">Online (w/ Perm)</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-purple-900">{data?.summary?.onlineWithRequest || 0}</p></CardContent>
             </Card>
-            <Card className="bg-slate-100 border-slate-300">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-slate-700">Standard Holidays</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-slate-800">{data?.summary?.holidayStandard || 0}</p></CardContent>
+            <Card className="bg-amber-50 border-amber-300 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-amber-800 truncate">Online (No Perm)</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-amber-900">{data?.summary?.onlineWithoutRequest || 0}</p></CardContent>
             </Card>
-            <Card className="bg-orange-50 border-orange-400">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-orange-900">Unexcused Absences</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-orange-900">{data?.summary?.unexcusedAbsence || 0}</p></CardContent>
+            <Card className="bg-rose-50 border-rose-300 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-rose-800 truncate">Online (Rejected)</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-rose-900">{data?.summary?.onlineRejected || 0}</p></CardContent>
             </Card>
-            <Card className="bg-pink-50 border-pink-200">
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs text-pink-800">Permission Hrs Taken</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-0"><p className="text-xl font-bold text-pink-900">{data?.summary?.totalPermissionHours || 0}</p></CardContent>
+            <Card className="bg-green-50 border-green-300 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-green-800 truncate">Holiday (Appr)</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-green-900">{data?.summary?.holidayApproved || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-red-50 border-red-300 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-red-800 truncate">Holiday (Rej)</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-red-900">{data?.summary?.holidayRejected || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-slate-100 border-slate-300 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-slate-700 truncate">Std Holidays</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-slate-800">{data?.summary?.holidayStandard || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-orange-50 border-orange-400 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-orange-900 truncate">Unexcused</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-orange-900">{data?.summary?.unexcusedAbsence || 0}</p></CardContent>
+            </Card>
+            <Card className="bg-pink-50 border-pink-200 hover:shadow-md transition-shadow">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-pink-800 truncate">Perm Hrs</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-pink-900">{data?.summary?.totalPermissionHours || 0}</p></CardContent>
             </Card>
           </div>
 
@@ -226,6 +252,7 @@ export default function AttendanceReport({ userId }) {
                     <th className="px-4 py-3">Hours</th>
                     <th className="px-4 py-3">Delay (Hrs)</th>
                     <th className="px-4 py-3">Perm. (Hrs)</th>
+                    {userId && <th className="px-4 py-3">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -249,6 +276,27 @@ export default function AttendanceReport({ userId }) {
                       <td className="px-4 py-3">
                         {row.attendance?.permissionHours || '-'}
                       </td>
+                      {userId && (
+                        <td className="px-4 py-3">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              setSelectedRecord({
+                                user: { id: userId },
+                                from: row.attendance?.from || `${row.date}T09:00:00`,
+                                to: row.attendance?.to || `${row.date}T17:00:00`,
+                                onsite: row.attendance?.onsite ?? true,
+                                isRequestOnline: row.attendance?.isRequestOnline ?? false
+                              });
+                              setIsModalOpen(true);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {allReports.length === 0 && (
@@ -270,6 +318,20 @@ export default function AttendanceReport({ userId }) {
             )}
           </div>
         </>
+      )}
+
+      {userId && isModalOpen && (
+        <AttendanceAdminModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          initialData={selectedRecord}
+          onSuccess={() => {
+            setIsModalOpen(false);
+            // reset page to 1 to refresh data
+            setPage(1);
+            setAllReports([]);
+          }}
+        />
       )}
     </div>
   );
