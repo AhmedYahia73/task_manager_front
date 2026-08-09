@@ -12,6 +12,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const userRole = userData?.role || 'Admin';
   const [isHrmOpen, setIsHrmOpen] = useState(false);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
+  const [isCompanyOpen, setIsCompanyOpen] = useState(false);
 
   const handleLogout = () => {
     removeAuthToken();
@@ -41,7 +42,6 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
           { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
-          { name: getRoleNamePlural('engineer') + ' & ' + getRoleNamePlural('tester'), path: '/admin/users', icon: 'group', adminOnly: true },
           { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true },
           { 
             name: 'HRM', 
@@ -58,7 +58,17 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
               { name: 'Deductions', path: '/admin/deductions', icon: 'money_off' },
             ]
           },
-          { name: 'Zones', path: '/admin/zones', icon: 'map', adminOnly: true },
+          { 
+            name: 'Company', 
+            icon: 'business', 
+            adminOnly: true,
+            subItems: [
+              { name: 'Business Setup', path: '/admin/company-settings', icon: 'domain' },
+              { name: 'Zones', path: '/admin/zones', icon: 'map' },
+              { name: 'Departments', path: '/admin/departments', icon: 'apartment' },
+              { name: getRoleNamePlural('engineer') + ' & ' + getRoleNamePlural('tester'), path: '/admin/users', icon: 'group' },
+            ]
+          },
           { name: 'Shifts', path: '/admin/shifts', icon: 'schedule', adminOnly: true },
           { name: 'Salaries', path: '/admin/salaries', icon: 'payments', adminOnly: true },
           { 
@@ -81,10 +91,15 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         })
         .map((item) => {
           if (item.subItems) {
-            const isOpen = item.name === 'HRM' ? isHrmOpen : isApplicationsOpen;
+            let isOpen = false;
+            if (item.name === 'HRM') isOpen = isHrmOpen;
+            else if (item.name === 'Applications') isOpen = isApplicationsOpen;
+            else if (item.name === 'Company') isOpen = isCompanyOpen;
+
             const toggleOpen = () => {
               if (item.name === 'HRM') setIsHrmOpen(!isHrmOpen);
-              else setIsApplicationsOpen(!isApplicationsOpen);
+              else if (item.name === 'Applications') setIsApplicationsOpen(!isApplicationsOpen);
+              else if (item.name === 'Company') setIsCompanyOpen(!isCompanyOpen);
             };
 
             return (

@@ -21,6 +21,8 @@ import HolidaysSystem from '@/Pages/Admin/HRM/HolidaysSystem';
 import Permissions from '@/Pages/Admin/HRM/Permissions';
 import MyHRM from '@/Pages/Admin/MyHRM';
 import Zones from '@/Pages/Admin/Zones';
+import Departments from '@/Pages/Admin/Departments';
+import CompanySettings from '@/Pages/Admin/CompanySettings';
 import Shifts from '@/Pages/Admin/Shifts';
 import Salaries from '@/Pages/Admin/Salaries';
 import Payroll from '@/Pages/Admin/HRM/Payroll';
@@ -112,6 +114,8 @@ export const router = createBrowserRouter([
       { path: 'admins', element: <Admins /> },
       { path: 'users', element: <Users /> },
       { path: 'zones', element: <Zones /> },
+      { path: 'departments', element: <Departments /> },
+      { path: 'company-settings', element: <CompanySettings /> },
       { path: 'shifts', element: <Shifts /> },
       { path: 'salaries', element: <Salaries /> },
       { path: 'payroll', element: <Payroll /> },

@@ -33,6 +33,7 @@ const Users = () => {
   const { data: listsData } = useGet('/api/admin/user/lists');
   const zonesList = listsData?.zones || [];
   const shiftsList = listsData?.shifts || [];
+  const departmentsList = listsData?.departments || [];
   
   const { data, loading, refresh } = useGet(`/api/admin/user?page=${page}&limit=10&search=${debouncedSearch}${roleFilter ? `&role=${roleFilter}` : ''}`);
   const { mutate, loading: mutationLoading } = useMutation();
@@ -53,10 +54,10 @@ const Users = () => {
     phone: '',
     password: '',
     status: 'active',
-    role: 'engineer',
     yearly_holidays: false,
     zone_id: '',
     shift_id: '',
+    department_id: '',
     image: null,
   });
 
@@ -69,15 +70,15 @@ const Users = () => {
         phone: userItem.phone,
         password: '', // Don't fill password on edit
         status: userItem.status,
-        role: userItem.role,
         yearly_holidays: userItem.yearly_holidays ?? false,
         zone_id: userItem.zone_id || '',
         shift_id: userItem.shift_id || '',
+        department_id: userItem.department_id || '',
         image: userItem.image || null,
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', role: 'engineer', yearly_holidays: false, zone_id: '', shift_id: '', image: null });
+      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', yearly_holidays: false, zone_id: '', shift_id: '', department_id: '', image: null });
     }
     setIsModalOpen(true);
   };
@@ -196,7 +197,7 @@ const Users = () => {
               <tr>
                 <th className="px-6 py-4">{getRoleName('engineer').toUpperCase()}</th>
                 <th className="px-6 py-4">CONTACT</th>
-                <th className="px-6 py-4">ROLE</th>
+                <th className="px-6 py-4">DEPARTMENT</th>
                 <th className="px-6 py-4">STATUS</th>
                 <th className="px-6 py-4">PROGRESS</th>
                 <th className="px-6 py-4 text-right">ACTIONS</th>
@@ -240,11 +241,13 @@ const Users = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        userItem.role === 'engineer' 
-                          ? 'bg-primary-light text-primary' 
-                          : 'bg-[#fff0e0] text-[#ba5a00]'
+                        userItem.department_id
+                          ? 'bg-blue-50 text-blue-700' 
+                          : 'bg-zinc-100 text-zinc-600'
                       }`}>
-                        {getRoleName(userItem.role)}
+                        {userItem.department_id 
+                          ? (departmentsList.find(d => d.id === userItem.department_id)?.name || 'Unknown Department')
+                          : 'No Department'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -387,38 +390,12 @@ const Users = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-foreground">Role</label>
-                  <select 
-                    name="role" 
-                    value={formData.role} 
-                    onChange={handleInputChange}
-                    className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="engineer">{getRoleName('engineer')}</option>
-                    <option value="tester">{getRoleName('tester')}</option>
-                  </select>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-foreground">Status</label>
-                  <select 
-                    name="status" 
-                    value={formData.status} 
-                    onChange={handleInputChange}
-                    className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-foreground">Zone</label>
                   <select 
                     name="zone_id" 
                     value={formData.zone_id} 
                     onChange={(e) => {
-                      setFormData({ ...formData, zone_id: e.target.value, shift_id: '' });
+                      setFormData({ ...formData, zone_id: e.target.value, department_id: '', shift_id: '' });
                     }}
                     required
                     className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -430,6 +407,22 @@ const Users = () => {
                   </select>
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Department</label>
+                  <select 
+                    name="department_id" 
+                    value={formData.department_id} 
+                    onChange={handleInputChange}
+                    disabled={!formData.zone_id}
+                    className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="" disabled>Select Department</option>
+                    {departmentsList.filter(dep => dep.zone_id === formData.zone_id).map(dep => (
+                      <option key={dep.id} value={dep.id}>{dep.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-foreground">Shift</label>
                   <select 
@@ -451,6 +444,19 @@ const Users = () => {
                         </option>
                       );
                     })}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Status</label>
+                  <select 
+                    name="status" 
+                    value={formData.status} 
+                    onChange={handleInputChange}
+                    className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                   </select>
                 </div>
 

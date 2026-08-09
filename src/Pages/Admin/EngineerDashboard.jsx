@@ -53,11 +53,12 @@ const EngineerDashboard = () => {
   const { data: pointsData, loading: pointsLoading } = useGet(`/api/admin/dashboard/points-chart?year=${year}`);
   const navigate = useNavigate();
 
+
   return (
     <div className="p-6 md:p-8 space-y-8 bg-gradient-to-br from-background to-muted/20 min-h-screen relative text-foreground">
       
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-4xl font-black font-['Plus_Jakarta_Sans'] bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent pb-1">
             My Workspace
