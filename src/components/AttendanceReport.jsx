@@ -283,12 +283,15 @@ export default function AttendanceReport({ userId }) {
                             size="sm" 
                             className="h-8 w-8 p-0"
                             onClick={() => {
+                              const hasOnsiteData = typeof row.attendance?.onsite !== 'undefined';
+                              
                               setSelectedRecord({
+                                id: row.attendance?.id,
                                 user: { id: userId },
                                 from: row.attendance?.from || `${row.date}T09:00:00`,
                                 to: row.attendance?.to || `${row.date}T17:00:00`,
-                                onsite: row.attendance?.onsite ?? true,
-                                isRequestOnline: row.attendance?.isRequestOnline ?? false
+                                onsite: hasOnsiteData ? row.attendance.onsite : false, // Default to false (remote)
+                                isRequestOnline: hasOnsiteData ? row.attendance.isRequestOnline : true // Default to true (Online Request)
                               });
                               setIsModalOpen(true);
                             }}
@@ -330,6 +333,7 @@ export default function AttendanceReport({ userId }) {
             // reset page to 1 to refresh data
             setPage(1);
             setAllReports([]);
+            refresh();
           }}
         />
       )}

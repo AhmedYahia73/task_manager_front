@@ -20,7 +20,10 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
 
   const formatDatetime = (dateStr) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toISOString().slice(0, 16);
+    const date = new Date(dateStr);
+    // Adjust to local time format for datetime-local input
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().slice(0, 16);
   };
 
   useEffect(() => {
@@ -48,7 +51,7 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
     if (!formData.userId) return toast.error('Please select a user');
     if (!formData.from) return toast.error('Please select check-in time');
 
-    const endpoint = initialData ? `/api/admin/hrm/attendance/${initialData.id}` : `/api/admin/hrm/attendance`;
+    const endpoint = initialData?.id ? `/api/admin/hrm/attendance/${initialData.id}` : `/api/admin/hrm/attendance`;
     
     const payload = {
       userId: formData.userId,
@@ -59,7 +62,7 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
     };
 
     const res = await mutate({
-      method: initialData ? 'PUT' : 'POST',
+      method: initialData?.id ? 'PUT' : 'POST',
       url: endpoint,
       data: payload
     });
@@ -77,7 +80,7 @@ export default function AttendanceAdminModal({ isOpen, onClose, onSuccess, initi
       <div className="bg-card rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center p-5 border-b border-border">
           <h2 className="text-lg font-bold text-foreground capitalize">
-            {initialData ? 'Edit' : 'Add'} Attendance
+            {initialData?.id ? 'Edit' : 'Add'} Attendance
           </h2>
           <button onClick={onClose} className="text-muted-foreground hover:bg-muted p-1.5 rounded-lg transition-colors">
             <X className="w-5 h-5" />
