@@ -77,29 +77,29 @@ export default function AttendanceReport({ userId }) {
             >
               <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
               <div className="relative z-10 flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">الإجازات السنوية</h3>
+                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">Annual Leaves</h3>
                 <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                   <Palmtree className="w-6 h-6 text-white" />
                 </div>
               </div>
               <div className="relative z-10 grid grid-cols-3 gap-4 text-center divide-x divide-white/20">
                 <div>
-                  <p className="text-sm text-blue-100 mb-1">المتبقي</p>
+                  <p className="text-sm text-blue-100 mb-1">Remaining</p>
                   <p className="text-2xl font-black">{data.yearlyHolidaysSummary.remaining}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-blue-100 mb-1">المستهلك</p>
+                  <p className="text-sm text-blue-100 mb-1">Used</p>
                   <p className="text-2xl font-black">{data.yearlyHolidaysSummary.used}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-blue-100 mb-1">الرصيد الكلي</p>
+                  <p className="text-sm text-blue-100 mb-1">Total Balance</p>
                   <p className="text-2xl font-black">{data.yearlyHolidaysSummary.totalAllowed}</p>
                 </div>
               </div>
               {data.yearlyHolidaysSummary.exceeded > 0 && (
                 <div className="relative z-10 mt-4 bg-red-500/20 text-red-100 text-sm py-2 px-3 rounded-lg border border-red-500/30 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  تجاوزت رصيد الإجازات بمقدار {data.yearlyHolidaysSummary.exceeded} أيام (محسوبة كغياب)
+                  <AlertCircle className="w-4 h-4" />
+                  You exceeded your leave balance by {data.yearlyHolidaysSummary.exceeded} days (counted as absence)
                 </div>
               )}
             </motion.div>
@@ -113,22 +113,22 @@ export default function AttendanceReport({ userId }) {
             >
               <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
               <div className="relative z-10 flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">المكافآت</h3>
+                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">Bonuses</h3>
                 <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                   <Gift className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <div className="relative z-10 grid grid-cols-2 gap-4 divide-x divide-white/20 text-center">
+              <div className="relative z-10 grid grid-cols-2 gap-4 text-center divide-x divide-white/20">
                 <div>
-                  <p className="text-sm text-emerald-100 mb-1">مبلغ ثابت</p>
+                  <p className="text-sm text-emerald-100 mb-1">Fixed Amount</p>
                   <p className="text-2xl font-black">
                     ${data.financials.bonuses.filter(b => b.type === 'amount').reduce((acc, curr) => acc + Number(curr.amount), 0).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-emerald-100 mb-1">أجر أيام</p>
+                  <p className="text-sm text-emerald-100 mb-1">Days Pay</p>
                   <p className="text-2xl font-black">
-                    {data.financials.bonuses.filter(b => b.type === 'days').reduce((acc, curr) => acc + Number(curr.amount), 0)} يوم
+                    {data.financials.bonuses.filter(b => b.type === 'days').reduce((acc, curr) => acc + Number(curr.amount), 0)} Days
                   </p>
                 </div>
               </div>
@@ -143,22 +143,22 @@ export default function AttendanceReport({ userId }) {
             >
               <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
               <div className="relative z-10 flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">الخصومات</h3>
+                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">Deductions</h3>
                 <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                  <FileMinus className="w-6 h-6 text-white" />
+                  <TrendingDown className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <div className="relative z-10 grid grid-cols-2 gap-4 divide-x divide-white/20 text-center">
+              <div className="relative z-10 grid grid-cols-2 gap-4 text-center divide-x divide-white/20">
                 <div>
-                  <p className="text-sm text-rose-100 mb-1">مبلغ ثابت</p>
+                  <p className="text-sm text-rose-100 mb-1">Fixed Amount</p>
                   <p className="text-2xl font-black">
                     ${data.financials.deductions.filter(d => d.type === 'amount').reduce((acc, curr) => acc + Number(curr.amount), 0).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-rose-100 mb-1">خصم أيام</p>
+                  <p className="text-sm text-rose-100 mb-1">Days Deduction</p>
                   <p className="text-2xl font-black">
-                    {data.financials.deductions.filter(d => d.type === 'days').reduce((acc, curr) => acc + Number(curr.amount), 0)} يوم
+                    {data.financials.deductions.filter(d => d.type === 'days').reduce((acc, curr) => acc + Number(curr.amount), 0)} Days
                   </p>
                 </div>
               </div>
@@ -173,29 +173,26 @@ export default function AttendanceReport({ userId }) {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 mb-6">
-            {/* New Cards */}
-            <Card className="bg-indigo-50 border-indigo-200 hover:shadow-md transition-shadow">
-              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-indigo-700 truncate">ساعات العمل</CardTitle></CardHeader>
-              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-indigo-900">{data?.summary?.totalWorkingHours?.toFixed(2) || 0}</p></CardContent>
+            <Card className="shadow-sm border-border bg-gradient-to-br from-indigo-50 to-white">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-indigo-700 truncate">Working Hours</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-indigo-950">{data?.summary?.totalWorkingHours?.toFixed(1) || 0}</p></CardContent>
             </Card>
-            <Card className="bg-fuchsia-50 border-fuchsia-200 hover:shadow-md transition-shadow">
-              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-fuchsia-700 truncate">ساعات إضافية</CardTitle></CardHeader>
-              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-fuchsia-900">{data?.summary?.totalOvertimeHours?.toFixed(2) || 0}</p></CardContent>
+            <Card className="shadow-sm border-border bg-gradient-to-br from-fuchsia-50 to-white">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-fuchsia-700 truncate">Overtime Hours</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-fuchsia-950">{data?.summary?.totalOvertimeHours?.toFixed(1) || 0}</p></CardContent>
             </Card>
-            <Card className="bg-teal-50 border-teal-200 hover:shadow-md transition-shadow">
-              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-teal-700 truncate">أيام الحضور (كلي)</CardTitle></CardHeader>
-              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-teal-900">
-                {(data?.summary?.onsiteDays || 0) + (data?.summary?.onlineWithRequest || 0) + (data?.summary?.onlineWithoutRequest || 0) + (data?.summary?.onlineRejected || 0)}
-              </p></CardContent>
+            <Card className="shadow-sm border-border bg-gradient-to-br from-teal-50 to-white">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-teal-700 truncate">Total Attendance Days</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1">
+                <p className="text-lg font-black text-teal-950">{(data?.summary?.onsiteDays || 0) + (data?.summary?.onlineWithRequest || 0) + (data?.summary?.onlineWithoutRequest || 0)}</p>
+              </CardContent>
             </Card>
-            <Card className="bg-cyan-50 border-cyan-200 hover:shadow-md transition-shadow">
-              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-cyan-700 truncate">أيام الإجازة (كلي)</CardTitle></CardHeader>
-              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-cyan-900">
-                {(data?.summary?.holidayApproved || 0) + (data?.summary?.holidayStandard || 0) + (data?.summary?.holidayRejected || 0)}
-              </p></CardContent>
+            <Card className="shadow-sm border-border bg-gradient-to-br from-cyan-50 to-white">
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-cyan-700 truncate">Total Leave Days</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1">
+                <p className="text-lg font-black text-cyan-950">{(data?.summary?.holidayApproved || 0) + (data?.summary?.holidayStandard || 0) + (data?.summary?.holidayRejected || 0)}</p>
+              </CardContent>
             </Card>
-
-            {/* Existing Cards (Resized) */}
             <Card className="bg-blue-50 border-blue-200 hover:shadow-md transition-shadow">
               <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-blue-700 truncate">Total Delay (Hrs)</CardTitle></CardHeader>
               <CardContent className="p-2 pt-1"><p className="text-lg font-black text-blue-900">{data?.summary?.totalDelay?.toFixed(2) || 0}</p></CardContent>
