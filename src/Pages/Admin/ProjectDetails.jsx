@@ -8,6 +8,7 @@ import { Loader2, Search, Plus, Edit, Trash2, X, Users, PersonStanding, Link as 
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
+import NotesBoard from '@/components/NotesBoard';
 
 const ProjectDetails = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
@@ -68,6 +69,7 @@ const ProjectDetails = () => {
   // Group Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const [isNotesBoardOpen, setIsNotesBoardOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -436,6 +438,10 @@ const ProjectDetails = () => {
                         <span className="material-symbols-outlined text-sm mr-2">task</span>
                         Manage Tasks
                       </Button>
+                      <Button onClick={() => setIsNotesBoardOpen(true)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 border border-border">
+                        <span className="material-symbols-outlined text-sm mr-2">speaker_notes</span>
+                        Notes Board
+                      </Button>
                     </div>
                   </div>
 
@@ -678,6 +684,16 @@ const ProjectDetails = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Notes Board Modal */}
+      {activeGroup && (
+        <NotesBoard
+          isOpen={isNotesBoardOpen}
+          onClose={() => setIsNotesBoardOpen(false)}
+          groupId={activeGroup.id}
+          groupName={activeGroup.name}
+        />
       )}
     </div>
   );
