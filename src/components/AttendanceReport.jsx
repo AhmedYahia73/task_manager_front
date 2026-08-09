@@ -98,7 +98,7 @@ export default function AttendanceReport({ userId }) {
               </div>
               {data.yearlyHolidaysSummary.exceeded > 0 && (
                 <div className="relative z-10 mt-4 bg-red-500/20 text-red-100 text-sm py-2 px-3 rounded-lg border border-red-500/30 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
+                  <AlertTriangle className="w-4 h-4" />
                   You exceeded your leave balance by {data.yearlyHolidaysSummary.exceeded} days (counted as absence)
                 </div>
               )}
@@ -145,7 +145,7 @@ export default function AttendanceReport({ userId }) {
               <div className="relative z-10 flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans']">Deductions</h3>
                 <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                  <TrendingDown className="w-6 h-6 text-white" />
+                  <FileMinus className="w-6 h-6 text-white" />
                 </div>
               </div>
               <div className="relative z-10 grid grid-cols-2 gap-4 text-center divide-x divide-white/20">
