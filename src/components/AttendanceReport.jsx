@@ -247,6 +247,7 @@ export default function AttendanceReport({ userId }) {
                     <th className="px-4 py-3">Check In</th>
                     <th className="px-4 py-3">Check Out</th>
                     <th className="px-4 py-3">Hours</th>
+                    <th className="px-4 py-3">Overtime (Hrs)</th>
                     <th className="px-4 py-3">Delay (Hrs)</th>
                     <th className="px-4 py-3">Perm. (Hrs)</th>
                     {userId && <th className="px-4 py-3">Actions</th>}
@@ -266,6 +267,9 @@ export default function AttendanceReport({ userId }) {
                       </td>
                       <td className="px-4 py-3">
                         {row.attendance?.hours ? row.attendance.hours.toFixed(2) : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.attendance?.over_time ? row.attendance.over_time.toFixed(2) : '-'}
                       </td>
                       <td className="px-4 py-3">
                         {row.attendance?.delay ? row.attendance.delay.toFixed(2) : '-'}
