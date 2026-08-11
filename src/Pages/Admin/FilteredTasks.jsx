@@ -35,6 +35,7 @@ const FilteredTasks = () => {
   const filterUserId = queryParams.get('user_id') || '';
 
   const filterStatus = queryParams.get('status') || '';
+  const fromRoute = queryParams.get('from') || '';
 
   const endpoint = type === 'pending' ? '/api/admin/tasks/pendingTasks' 
                  : type === 'delay' ? '/api/admin/tasks/delayTasks' 
@@ -45,6 +46,11 @@ const FilteredTasks = () => {
                   : type === 'delay' ? 'Delayed Tasks' 
                   : type === 'today' ? 'Today\'s Tasks'
                   : 'All Tasks';
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // Fetch Tasks Data
   const { data: tasksData, loading: tasksLoading, refresh: refreshTasks } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}&project_id=${projectId}&user_id=${filterUserId}&status=${filterStatus}`);
@@ -165,9 +171,15 @@ const FilteredTasks = () => {
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <nav className="mb-3 text-sm text-muted-foreground flex items-center">
-            <Link to="/admin/dashboard" className="hover:underline hover:text-primary flex items-center">
-              <ChevronLeft className="w-4 h-4 mr-1" /> Dashboard
-            </Link>
+            {fromRoute === 'employee-live' ? (
+              <Link to="/admin/employee-live" className="hover:underline hover:text-primary flex items-center">
+                <ChevronLeft className="w-4 h-4 mr-1" /> Employee Live
+              </Link>
+            ) : (
+              <Link to="/admin/dashboard" className="hover:underline hover:text-primary flex items-center">
+                <ChevronLeft className="w-4 h-4 mr-1" /> Dashboard
+              </Link>
+            )}
             <span className="material-symbols-outlined mx-1 text-[16px]">chevron_right</span>
             <span className="font-semibold text-foreground">{pageTitle}</span>
           </nav>

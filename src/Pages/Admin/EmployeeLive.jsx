@@ -145,7 +145,7 @@ const EmployeeLive = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button 
-                          onClick={() => navigate(`/admin/tasks/all?user_id=${userItem.id}&status=inprogress`)}
+                          onClick={() => navigate(`/admin/tasks/all?user_id=${userItem.id}&status=inprogress&from=employee-live`)}
                           variant="outline" 
                           size="sm"
                           className="h-8 text-xs font-semibold hover:bg-primary hover:text-white transition-colors"
