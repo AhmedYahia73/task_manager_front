@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { removeAuthToken } from '@/utils/auth';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useRoleNames } from '@/context/RoleNameContext';
+import { useMutation } from '@/hooks/useMutation';
 
 export const AdminSidebar = ({ isOpen, onClose }) => {
   const { getRoleNamePlural } = useRoleNames();
@@ -14,7 +15,14 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
 
-  const handleLogout = () => {
+  const { mutate } = useMutation();
+
+  const handleLogout = async () => {
+    try {
+      await mutate({ method: 'POST', url: '/api/admin/auth/logout' });
+    } catch (error) {
+      console.error("Logout API failed", error);
+    }
     removeAuthToken();
     localStorage.removeItem('user');
     navigate('/login', { replace: true });
