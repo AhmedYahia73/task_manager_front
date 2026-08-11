@@ -13,6 +13,7 @@ import ProjectDetails from '@/Pages/Admin/ProjectDetails';
 import Tasks from '@/Pages/Admin/Tasks';
 import Admins from '@/Pages/Admin/Admins';
 import Users from '@/Pages/Admin/Users';
+import EmployeeLive from '@/Pages/Admin/EmployeeLive';
 import { Settings } from '@/Pages/Admin/Settings';
 import HolidayRequests from '@/Pages/Admin/HRM/HolidayRequests';
 import OnlineRequests from '@/Pages/Admin/HRM/OnlineRequests';
@@ -113,6 +114,7 @@ export const router = createBrowserRouter([
       { path: 'tasks/:type', element: <FilteredTasks /> },
       { path: 'admins', element: <Admins /> },
       { path: 'users', element: <Users /> },
+      { path: 'employee-live', element: <EmployeeLive /> },
       { path: 'zones', element: <Zones /> },
       { path: 'departments', element: <Departments /> },
       { path: 'company-settings', element: <CompanySettings /> },

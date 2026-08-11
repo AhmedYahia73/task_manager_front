@@ -50,6 +50,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
             subItems: [
               { name: 'Holiday Requests', path: '/admin/holiday-requests', icon: 'beach_access' },
               { name: 'Online Requests', path: '/admin/online-requests', icon: 'home_work' },
+              { name: 'Employee Live', path: '/admin/employee-live', icon: 'monitor_heart' },
               { name: 'Attendance', path: '/admin/attendance', icon: 'how_to_reg' },
               { name: 'Payroll', path: '/admin/payroll', icon: 'account_balance_wallet' },
               { name: 'Holidays System', path: '/admin/holidays-system', icon: 'event_available' },

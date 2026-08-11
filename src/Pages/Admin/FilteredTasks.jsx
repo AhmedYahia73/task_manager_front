@@ -34,6 +34,8 @@ const FilteredTasks = () => {
   const queryParams = new URLSearchParams(querySearch);
   const filterUserId = queryParams.get('user_id') || '';
 
+  const filterStatus = queryParams.get('status') || '';
+
   const endpoint = type === 'pending' ? '/api/admin/tasks/pendingTasks' 
                  : type === 'delay' ? '/api/admin/tasks/delayTasks' 
                  : type === 'today' ? '/api/admin/tasks/todayTasks'
@@ -45,7 +47,7 @@ const FilteredTasks = () => {
                   : 'All Tasks';
 
   // Fetch Tasks Data
-  const { data: tasksData, loading: tasksLoading, refresh: refreshTasks } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}&project_id=${projectId}&user_id=${filterUserId}`);
+  const { data: tasksData, loading: tasksLoading, refresh: refreshTasks } = useGet(`${endpoint}?page=${page}&limit=10&search=${debouncedSearch}&project_id=${projectId}&user_id=${filterUserId}&status=${filterStatus}`);
   const tasks = tasksData?.tasks || tasksData?.Tasks || [];
   const pagination = tasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
 
