@@ -10,7 +10,7 @@ const Salaries = () => {
   const [page, setPage] = useState(1);
   const limit = 10;
   const { data: salariesData, loading: salariesLoading, refresh: refreshSalaries } = useGet(`/api/admin/salaries?page=${page}&limit=${limit}`);
-  const { data: usersData, loading: usersLoading } = useGet(`/api/admin/user/selection-list`);
+  const { data: usersData, loading: usersLoading } = useGet(`/api/admin/user/selection-list?withoutSalary=true`);
   const { mutate, loading: mutationLoading } = useMutation();
 
   const salariesList = salariesData?.Salaries || [];
@@ -188,12 +188,19 @@ const Salaries = () => {
                     required
                     value={formData.user_id}
                     onChange={e => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
-                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:opacity-50"
+                    disabled={!!editingId}
+                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:opacity-50"
                   >
                     <option value="" disabled>Select an employee</option>
                     {usersList.map(user => (
                       <option key={user.id} value={user.id}>{user.name}</option>
                     ))}
+                    {/* If editing, the user won't be in usersList, so we manually render them */}
+                    {editingId && formData.user_id && !usersList.find(u => u.id === formData.user_id) && (
+                      <option value={formData.user_id}>
+                        {salariesList.find(s => s.user_id === formData.user_id)?.userName || 'Current Employee'}
+                      </option>
+                    )}
                   </select>
                 </div>
 
