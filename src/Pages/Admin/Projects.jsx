@@ -45,11 +45,13 @@ const Projects = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    documentation: '', // Will hold base64 string
+    documentation: '',
+    logo: '', // Will hold base64 string
     tester_id: '',
     users_ids: []
   });
   const fileInputRef = useRef(null);
+  const logoInputRef = useRef(null);
 
   const openModal = (project = null) => {
     if (project) {
@@ -57,16 +59,15 @@ const Projects = () => {
       setFormData({
         name: project.name,
         description: project.description || '',
-        documentation: '', // Don't preload base64 of existing file, only update if new file selected
+        documentation: '', 
+        logo: '', // Don't preload base64 of existing logo
         tester_id: project.tester_id || '',
-        users_ids: [] // We don't get users_ids in the main project list, might need to fetch them if editing, but the backend requires it on PUT.
-        // Wait, updateProjectSchema in backend says users_ids is optional. So if it's empty, it might be ignored or might delete all. We should fetch them to prepopulate, but for now we will leave it empty and only update if changed, OR we fetch project users.
+        users_ids: []
       });
-      // Fetch users for this project to pre-fill multi-select
       fetchProjectUsers(project.id);
     } else {
       setEditingId(null);
-      setFormData({ name: '', description: '', documentation: '', tester_id: '', users_ids: [] });
+      setFormData({ name: '', description: '', documentation: '', logo: '', tester_id: '', users_ids: [] });
     }
     setIsModalOpen(true);
   };
@@ -83,6 +84,7 @@ const Projects = () => {
     setIsModalOpen(false);
     setEditingId(null);
     if(fileInputRef.current) fileInputRef.current.value = '';
+    if(logoInputRef.current) logoInputRef.current.value = '';
   };
 
   const handleInputChange = (e) => {
@@ -113,12 +115,28 @@ const Projects = () => {
     }
   };
 
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, logo: reader.result });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData({ ...formData, logo: '' });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = { ...formData };
     
     if (!payload.documentation) {
       delete payload.documentation;
+    }
+    if (!payload.logo) {
+      delete payload.logo;
     }
 
     const response = await mutate({
@@ -256,22 +274,22 @@ const Projects = () => {
             const colorTheme = colors[idx % colors.length];
             return (
               <div key={project.id} className={`bg-card rounded-xl shadow-sm border border-border p-6 flex flex-col relative border-l-4 ${colorTheme.border}`}>
-                <div className="absolute top-4 right-4 flex gap-2">
-                  {userRole !== 'engineer' && (
-                    <div className="flex gap-2">
-                      <button onClick={() => openModal(project)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors border border-transparent hover:border-border">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      {userRole !== 'tester' && (
-                        <button onClick={() => handleDelete(project.id)} className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-border">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                
+                <div className="flex items-center gap-3 mb-4 pr-2">
+                  {project.logo ? (
+                    <img 
+                      src={project.logo.startsWith('http') ? project.logo : `${import.meta.env.VITE_API_BASE_URL}${project.logo.startsWith('/') ? '' : '/'}${project.logo}`} 
+                      alt={project.name}
+                      className="w-12 h-12 rounded-lg object-contain border border-border shadow-sm shrink-0 bg-background p-1"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xl border border-primary/20 shrink-0">
+                      {project.name.charAt(0).toUpperCase()}
                     </div>
                   )}
+                  <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans'] truncate" title={project.name}>{project.name}</h3>
                 </div>
                 
-                <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans'] mb-2 pr-16 truncate" title={project.name}>{project.name}</h3>
                 <p className="text-muted-foreground font-['Inter'] text-sm mb-6 line-clamp-2 h-10">{project.description || 'No description provided.'}</p>
                 
                 <div className="mb-4">
@@ -355,21 +373,37 @@ const Projects = () => {
                   </div>
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-border flex flex-wrap gap-2">
-                  <Button 
-                    onClick={() => {
-                      setSelectedProjectForMembers(project);
-                      setMembersModalOpen(true);
-                    }} 
-                    variant="outline" 
-                    className="flex-1 min-w-[120px] border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-2 text-xs sm:text-sm"
-                  >
-                    <Users className="w-4 h-4" />
-                    Members
-                  </Button>
-                  <Button onClick={() => navigate(`/admin/projects/${project.id}`)} variant="outline" className="flex-1 min-w-[120px] border-primary text-primary hover:bg-primary/5 text-xs sm:text-sm">
-                    View Details
-                  </Button>
+                <div className="mt-auto pt-4 border-t border-border flex flex-col gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      onClick={() => {
+                        setSelectedProjectForMembers(project);
+                        setMembersModalOpen(true);
+                      }} 
+                      variant="outline" 
+                      className="flex-1 min-w-[100px] border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-2 text-xs sm:text-sm"
+                    >
+                      <Users className="w-4 h-4" />
+                      Members
+                    </Button>
+                    <Button onClick={() => navigate(`/admin/projects/${project.id}`)} variant="outline" className="flex-1 min-w-[100px] border-primary text-primary hover:bg-primary/5 text-xs sm:text-sm">
+                      View Details
+                    </Button>
+                  </div>
+                  
+                  {/* Actions Area */}
+                  {userRole !== 'engineer' && (
+                    <div className="flex justify-end gap-3 pt-2 border-t border-border/40">
+                      <button onClick={() => openModal(project)} className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors font-medium">
+                        <Edit className="w-3.5 h-3.5" /> Edit Project
+                      </button>
+                      {userRole !== 'tester' && (
+                        <button onClick={() => handleDelete(project.id)} className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-red-500 transition-colors font-medium">
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -432,6 +466,23 @@ const Projects = () => {
                   />
                 </div>
                 
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Project Logo {!editingId && <span className="text-red-500">*</span>}
+                  </label>
+                  <div className="border border-input rounded-md flex items-center bg-card pr-2 overflow-hidden">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleLogoChange} 
+                      ref={logoInputRef}
+                      required={!editingId}
+                      className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                  </div>
+                  {editingId && <p className="text-xs text-muted-foreground mt-1">Leave empty to keep current logo.</p>}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Documentation File</label>
                   <div className="border border-input rounded-md flex items-center bg-card pr-2 overflow-hidden">
