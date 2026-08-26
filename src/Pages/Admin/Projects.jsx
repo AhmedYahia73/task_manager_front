@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, Plus, Edit, Trash2, X, Link as LinkIcon, Image as ImageIcon, Users } from 'lucide-react';
+import { Loader2, Search, Plus, Edit, Trash2, X, Link as LinkIcon, Image as ImageIcon, Users, MoreVertical } from 'lucide-react';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { useRoleNames } from '@/context/RoleNameContext';
@@ -15,7 +15,15 @@ const Projects = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = () => setOpenDropdownId(null);
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -273,54 +281,108 @@ const Projects = () => {
           projects.map((project, idx) => {
             const colorTheme = colors[idx % colors.length];
             return (
-              <div key={project.id} className={`bg-card rounded-xl shadow-sm border border-border p-6 flex flex-col relative border-l-4 ${colorTheme.border}`}>
+              <div key={project.id} className={`bg-card rounded-xl shadow-sm hover:shadow-md transition-shadow border border-border p-5 flex flex-col relative border-l-4 ${colorTheme.border}`}>
                 
-                <div className="flex items-center gap-3 mb-4 pr-2">
-                  {project.logo ? (
-                    <img 
-                      src={project.logo.startsWith('http') ? project.logo : `${import.meta.env.VITE_API_BASE_URL}${project.logo.startsWith('/') ? '' : '/'}${project.logo}`} 
-                      alt={project.name}
-                      className="w-12 h-12 rounded-lg object-contain border border-border shadow-sm shrink-0 bg-background p-1"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xl border border-primary/20 shrink-0">
-                      {project.name.charAt(0).toUpperCase()}
+                {/* Header: Logo + Title + 3-Dots Menu */}
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {project.logo ? (
+                      <img 
+                        src={project.logo.startsWith('http') ? project.logo : `${import.meta.env.VITE_API_BASE_URL}${project.logo.startsWith('/') ? '' : '/'}${project.logo}`} 
+                        alt={project.name}
+                        className="w-11 h-11 rounded-xl object-contain border border-border shadow-sm shrink-0 bg-background p-1"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20 shrink-0">
+                        {project.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-bold font-['Plus_Jakarta_Sans'] truncate text-foreground leading-tight" title={project.name}>
+                        {project.name}
+                      </h3>
+                    </div>
+                  </div>
+
+                  {/* 3-Dots Action Menu */}
+                  {userRole !== 'engineer' && (
+                    <div className="relative shrink-0">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(openDropdownId === project.id ? null : project.id);
+                        }}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus:outline-none"
+                        title="Actions"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+
+                      {openDropdownId === project.id && (
+                        <div 
+                          className="absolute right-0 top-8 z-30 w-36 bg-card border border-border rounded-xl shadow-xl py-1 text-sm animate-in fade-in zoom-in-95 duration-100"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button 
+                            onClick={() => {
+                              setOpenDropdownId(null);
+                              openModal(project);
+                            }} 
+                            className="w-full px-3 py-2 flex items-center gap-2 text-left text-foreground hover:bg-muted hover:text-primary transition-colors text-xs font-medium"
+                          >
+                            <Edit className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span>Edit Project</span>
+                          </button>
+                          
+                          {userRole !== 'tester' && (
+                            <button 
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                handleDelete(project.id);
+                              }} 
+                              className="w-full px-3 py-2 flex items-center gap-2 text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors text-xs font-medium"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
-                  <h3 className="text-xl font-bold font-['Plus_Jakarta_Sans'] truncate" title={project.name}>{project.name}</h3>
                 </div>
                 
-                <p className="text-muted-foreground font-['Inter'] text-sm mb-6 line-clamp-2 h-10">{project.description || 'No description provided.'}</p>
+                <p className="text-muted-foreground font-['Inter'] text-sm mb-4 line-clamp-2 h-10">{project.description || 'No description provided.'}</p>
                 
                 <div className="mb-4">
-                  <div className="flex justify-between text-sm font-medium mb-2">
+                  <div className="flex justify-between text-xs font-medium mb-1.5">
                     <span>Approved: {project.progress}%</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2 mb-3">
-                    <div className={`${colorTheme.bg} h-2 rounded-full transition-all duration-500`} style={{ width: `${project.progress}%` }}></div>
+                  <div className="w-full bg-muted rounded-full h-1.5 mb-2.5">
+                    <div className={`${colorTheme.bg} h-1.5 rounded-full transition-all duration-500`} style={{ width: `${project.progress}%` }}></div>
                   </div>
-                  <div className="flex justify-between text-sm font-medium mb-2 text-red-600">
+                  <div className="flex justify-between text-xs font-medium mb-1.5 text-red-600">
                     <span>Done: {project.done_progress || 0}%</span>
                   </div>
-                  <div className="w-full bg-red-100 rounded-full h-2">
-                    <div className="bg-red-500 h-2 rounded-full transition-all duration-500" style={{ width: `${project.done_progress || 0}%` }}></div>
+                  <div className="w-full bg-red-100 dark:bg-red-950/40 rounded-full h-1.5">
+                    <div className="bg-red-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${project.done_progress || 0}%` }}></div>
                   </div>
                 </div>
 
                 {project.documentation && (
-                  <button onClick={(e) => handleViewDoc(e, project.documentation)} className="text-sm text-primary flex items-center gap-1 mb-6 hover:underline w-fit bg-transparent border-none cursor-pointer p-0">
-                    <LinkIcon className="w-4 h-4" />
+                  <button onClick={(e) => handleViewDoc(e, project.documentation)} className="text-xs text-primary flex items-center gap-1 mb-4 hover:underline w-fit bg-transparent border-none cursor-pointer p-0 font-medium">
+                    <LinkIcon className="w-3.5 h-3.5" />
                     Documentation
                   </button>
                 )}
                 {!project.documentation && (
-                  <div className="text-sm text-gray-400 flex items-center gap-1 mb-6 w-fit">
-                    <LinkIcon className="w-4 h-4" />
+                  <div className="text-xs text-muted-foreground/60 flex items-center gap-1 mb-4 w-fit">
+                    <LinkIcon className="w-3.5 h-3.5" />
                     No Documentation
                   </div>
                 )}
 
-                <div className="flex flex-col gap-3 mb-6">
+                <div className="flex flex-col gap-2.5 mb-5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground font-medium w-24">Lead {getRoleName('tester')}:</span>
                     {project.tester_name ? (
@@ -329,10 +391,10 @@ const Projects = () => {
                           <img 
                             src={project.tester_image.startsWith('http') ? project.tester_image : `${import.meta.env.VITE_API_BASE_URL}${project.tester_image.startsWith('/') ? '' : '/'}${project.tester_image}`} 
                             alt={project.tester_name}
-                            className="w-6 h-6 rounded-full object-cover"
+                            className="w-5 h-5 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                          <div className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[9px] font-bold">
                             {project.tester_name.charAt(0).toUpperCase()}
                           </div>
                         )}
@@ -346,9 +408,9 @@ const Projects = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground font-medium w-24">{getRoleNamePlural('engineer')}:</span>
                     {project.users && project.users.length > 0 ? (
-                      <div className="flex items-center -space-x-2 overflow-hidden">
+                      <div className="flex items-center -space-x-1.5 overflow-hidden">
                         {project.users.slice(0, 5).map((user, i) => (
-                          <div key={user.id || i} className="inline-block rounded-full ring-2 ring-card bg-muted text-primary w-7 h-7 flex items-center justify-center text-[10px] font-bold border border-border shrink-0 z-10">
+                          <div key={user.id || i} className="inline-block rounded-full ring-2 ring-card bg-muted text-primary w-6 h-6 flex items-center justify-center text-[9px] font-bold border border-border shrink-0 z-10">
                             {user.image ? (
                               <img 
                                 src={user.image.startsWith('http') ? user.image : `${import.meta.env.VITE_API_BASE_URL}${user.image.startsWith('/') ? '' : '/'}${user.image}`} 
@@ -362,7 +424,7 @@ const Projects = () => {
                           </div>
                         ))}
                         {project.users.length > 5 && (
-                          <div className="inline-block rounded-full ring-2 ring-card bg-background text-muted-foreground w-7 h-7 flex items-center justify-center text-[10px] font-bold border border-border z-0">
+                          <div className="inline-block rounded-full ring-2 ring-card bg-background text-muted-foreground w-6 h-6 flex items-center justify-center text-[9px] font-bold border border-border z-0">
                             +{project.users.length - 5}
                           </div>
                         )}
@@ -373,37 +435,25 @@ const Projects = () => {
                   </div>
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-border flex flex-col gap-3">
-                  <div className="flex flex-wrap gap-2">
-                    <Button 
-                      onClick={() => {
-                        setSelectedProjectForMembers(project);
-                        setMembersModalOpen(true);
-                      }} 
-                      variant="outline" 
-                      className="flex-1 min-w-[100px] border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-2 text-xs sm:text-sm"
-                    >
-                      <Users className="w-4 h-4" />
-                      Members
-                    </Button>
-                    <Button onClick={() => navigate(`/admin/projects/${project.id}`)} variant="outline" className="flex-1 min-w-[100px] border-primary text-primary hover:bg-primary/5 text-xs sm:text-sm">
-                      View Details
-                    </Button>
-                  </div>
-                  
-                  {/* Actions Area */}
-                  {userRole !== 'engineer' && (
-                    <div className="flex justify-end gap-3 pt-2 border-t border-border/40">
-                      <button onClick={() => openModal(project)} className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors font-medium">
-                        <Edit className="w-3.5 h-3.5" /> Edit Project
-                      </button>
-                      {userRole !== 'tester' && (
-                        <button onClick={() => handleDelete(project.id)} className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-red-500 transition-colors font-medium">
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      )}
-                    </div>
-                  )}
+                <div className="mt-auto pt-3 border-t border-border flex gap-2">
+                  <Button 
+                    onClick={() => {
+                      setSelectedProjectForMembers(project);
+                      setMembersModalOpen(true);
+                    }} 
+                    variant="outline" 
+                    className="flex-1 border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-1.5 text-xs h-9"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    Members
+                  </Button>
+                  <Button 
+                    onClick={() => navigate(`/admin/projects/${project.id}`)} 
+                    variant="default" 
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 font-medium shadow-sm"
+                  >
+                    View Details
+                  </Button>
                 </div>
               </div>
             );
