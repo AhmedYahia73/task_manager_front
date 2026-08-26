@@ -3,15 +3,18 @@ import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Edit, Trash2, X, DollarSign } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, X, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Salaries = () => {
-  const { data: salariesData, loading: salariesLoading, refresh: refreshSalaries } = useGet(`/api/admin/salaries`);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const { data: salariesData, loading: salariesLoading, refresh: refreshSalaries } = useGet(`/api/admin/salaries?page=${page}&limit=${limit}`);
   const { data: usersData, loading: usersLoading } = useGet(`/api/admin/user/selection-list`);
   const { mutate, loading: mutationLoading } = useMutation();
 
   const salariesList = salariesData?.Salaries || [];
+  const pagination = salariesData?.pagination;
   const usersList = usersData?.Users || [];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -135,6 +138,33 @@ const Salaries = () => {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t pt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, pagination.total)} of {pagination.total} entries
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+              disabled={page === pagination.totalPages}
+            >
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       {isModalOpen && (

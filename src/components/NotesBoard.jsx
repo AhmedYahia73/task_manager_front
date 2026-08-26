@@ -1,18 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Send, Edit, Trash2, MoreVertical, X } from 'lucide-react';
+import { Loader2, Send, Edit, Trash2, X } from 'lucide-react';
 import dayjs from 'dayjs';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/axios';
 
 const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editNoteContent, setEditNoteContent] = useState('');
+  
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const scrollRef = useRef(null);
   
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = userData?.role || 'engineer';
@@ -21,24 +27,80 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
   const isAdminOrTester = userRole === 'admin' || userRole === 'tester' || userRole === 'super_admin';
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
-  // We need to decide which route to call based on the user's role (admin vs user)
   const apiRouteBase = (userRole === 'admin' || userRole === 'super_admin' || userRole === 'tester') 
     ? '/api/admin/notesBoard' 
     : '/api/user/notesBoard';
 
-  const { data: notesData, loading: notesLoading, refresh: refreshNotes } = useGet(
-    groupId && isOpen ? `${apiRouteBase}/group/${groupId}` : null,
-    true,
-    groupId
-  );
-
   const { mutate, loading: actionLoading } = useMutation();
 
-  useEffect(() => {
-    if (notesData?.notes) {
-      setNotes(notesData.notes);
+  const fetchNotes = async (pageNum = 1) => {
+    if (!groupId || !isOpen) return;
+    try {
+      if (pageNum === 1) setIsInitialLoad(true);
+      else setIsLoadingMore(true);
+
+      const res = await apiClient.get(`${apiRouteBase}/group/${groupId}?page=${pageNum}&limit=20`);
+      const fetchedNotes = res.data?.notes || res.data?.data?.notes || [];
+      const pagination = res.data?.pagination || res.data?.data?.pagination;
+      
+      // Reverse because backend sends DESC (newest first), we want ASC (newest at bottom)
+      const reversed = [...fetchedNotes].reverse();
+
+      if (pageNum === 1) {
+        setNotes(reversed);
+        setPage(1);
+      } else {
+        const scrollElement = scrollRef.current;
+        const previousScrollHeight = scrollElement ? scrollElement.scrollHeight : 0;
+        
+        setNotes(prev => [...reversed, ...prev]);
+        
+        // Restore scroll position after React updates the DOM
+        requestAnimationFrame(() => {
+          if (scrollElement) {
+            scrollElement.scrollTop = scrollElement.scrollHeight - previousScrollHeight;
+          }
+        });
+      }
+
+      if (pagination && pageNum >= pagination.totalPages) {
+        setHasMore(false);
+      } else if (fetchedNotes.length < 20) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notes", error);
+    } finally {
+      setIsInitialLoad(false);
+      setIsLoadingMore(false);
     }
-  }, [notesData]);
+  };
+
+  useEffect(() => {
+    if (isOpen && groupId) {
+      fetchNotes(1);
+    } else {
+      setNotes([]);
+    }
+  }, [isOpen, groupId]);
+
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    if (page === 1 && scrollRef.current && !isInitialLoad && notes.length > 0) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [notes, isInitialLoad, page]);
+
+  const handleScroll = (e) => {
+    const { scrollTop } = e.target;
+    if (scrollTop === 0 && hasMore && !isLoadingMore && !isInitialLoad) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchNotes(nextPage);
+    }
+  };
 
   const handleAddNote = async (e) => {
     e.preventDefault();
@@ -52,7 +114,7 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
 
     if (res?.success) {
       setNewNote('');
-      refreshNotes();
+      fetchNotes(1);
     }
   };
 
@@ -68,7 +130,8 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
     if (res?.success) {
       setEditingNoteId(null);
       setEditNoteContent('');
-      refreshNotes();
+      // Update locally to avoid scrolling to bottom
+      setNotes(prev => prev.map(n => n.id === id ? { ...n, notes: editNoteContent, updatedAt: new Date().toISOString() } : n));
     }
   };
 
@@ -81,7 +144,8 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
     });
 
     if (res?.success) {
-      refreshNotes();
+      // Remove locally
+      setNotes(prev => prev.filter(n => n.id !== id));
     }
   };
 
@@ -99,8 +163,18 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
         </DialogHeader>
         
         {/* Notes List */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#f8f9fa] dark:bg-background custom-scrollbar">
-          {notesLoading ? (
+        <div 
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#f8f9fa] dark:bg-background custom-scrollbar"
+        >
+          {isLoadingMore && (
+            <div className="flex justify-center py-2">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            </div>
+          )}
+          
+          {isInitialLoad ? (
             <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
           ) : notes.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm">
@@ -171,7 +245,7 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">
                       {note.notes}
                     </p>
                   )}

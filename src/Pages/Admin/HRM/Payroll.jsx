@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useGet } from '@/hooks/useGet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Calculator, Users, DollarSign, ArrowDownToLine, ArrowUpToLine, FileSpreadsheet } from 'lucide-react';
+import { Loader2, Calculator, Users, DollarSign, ArrowDownToLine, ArrowUpToLine, FileSpreadsheet, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
 const Payroll = () => {
   const currentYear = new Date().getFullYear();
@@ -10,14 +11,14 @@ const Payroll = () => {
 
   const [month, setMonth] = useState(currentMonth);
   const [year, setYear] = useState(currentYear);
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
-  const { data, loading } = useGet(`/api/admin/payroll?month=${month}&year=${year}`);
+  const { data, loading } = useGet(`/api/admin/payroll?month=${month}&year=${year}&page=${page}&limit=${limit}`);
 
   const payrollList = data?.payroll || [];
-
-  const totalSalaries = payrollList.reduce((acc, curr) => acc + curr.netSalary, 0);
-  const totalDeductions = payrollList.reduce((acc, curr) => acc + curr.deductions + curr.absencePenalty + (curr.delayPenalty || 0), 0);
-  const totalBonuses = payrollList.reduce((acc, curr) => acc + curr.bonuses, 0);
+  const summary = data?.summary || { totalEmployees: 0, totalSalaries: 0, totalDeductions: 0, totalBonuses: 0 };
+  const pagination = data?.pagination;
 
   const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
   const months = Array.from({ length: 12 }, (_, i) => {
@@ -25,6 +26,12 @@ const Payroll = () => {
     d.setMonth(i);
     return { value: i + 1, label: d.toLocaleString('en-US', { month: 'long' }) };
   });
+
+  // Handle month/year change - reset to page 1
+  const handleFilterChange = (setter, value) => {
+    setter(value);
+    setPage(1);
+  };
 
   return (
     <div className="p-6 md:p-8 space-y-8 bg-gradient-to-br from-background to-muted/20 min-h-screen text-foreground">
@@ -40,7 +47,7 @@ const Payroll = () => {
         <div className="flex items-center gap-3 bg-card p-2 rounded-xl shadow-sm border">
           <select 
             value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
+            onChange={(e) => handleFilterChange(setMonth, Number(e.target.value))}
             className="h-10 px-4 rounded-lg border-0 bg-muted/50 text-sm font-semibold focus:ring-2 focus:ring-primary outline-none"
           >
             {months.map(m => (
@@ -49,7 +56,7 @@ const Payroll = () => {
           </select>
           <select 
             value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
+            onChange={(e) => handleFilterChange(setYear, Number(e.target.value))}
             className="h-10 px-4 rounded-lg border-0 bg-muted/50 text-sm font-semibold focus:ring-2 focus:ring-primary outline-none"
           >
             {years.map(y => (
@@ -69,7 +76,7 @@ const Payroll = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <p className="text-3xl font-black">{payrollList.length}</p>
+              <p className="text-3xl font-black">{summary.totalEmployees}</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -82,7 +89,7 @@ const Payroll = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <p className="text-3xl font-black">${totalSalaries.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-3xl font-black">${summary.totalSalaries.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -95,7 +102,7 @@ const Payroll = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <p className="text-3xl font-black">${totalDeductions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-3xl font-black">${summary.totalDeductions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -108,7 +115,7 @@ const Payroll = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <p className="text-3xl font-black">${totalBonuses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-3xl font-black">${summary.totalBonuses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -192,6 +199,33 @@ const Payroll = () => {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t pt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, pagination.total)} of {pagination.total} entries
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+              disabled={page === pagination.totalPages}
+            >
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

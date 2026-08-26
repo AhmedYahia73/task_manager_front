@@ -407,14 +407,14 @@ const ProjectDetails = () => {
                 </div>
                 
                 <div className="px-6 pb-6 relative">
-                  <div className="flex justify-between items-start mb-6">
+                  <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
                     <div className="flex items-start gap-4">
                       <div className="w-20 h-20 shrink-0 bg-card rounded-2xl flex items-center justify-center text-primary border-4 border-[#f8f9fa] shadow-md z-10 -mt-10">
                         <span className="material-symbols-outlined text-4xl">diversity_3</span>
                       </div>
                       <div className="mt-3">
                         <h2 className="text-2xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{activeGroup.name}</h2>
-                        <div className="flex items-center gap-3 mt-1">
+                        <div className="flex flex-wrap items-center gap-3 mt-1">
                           <p className="text-muted-foreground text-sm flex items-center">
                              Part of <span className="font-semibold ml-1">{project.name}</span>
                           </p>
@@ -427,18 +427,18 @@ const ProjectDetails = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-2 xl:mt-0 w-full xl:w-auto">
                       {userRole !== 'engineer' && (
-                        <Button onClick={() => openModal(activeGroup)} variant="outline" className="border-primary text-primary hover:bg-primary/5">
+                        <Button onClick={() => openModal(activeGroup)} variant="outline" className="border-primary text-primary hover:bg-primary/5 flex-1 xl:flex-none">
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Group
                         </Button>
                       )}
-                      <Button onClick={() => navigate(`/admin/projects/${id}/groups/${activeGroup.id}/tasks`)} className="bg-primary hover:bg-primary/90 text-white">
+                      <Button onClick={() => navigate(`/admin/projects/${id}/groups/${activeGroup.id}/tasks`)} className="bg-primary hover:bg-primary/90 text-white flex-1 xl:flex-none">
                         <span className="material-symbols-outlined text-sm mr-2">task</span>
                         Manage Tasks
                       </Button>
-                      <Button onClick={() => setIsNotesBoardOpen(true)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 border border-border">
+                      <Button onClick={() => setIsNotesBoardOpen(true)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 border border-border flex-1 xl:flex-none">
                         <span className="material-symbols-outlined text-sm mr-2">speaker_notes</span>
                         Notes Board
                       </Button>
@@ -456,64 +456,66 @@ const ProjectDetails = () => {
                         <Users className="w-5 h-5 text-primary" />
                         Assigned {getRoleNamePlural('engineer')}
                       </h3>
-                      <span className="bg-primary-light text-primary px-3 py-1 rounded-full text-xs font-bold">
+                      <span className="bg-primary-light text-primary px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
                         {assignedUsers.length} Members
                       </span>
                     </div>
                     
                     <div className="overflow-hidden border border-border rounded-xl bg-card shadow-sm">
-                      <table className="w-full text-left border-collapse">
-                        <thead className="bg-background">
-                          <tr className="border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            <th className="px-6 py-4 font-medium">{getRoleName('engineer')}</th>
-                            <th className="px-6 py-4 font-medium">Role</th>
-                            <th className="px-6 py-4 font-medium w-32">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-sm divide-y divide-[#edeeef]">
-                          {groupUsersLoading ? (
-                            <tr><td colSpan="3" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></td></tr>
-                          ) : assignedUsers.length === 0 ? (
-                            <tr><td colSpan="3" className="py-8 text-center text-muted-foreground">No {getRoleNamePlural('engineer').toLowerCase()} assigned to this group.</td></tr>
-                          ) : (
-                            assignedUsers.map(user => (
-                              <tr key={user.id} className="hover:bg-background transition-colors">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-muted text-primary flex items-center justify-center font-bold text-sm border border-border">
-                                      {user.image ? (
-                                        <img 
-                                          src={user.image.startsWith('http') ? user.image : `${import.meta.env.VITE_API_BASE_URL}${user.image.startsWith('/') ? '' : '/'}${user.image}`} 
-                                          alt={user.name} 
-                                          className="w-8 h-8 rounded-full object-cover" 
-                                        />
-                                      ) : (
-                                        user.name.charAt(0).toUpperCase()
-                                      )}
+                      <div className="overflow-x-auto w-full">
+                        <table className="w-full text-left border-collapse min-w-[500px]">
+                          <thead className="bg-background">
+                            <tr className="border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              <th className="px-6 py-4 font-medium">{getRoleName('engineer')}</th>
+                              <th className="px-6 py-4 font-medium">Role</th>
+                              <th className="px-6 py-4 font-medium w-32">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-sm divide-y divide-[#edeeef]">
+                            {groupUsersLoading ? (
+                              <tr><td colSpan="3" className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></td></tr>
+                            ) : assignedUsers.length === 0 ? (
+                              <tr><td colSpan="3" className="py-8 text-center text-muted-foreground">No {getRoleNamePlural('engineer').toLowerCase()} assigned to this group.</td></tr>
+                            ) : (
+                              assignedUsers.map(user => (
+                                <tr key={user.id} className="hover:bg-background transition-colors">
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-muted text-primary flex items-center justify-center font-bold text-sm border border-border shrink-0">
+                                        {user.image ? (
+                                          <img 
+                                            src={user.image.startsWith('http') ? user.image : `${import.meta.env.VITE_API_BASE_URL}${user.image.startsWith('/') ? '' : '/'}${user.image}`} 
+                                            alt={user.name} 
+                                            className="w-8 h-8 rounded-full object-cover" 
+                                          />
+                                        ) : (
+                                          user.name.charAt(0).toUpperCase()
+                                        )}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="font-semibold text-foreground truncate">{user.name}</div>
+                                        <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <div className="font-semibold text-foreground">{user.name}</div>
-                                      <div className="text-xs text-muted-foreground">{user.email}</div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-muted text-muted-foreground capitalize border border-border whitespace-nowrap">
+                                      {getRoleName(user.role)}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {/* Just a mockup status since user table doesn't have availability */}
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-[#006c49]"></div>
+                                      <span className="text-xs font-medium text-[#006c49]">Active</span>
                                     </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-muted text-muted-foreground capitalize border border-border">
-                                    {getRoleName(user.role)}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                  {/* Just a mockup status since user table doesn't have availability */}
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-[#006c49]"></div>
-                                    <span className="text-xs font-medium text-[#006c49]">Active</span>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>

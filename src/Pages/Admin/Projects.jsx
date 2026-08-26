@@ -355,19 +355,19 @@ const Projects = () => {
                   </div>
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between gap-3">
+                <div className="mt-auto pt-4 border-t border-border flex flex-wrap gap-2">
                   <Button 
                     onClick={() => {
                       setSelectedProjectForMembers(project);
                       setMembersModalOpen(true);
                     }} 
                     variant="outline" 
-                    className="flex-1 border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[120px] border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-2 text-xs sm:text-sm"
                   >
                     <Users className="w-4 h-4" />
                     Members
                   </Button>
-                  <Button onClick={() => navigate(`/admin/projects/${project.id}`)} variant="outline" className="flex-1 border-primary text-primary hover:bg-primary/5">
+                  <Button onClick={() => navigate(`/admin/projects/${project.id}`)} variant="outline" className="flex-1 min-w-[120px] border-primary text-primary hover:bg-primary/5 text-xs sm:text-sm">
                     View Details
                   </Button>
                 </div>

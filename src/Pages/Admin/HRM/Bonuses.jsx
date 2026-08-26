@@ -3,15 +3,18 @@ import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Edit, Trash2, X, Gift } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, X, Gift, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Bonuses = () => {
-  const { data: bonusesData, loading: bonusesLoading, refresh: refreshBonuses } = useGet(`/api/admin/bonuses`);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const { data: bonusesData, loading: bonusesLoading, refresh: refreshBonuses } = useGet(`/api/admin/bonuses?page=${page}&limit=${limit}`);
   const { data: usersData, loading: usersLoading } = useGet(`/api/admin/user/selection-list`);
   const { mutate, loading: mutationLoading } = useMutation();
 
   const bonusesList = bonusesData?.bonuses || [];
+  const pagination = bonusesData?.pagination;
   const usersList = usersData?.Users || [];
 
   const currentYear = new Date().getFullYear();
@@ -93,11 +96,11 @@ const Bonuses = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black font-['Plus_Jakarta_Sans'] text-foreground tracking-tight">المكافآت (Bonuses)</h1>
-          <p className="text-muted-foreground mt-1">إدارة مكافآت الموظفين.</p>
+          <h1 className="text-3xl font-black font-['Plus_Jakarta_Sans'] text-foreground tracking-tight">Bonuses</h1>
+          <p className="text-muted-foreground mt-1">Manage employee bonuses.</p>
         </div>
         <Button onClick={openAddModal} className="flex items-center gap-2 font-semibold">
-          <Plus className="w-4 h-4" /> إضافة مكافأة
+          <Plus className="w-4 h-4" /> Add Bonus
         </Button>
       </div>
 
@@ -107,25 +110,25 @@ const Bonuses = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/50 text-muted-foreground border-b">
               <tr>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-right">الموظف</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-right">النوع</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-right">القيمة / الأيام</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-right">الشهر/السنة</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">الإجراءات</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Employee</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Type</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Amount / Days</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Month/Year</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/50 text-right">
+            <tbody className="divide-y divide-border/50 text-left">
               {bonusesLoading ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    جاري تحميل المكافآت...
+                    Loading bonuses...
                   </td>
                 </tr>
               ) : bonusesList.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
-                    لا توجد مكافآت مسجلة.
+                    No bonuses recorded.
                   </td>
                 </tr>
               ) : (
@@ -135,10 +138,10 @@ const Bonuses = () => {
                       {item.userName}
                     </td>
                     <td className="px-6 py-4 font-medium">
-                      {item.type === 'amount' ? 'مبلغ ثابت' : 'عدد أيام'}
+                      {item.type === 'amount' ? 'Fixed Amount' : 'Number of Days'}
                     </td>
                     <td className="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">
-                      {item.type === 'amount' ? `$${Number(item.amount).toLocaleString()}` : `${item.amount} يوم`}
+                      {item.type === 'amount' ? `$${Number(item.amount).toLocaleString()}` : `${item.amount} days`}
                     </td>
                     <td className="px-6 py-4">
                       {item.month} / {item.year}
@@ -159,14 +162,41 @@ const Bonuses = () => {
         </div>
       </div>
 
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t pt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, pagination.total)} of {pagination.total} entries
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+              disabled={page === pagination.totalPages}
+            >
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" dir="rtl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border flex flex-col">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] flex items-center gap-2">
                 <Gift className="w-5 h-5 text-primary" />
-                {editingId ? 'تعديل المكافأة' : 'إضافة مكافأة'}
+                {editingId ? 'Edit Bonus' : 'Add Bonus'}
               </h2>
               <Button variant="ghost" size="icon" onClick={closeModal} className="rounded-full">
                 <X className="w-5 h-5" />
@@ -176,14 +206,14 @@ const Bonuses = () => {
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold">الموظف *</label>
+                  <label className="text-sm font-semibold">Employee *</label>
                   <select 
                     required
                     value={formData.userId}
                     onChange={e => setFormData(prev => ({ ...prev, userId: e.target.value }))}
                     className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:opacity-50"
                   >
-                    <option value="" disabled>اختر الموظف</option>
+                    <option value="" disabled>Select Employee</option>
                     {usersList.map(user => (
                       <option key={user.id} value={user.id}>{user.name}</option>
                     ))}
@@ -191,21 +221,21 @@ const Bonuses = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold">نوع المكافأة *</label>
+                  <label className="text-sm font-semibold">Bonus Type *</label>
                   <select 
                     required
                     value={formData.type}
                     onChange={e => setFormData(prev => ({ ...prev, type: e.target.value }))}
                     className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   >
-                    <option value="amount">مبلغ ثابت</option>
-                    <option value="days">أجر عدد أيام</option>
+                    <option value="amount">Fixed Amount</option>
+                    <option value="days">Number of Days</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">
-                    {formData.type === 'amount' ? 'قيمة المبلغ *' : 'عدد الأيام *'}
+                    {formData.type === 'amount' ? 'Amount *' : 'Number of Days *'}
                   </label>
                   <Input 
                     required 
@@ -214,13 +244,13 @@ const Bonuses = () => {
                     step={formData.type === 'amount' ? '0.01' : '1'}
                     value={formData.amount} 
                     onChange={e => setFormData(prev => ({ ...prev, amount: e.target.value }))} 
-                    placeholder={formData.type === 'amount' ? 'مثال: 5000' : 'مثال: 3'}
+                    placeholder={formData.type === 'amount' ? 'Example: 5000' : 'Example: 3'}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold">الشهر *</label>
+                    <label className="text-sm font-semibold">Month *</label>
                     <select 
                       required
                       value={formData.month}
@@ -233,7 +263,7 @@ const Bonuses = () => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold">السنة *</label>
+                    <label className="text-sm font-semibold">Year *</label>
                     <select 
                       required
                       value={formData.year}
@@ -249,11 +279,11 @@ const Bonuses = () => {
 
               </div>
 
-              <div className="pt-4 flex justify-end gap-3 border-t" dir="ltr">
-                <Button type="button" variant="outline" onClick={closeModal}>إلغاء</Button>
+              <div className="pt-4 flex justify-end gap-3 border-t">
+                <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
                 <Button type="submit" disabled={mutationLoading}>
                   {mutationLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? 'حفظ التعديلات' : 'إضافة'}
+                  {editingId ? 'Save Changes' : 'Add'}
                 </Button>
               </div>
             </form>
