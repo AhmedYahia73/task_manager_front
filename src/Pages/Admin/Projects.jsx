@@ -53,11 +53,11 @@ const Projects = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    documentation: '',
-    logo: '', // Will hold base64 string
     tester_id: '',
     users_ids: []
   });
+  const [selectedLogoFile, setSelectedLogoFile] = useState(null);
+  const [selectedDocFile, setSelectedDocFile] = useState(null);
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
 
@@ -67,16 +67,20 @@ const Projects = () => {
       setFormData({
         name: project.name,
         description: project.description || '',
-        documentation: '', 
-        logo: '', // Don't preload base64 of existing logo
         tester_id: project.tester_id || '',
         users_ids: []
       });
+      setSelectedLogoFile(null);
+      setSelectedDocFile(null);
       fetchProjectUsers(project.id);
     } else {
       setEditingId(null);
-      setFormData({ name: '', description: '', documentation: '', logo: '', tester_id: '', users_ids: [] });
+      setFormData({ name: '', description: '', tester_id: '', users_ids: [] });
+      setSelectedLogoFile(null);
+      setSelectedDocFile(null);
     }
+    if(fileInputRef.current) fileInputRef.current.value = '';
+    if(logoInputRef.current) logoInputRef.current.value = '';
     setIsModalOpen(true);
   };
 
@@ -91,6 +95,8 @@ const Projects = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
+    setSelectedLogoFile(null);
+    setSelectedDocFile(null);
     if(fileInputRef.current) fileInputRef.current.value = '';
     if(logoInputRef.current) logoInputRef.current.value = '';
   };
@@ -112,45 +118,37 @@ const Projects = () => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, documentation: reader.result });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setFormData({ ...formData, documentation: '' });
-    }
+    setSelectedDocFile(file || null);
   };
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, logo: reader.result });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setFormData({ ...formData, logo: '' });
-    }
+    setSelectedLogoFile(file || null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...formData };
     
-    if (!payload.documentation) {
-      delete payload.documentation;
+    const data = new FormData();
+    data.append('name', formData.name);
+    if (formData.description) data.append('description', formData.description);
+    if (formData.tester_id) data.append('tester_id', formData.tester_id);
+
+    formData.users_ids.forEach((userId) => {
+      data.append('users_ids', userId);
+    });
+
+    if (selectedLogoFile) {
+      data.append('logo', selectedLogoFile);
     }
-    if (!payload.logo) {
-      delete payload.logo;
+    if (selectedDocFile) {
+      data.append('documentation', selectedDocFile);
     }
 
     const response = await mutate({
       method: editingId ? 'PUT' : 'POST',
       url: editingId ? `/api/admin/project/${editingId}` : '/api/admin/project',
-      data: payload
+      data
     });
 
     if (response?.success) {
@@ -559,7 +557,9 @@ const Projects = () => {
                     >
                       <option value="">Select a {getRoleName('tester')}</option>
                       {testersList.map(tester => (
-                        <option key={tester.id} value={tester.id}>{tester.name}</option>
+                        <option key={tester.id} value={tester.id}>
+                          {tester.name} {tester.role ? `(${getRoleName(tester.role)})` : ''}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -572,7 +572,7 @@ const Projects = () => {
                   </label>
                   <div className="border border-input rounded-md max-h-40 overflow-y-auto bg-card p-2 flex flex-col gap-1">
                     {engineersList.length === 0 ? (
-                      <p className="text-sm text-muted-foreground p-2 text-center">No {getRoleNamePlural('engineer').toLowerCase()} available.</p>
+                      <p className="text-sm text-muted-foreground p-2 text-center">No users available.</p>
                     ) : (
                       engineersList.map(engineer => (
                         <div 
@@ -584,12 +584,17 @@ const Projects = () => {
                               : 'hover:bg-gray-100 text-muted-foreground'
                           }`}
                         >
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 ${
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 shrink-0 ${
                             formData.users_ids.includes(engineer.id) ? 'bg-primary border-primary' : 'border-gray-300'
                           }`}>
                             {formData.users_ids.includes(engineer.id) && <span className="material-symbols-outlined text-[12px] text-white font-bold">check</span>}
                           </div>
-                          {engineer.name}
+                          <span className="truncate">{engineer.name}</span>
+                          {engineer.role && (
+                            <span className="ml-auto text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground font-normal shrink-0">
+                              {getRoleName(engineer.role)}
+                            </span>
+                          )}
                         </div>
                       ))
                     )}
@@ -645,7 +650,7 @@ const Projects = () => {
                     )}
                     <div>
                       <p className="font-semibold text-foreground text-sm">{selectedProjectForMembers.tester_name}</p>
-                      <p className="text-xs text-muted-foreground">{getRoleName('tester')}</p>
+                      <p className="text-xs text-muted-foreground">{getRoleName(selectedProjectForMembers.tester_role || 'tester')}</p>
                     </div>
                   </div>
                 ) : (
@@ -672,7 +677,7 @@ const Projects = () => {
                         )}
                         <div>
                           <p className="font-semibold text-foreground text-sm">{user.name}</p>
-                          <p className="text-xs text-muted-foreground">{getRoleName('engineer')}</p>
+                          <p className="text-xs text-muted-foreground">{getRoleName(user.role || 'engineer')}</p>
                         </div>
                       </div>
                     ))}

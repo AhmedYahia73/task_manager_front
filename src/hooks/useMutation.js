@@ -17,13 +17,15 @@ export const useMutation = () => {
                 method,
                 url,
                 ...(data !== null && data !== undefined ? { data } : {}),
-                // 2. تمرير الـ Headers المناسبة
                 headers: {
                     ...headers,
-                    ...(isFormData ? { 'Content-Type': 'multipart/form-data' } : {}),
                 },
                 ...restConfig,
             };
+
+            if (isFormData && config.headers && config.headers['Content-Type']) {
+                delete config.headers['Content-Type'];
+            }
 
             const response = await apiClient(config);
 

@@ -38,6 +38,9 @@ const Admins = () => {
     image: null,
   });
 
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
   const openModal = (admin = null) => {
     if (admin) {
       setEditingId(admin.id);
@@ -47,11 +50,14 @@ const Admins = () => {
         phone: admin.phone,
         password: '', // Don't fill password on edit
         status: admin.status,
-        image: admin.image || null,
       });
+      setImagePreview(admin.image || null);
+      setSelectedImageFile(null);
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', image: null });
+      setFormData({ name: '', email: '', phone: '', password: '', status: 'active' });
+      setImagePreview(null);
+      setSelectedImageFile(null);
     }
     setIsModalOpen(true);
   };
@@ -59,6 +65,8 @@ const Admins = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
+    setSelectedImageFile(null);
+    setImagePreview(null);
   };
 
   const handleInputChange = (e) => {
@@ -68,29 +76,32 @@ const Admins = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, image: reader.result });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setFormData({ ...formData, image: null });
+      setSelectedImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...formData };
+    const data = new FormData();
+    data.append('name', formData.name);
+    data.append('email', formData.email);
+    data.append('phone', formData.phone);
+    data.append('status', formData.status);
     
-    // Remove password from payload if it's empty during edit
-    if (editingId && !payload.password) {
-      delete payload.password;
+    // Only send password if provided (required on create, optional on edit)
+    if (formData.password) {
+      data.append('password', formData.password);
+    }
+
+    if (selectedImageFile) {
+      data.append('image', selectedImageFile);
     }
 
     const response = await mutate({
       method: editingId ? 'PUT' : 'POST',
       url: editingId ? `/api/admin/admin/${editingId}` : '/api/admin/admin',
-      data: payload
+      data
     });
 
     if (response?.success) {
@@ -254,9 +265,9 @@ const Admins = () => {
               
               <div className="flex justify-center mb-4">
                 <div className="relative">
-                  {formData.image ? (
+                  {imagePreview ? (
                     <img 
-                      src={formData.image}
+                      src={imagePreview}
                       alt="Profile" 
                       className="w-24 h-24 rounded-full object-cover border-2 border-border shadow-sm"
                     />

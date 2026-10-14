@@ -22,6 +22,9 @@ const CompanySettings = () => {
     logo: ''
   });
 
+  const [selectedLogoFile, setSelectedLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+
   useEffect(() => {
     if (data) {
       setFormData({
@@ -35,6 +38,8 @@ const CompanySettings = () => {
         email: data.email || '',
         logo: data.logo || ''
       });
+      setLogoPreview(data.logo || null);
+      setSelectedLogoFile(null);
     }
   }, [data]);
 
@@ -45,25 +50,42 @@ const CompanySettings = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, logo: reader.result });
-      };
-      reader.readAsDataURL(file);
+      setSelectedLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.logo) {
-      toast.error('Name and Logo are required.');
+    if (!formData.name) {
+      toast.error('Company Name is required.');
       return;
+    }
+    if (!selectedLogoFile && !formData.logo) {
+      toast.error('Company Logo is required.');
+      return;
+    }
+
+    const data = new FormData();
+    data.append('name', formData.name);
+    if (formData.owner_name) data.append('owner_name', formData.owner_name);
+    if (formData.address) data.append('address', formData.address);
+    if (formData.phone) data.append('phone', formData.phone);
+    if (formData.whatts) data.append('whatts', formData.whatts);
+    if (formData.facebook) data.append('facebook', formData.facebook);
+    if (formData.instgram) data.append('instgram', formData.instgram);
+    if (formData.email) data.append('email', formData.email);
+
+    if (selectedLogoFile) {
+      data.append('logo', selectedLogoFile);
+    } else if (formData.logo) {
+      data.append('logo', formData.logo);
     }
 
     const res = await mutate({
       method: 'PUT',
       url: '/api/admin/company',
-      data: formData
+      data
     });
 
     if (res?.success) {
@@ -100,8 +122,8 @@ const CompanySettings = () => {
             <label className="text-sm font-semibold text-foreground">Company Logo <span className="text-red-500">*</span></label>
             <div className="flex items-center gap-6">
               <div className="relative w-32 h-32 rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center overflow-hidden group">
-                {formData.logo ? (
-                  <img src={formData.logo} alt="Company Logo" className="w-full h-full object-contain p-2" />
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Company Logo" className="w-full h-full object-contain p-2" />
                 ) : (
                   <Building className="w-12 h-12 text-muted-foreground/50" />
                 )}

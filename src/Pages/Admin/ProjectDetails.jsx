@@ -62,7 +62,7 @@ const ProjectDetails = () => {
   // Fetch Project Users
   const { data: projectUsersData, loading: projectUsersLoading } = useGet(`/api/admin/project/${id}/users`);
   const projectUsers = projectUsersData?.users || [];
-  const engineersList = projectUsers.filter(u => u.role !== 'admin' && u.role !== 'tester' && u.role !== 'superadmin'); // Exclude admins and testers from group assignment
+  const engineersList = projectUsers.filter(u => u.role !== 'admin' && u.role !== 'superadmin' && u.role !== 'super_admin');
 
   const { mutate, loading: mutationLoading } = useMutation();
 
@@ -77,19 +77,12 @@ const ProjectDetails = () => {
     documentation: '',
     users_ids: []
   });
+  const [selectedDocFile, setSelectedDocFile] = useState(null);
   const fileInputRef = React.useRef(null);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, documentation: reader.result });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setFormData({ ...formData, documentation: '' });
-    }
+    setSelectedDocFile(file || null);
   };
 
   const openModal = async (group = null) => {
@@ -98,9 +91,10 @@ const ProjectDetails = () => {
       setFormData({
         name: group.name,
         description: group.description || '',
-        documentation: '', // Don't preload URL to avoid invalid base64 on submit
+        documentation: group.documentation || '',
         users_ids: [] 
       });
+      setSelectedDocFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       // Fetch users for this group to prepopulate multi-select
       const res = await mutate({ method: 'GET', url: `/api/admin/projectGroup/${group.id}/users`, showToast: false });
@@ -111,6 +105,7 @@ const ProjectDetails = () => {
     } else {
       setEditingId(null);
       setFormData({ name: '', description: '', documentation: '', users_ids: [] });
+      setSelectedDocFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
     setIsModalOpen(true);
@@ -119,6 +114,8 @@ const ProjectDetails = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
+    setSelectedDocFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleInputChange = (e) => {
@@ -138,16 +135,23 @@ const ProjectDetails = () => {
 
   const handleGroupSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...formData, project_id: id };
+    const data = new FormData();
+    data.append('name', formData.name);
+    data.append('project_id', id);
+    if (formData.description) data.append('description', formData.description);
 
-    if (!payload.documentation) {
-      delete payload.documentation;
+    formData.users_ids.forEach((userId) => {
+      data.append('users_ids', userId);
+    });
+
+    if (selectedDocFile) {
+      data.append('documentation', selectedDocFile);
     }
 
     const response = await mutate({
       method: editingId ? 'PUT' : 'POST',
       url: editingId ? `/api/admin/projectGroup/${editingId}` : '/api/admin/projectGroup',
-      data: payload
+      data
     });
 
     if (response?.success) {
@@ -565,9 +569,11 @@ const ProjectDetails = () => {
                       ref={fileInputRef}
                       className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                     />
-                    {formData.documentation && !formData.documentation.startsWith('data:') && (
-                      <a href={formData.documentation} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap">View Current</a>
-                    )}
+                    {selectedDocFile ? (
+                      <span className="text-xs text-primary font-medium whitespace-nowrap px-2">{selectedDocFile.name}</span>
+                    ) : formData.documentation ? (
+                      <a href={formData.documentation} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap px-2">View Current</a>
+                    ) : null}
                   </div>
                 </div>
                 
@@ -599,8 +605,13 @@ const ProjectDetails = () => {
                             }`}>
                               {isSelected && <span className="material-symbols-outlined text-[14px] text-white font-bold">check</span>}
                             </div>
-                            <div className="flex flex-col">
+                            <div className="flex items-center justify-between flex-1">
                               <span className={`font-semibold ${isSelected ? 'text-primary' : 'text-foreground'}`}>{engineer.name}</span>
+                              {engineer.role && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground font-normal">
+                                  {getRoleName(engineer.role)}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )

@@ -103,7 +103,25 @@ const AddPage = ({
   }, [initialDataString, reset]); // ✅ التبعية مستقرة ولن تسبب Loop
 
   const onSubmit = async (data) => {
-    const payloadToSend = transformPayload ? transformPayload(data) : data;
+    let payloadToSend = transformPayload ? transformPayload(data) : data;
+
+    // Convert to FormData if payload contains any File or Blob instances
+    const hasFiles = payloadToSend && typeof payloadToSend === 'object' && !(payloadToSend instanceof FormData) && 
+      Object.values(payloadToSend).some(val => val instanceof File || val instanceof Blob);
+
+    if (hasFiles) {
+      const formData = new FormData();
+      Object.entries(payloadToSend).forEach(([key, val]) => {
+        if (val !== undefined && val !== null) {
+          if (Array.isArray(val)) {
+            val.forEach(item => formData.append(key, item));
+          } else {
+            formData.append(key, val);
+          }
+        }
+      });
+      payloadToSend = formData;
+    }
 
     // تحديد الـ URL والـ Method ديناميكياً
     const recordId = initialData?.id || data?.id;
@@ -359,38 +377,43 @@ const AddPage = ({
                     name={fieldItem.name}
                     control={control}
                     rules={{ required: isEdit ? false : fieldItem.required }}
-                    render={({ field: { onChange: formOnChange, value } }) => (
-                      <div className="space-y-3">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              const base64 = await toBase64(file);
-                              formOnChange(base64);
-                              if (fieldItem.onChange)
-                                fieldItem.onChange(base64);
+                    render={({ field: { onChange: formOnChange, value } }) => {
+                      const displaySrc = value instanceof File 
+                        ? URL.createObjectURL(value) 
+                        : (typeof value === "string" ? value : null);
+
+                      return (
+                        <div className="space-y-3">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                formOnChange(file);
+                                if (fieldItem.onChange)
+                                  fieldItem.onChange(file);
+                              }
+                            }}
+                            className={
+                              errors[fieldItem.name] ? "border-destructive" : ""
                             }
-                          }}
-                          className={
-                            errors[fieldItem.name] ? "border-destructive" : ""
-                          }
-                        />
-                        {value && (
-                          <div className="relative w-32 h-32 border rounded-lg overflow-hidden bg-muted">
-                            <img
-                              src={value}
-                              alt="Preview"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute top-0 right-0 bg-primary text-white text-[10px] px-2 py-1">
-                              {"currentImage"}
+                          />
+                          {displaySrc && (
+                            <div className="relative w-32 h-32 border rounded-lg overflow-hidden bg-muted">
+                              <img
+                                src={displaySrc}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute top-0 right-0 bg-primary text-white text-[10px] px-2 py-1">
+                                {"currentImage"}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </div>
+                      );
+                    }}
                   />
                 ) : fieldItem.type === "switch" ? (
                   <Controller

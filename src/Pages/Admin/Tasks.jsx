@@ -61,19 +61,12 @@ const Tasks = () => {
     documentation: '',
     users_ids: []
   });
+  const [selectedDocFile, setSelectedDocFile] = useState(null);
   const fileInputRef = React.useRef(null);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, documentation: reader.result });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setFormData({ ...formData, documentation: '' });
-    }
+    setSelectedDocFile(file || null);
   };
 
   const openModal = async (task = null) => {
@@ -86,15 +79,17 @@ const Tasks = () => {
         status: task.status,
         importanc_status: task.importanc_status || 'medium',
         tester_note: task.tester_note || '',
-        documentation: '', // Don't preload URL to avoid invalid base64 on submit
+        documentation: task.documentation || '',
         users_ids: task.user_id ? [task.user_id] : []
       });
+      setSelectedDocFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } else {
       setEditingId(null);
       setFormData({ 
         name: '', description: '', delivery_date: '', status: 'pending', importanc_status: 'medium', tester_note: '', documentation: '', users_ids: [] 
       });
+      setSelectedDocFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
     setIsModalOpen(true);
@@ -103,6 +98,8 @@ const Tasks = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
+    setSelectedDocFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleInputChange = (e) => {
@@ -123,29 +120,36 @@ const Tasks = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Construct payload
-    const payload = { 
-      ...formData, 
-      project_id: projectId,
-      group_id: groupId
-    };
+    const data = new FormData();
+    data.append('name', formData.name);
+    data.append('project_id', projectId);
+    data.append('group_id', groupId);
+    if (formData.description) data.append('description', formData.description);
+    if (formData.delivery_date) data.append('delivery_date', formData.delivery_date);
+    if (formData.status) data.append('status', formData.status);
+    if (formData.importanc_status) data.append('importanc_status', formData.importanc_status);
+    if (formData.tester_note) data.append('tester_note', formData.tester_note);
 
-    if (!payload.delivery_date) delete payload.delivery_date;
-
-    if (!payload.documentation) {
-      delete payload.documentation;
+    if (editingId) {
+      if (formData.users_ids && formData.users_ids.length > 0) {
+        data.append('user_id', formData.users_ids[0]);
+      }
+    } else {
+      if (formData.users_ids) {
+        formData.users_ids.forEach((uid) => {
+          data.append('users_ids', uid);
+        });
+      }
     }
 
-    // If editing, the backend expects `user_id` not `users_ids` (as per updateTasksSchema).
-    if (editingId) {
-        payload.user_id = payload.users_ids[0]; // take the first one if multiple selected by accident
-        delete payload.users_ids;
+    if (selectedDocFile) {
+      data.append('documentation', selectedDocFile);
     }
 
     const response = await mutate({
       method: editingId ? 'PUT' : 'POST',
       url: editingId ? `/api/admin/tasks/${editingId}` : '/api/admin/tasks',
-      data: payload
+      data
     });
 
     if (response?.success) {
@@ -612,9 +616,11 @@ const Tasks = () => {
                         ref={fileInputRef}
                         className="w-full text-sm file:mr-4 file:py-2.5 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                       />
-                      {formData.documentation && !formData.documentation.startsWith('data:') && (
-                        <a href={formData.documentation} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap font-medium">View Current</a>
-                      )}
+                      {selectedDocFile ? (
+                        <span className="text-xs text-primary font-medium whitespace-nowrap px-2">{selectedDocFile.name}</span>
+                      ) : formData.documentation ? (
+                        <a href={formData.documentation} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap font-medium px-2">View Current</a>
+                      ) : null}
                     </div>
                   </div>
 

@@ -61,6 +61,9 @@ const Users = () => {
     image: null,
   });
 
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
   const openModal = (userItem = null) => {
     if (userItem) {
       setEditingId(userItem.id);
@@ -70,15 +73,18 @@ const Users = () => {
         phone: userItem.phone,
         password: '', // Don't fill password on edit
         status: userItem.status,
-        yearly_holidays: userItem.yearly_holidays ?? false,
+        yearly_holidays: userItem.yearly_holidays || false,
         zone_id: userItem.zone_id || '',
         shift_id: userItem.shift_id || '',
         department_id: userItem.department_id || '',
-        image: userItem.image || null,
       });
+      setImagePreview(userItem.image || null);
+      setSelectedImageFile(null);
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', yearly_holidays: false, zone_id: '', shift_id: '', department_id: '', image: null });
+      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', yearly_holidays: false, zone_id: '', shift_id: '', department_id: '' });
+      setImagePreview(null);
+      setSelectedImageFile(null);
     }
     setIsModalOpen(true);
   };
@@ -86,6 +92,8 @@ const Users = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
+    setSelectedImageFile(null);
+    setImagePreview(null);
   };
 
   const handleInputChange = (e) => {
@@ -95,26 +103,17 @@ const Users = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, image: reader.result });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setFormData({ ...formData, image: null });
+      setSelectedImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...formData };
     
-    // Remove password from payload if it's empty during edit
-    if (editingId && !payload.password) {
-      delete payload.password;
-    }
+    let vector_image_array = null;
 
-    if (payload.image && payload.image.startsWith('data:image')) {
+    if (selectedImageFile && imagePreview) {
       toast.info('Processing Face ID...', { duration: 3000 });
       try {
         await faceapi.nets.ssdMobilenetv1.loadFromUri('/models/face-api');
@@ -122,12 +121,12 @@ const Users = () => {
         await faceapi.nets.faceRecognitionNet.loadFromUri('/models/face-api');
         
         const img = new Image();
-        img.src = payload.image;
+        img.src = imagePreview;
         await new Promise((resolve) => { img.onload = resolve; });
         
         const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
         if (detection) {
-          payload.vector_image_array = Array.from(detection.descriptor);
+          vector_image_array = Array.from(detection.descriptor);
           toast.success('Face ID generated');
         } else {
           toast.warning('No face detected in the image. Face ID check-in might not work.', { duration: 5000 });
@@ -137,10 +136,29 @@ const Users = () => {
       }
     }
 
+    const data = new FormData();
+    data.append('name', formData.name);
+    data.append('email', formData.email);
+    data.append('phone', formData.phone);
+    data.append('status', formData.status);
+    data.append('yearly_holidays', String(!!formData.yearly_holidays));
+
+    if (formData.password) data.append('password', formData.password);
+    if (formData.zone_id) data.append('zone_id', formData.zone_id);
+    if (formData.shift_id) data.append('shift_id', formData.shift_id);
+    if (formData.department_id) data.append('department_id', formData.department_id);
+
+    if (selectedImageFile) {
+      data.append('image', selectedImageFile);
+    }
+    if (vector_image_array && vector_image_array.length > 0) {
+      data.append('vector_image_array', JSON.stringify(vector_image_array));
+    }
+
     const response = await mutate({
       method: editingId ? 'PUT' : 'POST',
       url: editingId ? `/api/admin/user/${editingId}` : '/api/admin/user',
-      data: payload
+      data
     });
 
     if (response?.success) {
@@ -351,9 +369,9 @@ const Users = () => {
                 
                 <div className="flex justify-center mb-4">
                   <div className="relative">
-                    {formData.image ? (
+                    {imagePreview ? (
                     <img 
-                      src={formData.image}
+                      src={imagePreview}
                       alt="Profile" 
                       className="w-24 h-24 rounded-full object-cover border-2 border-border shadow-sm"
                     />
