@@ -19,3 +19,32 @@ export const removeAuthToken = () => {
 export const isAuthenticated = () => {
   return !!getAuthToken();
 };
+
+export const getCurrentUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}');
+  } catch {
+    return {};
+  }
+};
+
+export const normalizeRole = (role) => {
+  if (!role) return '';
+  return String(role).toLowerCase().trim().replace(/[\s-]/g, '_');
+};
+
+export const isAdminRole = (role) => {
+  const norm = normalizeRole(role);
+  return norm === 'admin' || norm === 'super_admin' || norm === 'superadmin';
+};
+
+export const isValidRole = (role) => {
+  const norm = normalizeRole(role);
+  return (
+    norm === 'admin' ||
+    norm === 'super_admin' ||
+    norm === 'superadmin' ||
+    norm === 'tester' ||
+    norm === 'engineer'
+  );
+};

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { removeAuthToken } from '@/utils/auth';
+import { removeAuthToken, isAdminRole } from '@/utils/auth';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { useMutation } from '@/hooks/useMutation';
@@ -11,6 +11,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = userData?.name || 'Admin User';
   const userRole = userData?.role || 'Admin';
+  const isAdmin = isAdminRole(userRole);
   const [isHrmOpen, setIsHrmOpen] = useState(false);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
@@ -94,8 +95,8 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
           { name: 'Settings', path: '/admin/settings', icon: 'settings', adminOnly: true },
         ]
         .filter(item => {
-          if (item.adminOnly && userRole !== 'admin') return false;
-          if (item.notAdmin && userRole === 'admin') return false;
+          if (item.adminOnly && !isAdmin) return false;
+          if (item.notAdmin && isAdmin) return false;
           return true;
         })
         .map((item) => {

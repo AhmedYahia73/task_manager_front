@@ -13,19 +13,9 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // If already authenticated, redirect immediately
+    // If already authenticated, redirect immediately to dashboard
     if (isAuthenticated()) {
-      try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const role = user?.role?.toLowerCase?.() || '';
-        if (role === 'admin' || role === 'superadmin' || role === 'tester' || role === 'engineer') {
-          navigate('/admin/dashboard', { replace: true });
-        } else {
-          navigate('/home', { replace: true });
-        }
-      } catch {
-        navigate('/admin/dashboard', { replace: true });
-      }
+      navigate('/admin/dashboard', { replace: true });
     }
   }, [navigate]);
 
@@ -57,12 +47,7 @@ export const LoginPage = () => {
         setAuthToken(token);
         localStorage.setItem('user', JSON.stringify(user));
         
-        const userRole = user?.role?.toLowerCase?.() || '';
-        if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'tester' || userRole === 'engineer') {
-          navigate('/admin/dashboard', { replace: true });
-        } else {
-          navigate('/home', { replace: true });
-        }
+        navigate('/admin/dashboard', { replace: true });
     }
   };
 

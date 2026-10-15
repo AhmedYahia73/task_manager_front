@@ -14,7 +14,8 @@ export default function OnlineRequests() {
 
   const userStr = localStorage.getItem('user');
   const currentUser = userStr ? JSON.parse(userStr) : null;
-  const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
+  const role = currentUser?.role?.toLowerCase();
+  const isAdmin = role === 'admin' || role === 'super_admin' || role === 'superadmin';
 
   const limit = 10;
   const { data, loading, refresh } = useGet(`/api/admin/hrm/online-requests?status=${activeTab}&page=${page}&limit=${limit}`);

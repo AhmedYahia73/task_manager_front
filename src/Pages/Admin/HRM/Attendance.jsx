@@ -16,7 +16,8 @@ export default function Attendance() {
 
   const userStr = localStorage.getItem('user');
   const currentUser = userStr ? JSON.parse(userStr) : null;
-  const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
+  const role = currentUser?.role?.toLowerCase();
+  const isAdmin = role === 'admin' || role === 'super_admin' || role === 'superadmin';
 
   const attendanceRecords = data?.data || [];
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };

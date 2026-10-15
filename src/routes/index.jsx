@@ -1,8 +1,7 @@
 import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { MainLayout } from '@/layouts/MainLayout';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { isAuthenticated } from '@/utils/auth';
+import { isAuthenticated, removeAuthToken, isValidRole } from '@/utils/auth';
 import { LoginPage } from '@/components/LoginPage';
 
 // Removed Visits Pages since they are from the old template
@@ -35,49 +34,41 @@ import Jobs from '@/Pages/Admin/Applications/Jobs';
 import Qualifications from '@/Pages/Admin/Applications/Qualifications';
 import ApplicationsList from '@/Pages/Admin/Applications/ApplicationsList';
 
-// Protected Route Wrapper
-const ProtectedRoute = ({ children }) => {
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-};
 
 // Admin Route Wrapper - checks role
 const AdminRoute = ({ children }) => {
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
-  // Check admin role
+  // Check valid system role
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const role = user?.role?.toLowerCase?.() || '';
-    if (role !== 'admin' && role !== 'superadmin' && role !== 'tester' && role !== 'engineer') {
-      return <Navigate to="/home" replace />;
+    if (!isValidRole(user?.role)) {
+      removeAuthToken();
+      localStorage.removeItem('user');
+      return <Navigate to="/login" replace />;
     }
   } catch {
+    removeAuthToken();
+    localStorage.removeItem('user');
     return <Navigate to="/login" replace />;
   }
   return children;
 };
 
-// Smart redirect based on role
+// Smart redirect: authenticated users go to /admin/dashboard, otherwise /login
 const SmartRedirect = () => {
-  try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const role = user?.role?.toLowerCase?.() || '';
-    if (role === 'admin' || role === 'superadmin' || role === 'tester' || role === 'engineer') {
-      return <Navigate to="/admin/dashboard" replace />;
-    }
-  } catch { /* fallback to login */ }
+  if (isAuthenticated()) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
   return <Navigate to="/login" replace />;
 };
 
 const NotFoundRedirect = () => {
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
+  if (isAuthenticated()) {
+    return <Navigate to="/admin/dashboard" replace />;
   }
-  return <Navigate to="/" replace />;
+  return <Navigate to="/login" replace />;
 };
 
 // Import FilteredTasks
@@ -137,14 +128,13 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Main App Routes (existing layout for non-admin roles)
   {
     path: '/',
-    element: (<ProtectedRoute><MainLayout /></ProtectedRoute>),
-    children: [
-      { index: true, element: <SmartRedirect /> },
-      { path: 'home', element: <SmartRedirect /> },
-    ],
+    element: <SmartRedirect />,
+  },
+  {
+    path: '/home',
+    element: <SmartRedirect />,
   },
 
   {
