@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
 
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/axios';
 
 const Tasks = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
@@ -72,6 +73,13 @@ const Tasks = () => {
   const openModal = async (task = null) => {
     if (task) {
       setEditingId(task.id);
+
+      const matchingFromList = tasks
+        .filter(t => t.name?.trim().toLowerCase() === task.name?.trim().toLowerCase())
+        .map(t => t.user_id)
+        .filter(Boolean);
+      const initialUsers = Array.from(new Set([task.user_id, ...matchingFromList].filter(Boolean)));
+
       setFormData({
         name: task.name,
         description: task.description || '',
@@ -80,10 +88,28 @@ const Tasks = () => {
         importanc_status: task.importanc_status || 'medium',
         tester_note: task.tester_note || '',
         documentation: task.documentation || '',
-        users_ids: task.user_id ? [task.user_id] : []
+        users_ids: initialUsers
       });
       setSelectedDocFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsModalOpen(true);
+
+      try {
+        const res = await apiClient.get(`/api/admin/tasks/${task.id}`);
+        const taskDetail = res?.data?.data?.task || res?.data?.task;
+        if (taskDetail?.users_ids && Array.isArray(taskDetail.users_ids)) {
+          setFormData(prev => {
+            const isUnmodified = prev.users_ids.length === initialUsers.length &&
+              prev.users_ids.every(id => initialUsers.includes(id));
+            if (isUnmodified) {
+              return { ...prev, users_ids: taskDetail.users_ids };
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching task details:', err);
+      }
     } else {
       setEditingId(null);
       setFormData({ 
@@ -91,8 +117,8 @@ const Tasks = () => {
       });
       setSelectedDocFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsModalOpen(true);
     }
-    setIsModalOpen(true);
   };
 
   const closeModal = () => {
@@ -108,20 +134,13 @@ const Tasks = () => {
 
   const toggleUserSelection = (userId) => {
     setFormData(prev => {
-      if (editingId) {
-        // Single selection in edit mode
-        const isSelected = prev.users_ids.includes(userId);
-        return { ...prev, users_ids: isSelected ? [] : [userId] };
-      } else {
-        // Multi selection in create mode
-        const isSelected = prev.users_ids.includes(userId);
-        return {
-          ...prev,
-          users_ids: isSelected
-            ? prev.users_ids.filter(id => id !== userId)
-            : [...prev.users_ids, userId]
-        };
-      }
+      const isSelected = prev.users_ids.includes(userId);
+      return {
+        ...prev,
+        users_ids: isSelected
+          ? prev.users_ids.filter(id => id !== userId)
+          : [...prev.users_ids, userId]
+      };
     });
   };
 
@@ -146,18 +165,14 @@ const Tasks = () => {
     if (formData.importanc_status) data.append('importanc_status', formData.importanc_status);
     if (formData.tester_note) data.append('tester_note', formData.tester_note);
 
-    if (editingId) {
-      if (formData.users_ids && formData.users_ids.length > 0) {
-        data.append('user_id', formData.users_ids[0]);
-      }
-    } else {
-      if (userRole === 'engineer' && user?.id) {
-        data.append('users_ids', user.id);
-      } else if (formData.users_ids) {
-        formData.users_ids.forEach((uid) => {
-          data.append('users_ids', uid);
-        });
-      }
+    if (userRole === 'engineer' && user?.id) {
+      data.append('users_ids', user.id);
+      data.append('user_id', user.id);
+    } else if (formData.users_ids && formData.users_ids.length > 0) {
+      formData.users_ids.forEach((uid) => {
+        data.append('users_ids', uid);
+      });
+      data.append('user_id', formData.users_ids[0]);
     }
 
     if (selectedDocFile) {
@@ -707,13 +722,11 @@ const Tasks = () => {
                         <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-[16px] text-primary">group</span>
                           Assign To
-                          {!editingId && (
-                            <span className="text-xs text-muted-foreground font-normal">
-                              (Select one or multiple {getRoleNamePlural('engineer').toLowerCase()})
-                            </span>
-                          )}
+                          <span className="text-xs text-muted-foreground font-normal">
+                            (Select one or multiple {getRoleNamePlural('engineer').toLowerCase()})
+                          </span>
                         </label>
-                        {!editingId && engineersList.length > 1 && (
+                        {engineersList.length > 1 && (
                           <button
                             type="button"
                             onClick={handleSelectAllUsers}
@@ -761,10 +774,13 @@ const Tasks = () => {
                         </div>
                       )}
 
-                      {!editingId && formData.users_ids.length > 1 && (
+                      {formData.users_ids.length > 1 && (
                         <p className="text-xs text-primary mt-1 flex items-center font-medium bg-primary/5 p-2 rounded-lg border border-primary/20">
                           <span className="material-symbols-outlined text-[16px] mr-1.5">info</span>
-                          This task will be created separately for each of the {formData.users_ids.length} selected {getRoleNamePlural('engineer').toLowerCase()}.
+                          {editingId
+                            ? `This task will be synced across all ${formData.users_ids.length} selected ${getRoleNamePlural('engineer').toLowerCase()} (duplicated for new assignees, removed if unchecked).`
+                            : `This task will be created separately for each of the ${formData.users_ids.length} selected ${getRoleNamePlural('engineer').toLowerCase()}.`
+                          }
                         </p>
                       )}
 
