@@ -108,13 +108,29 @@ const Tasks = () => {
 
   const toggleUserSelection = (userId) => {
     setFormData(prev => {
-      const isSelected = prev.users_ids.includes(userId);
-      if (isSelected) {
-        return { ...prev, users_ids: [] };
+      if (editingId) {
+        // Single selection in edit mode
+        const isSelected = prev.users_ids.includes(userId);
+        return { ...prev, users_ids: isSelected ? [] : [userId] };
       } else {
-        return { ...prev, users_ids: [userId] };
+        // Multi selection in create mode
+        const isSelected = prev.users_ids.includes(userId);
+        return {
+          ...prev,
+          users_ids: isSelected
+            ? prev.users_ids.filter(id => id !== userId)
+            : [...prev.users_ids, userId]
+        };
       }
     });
+  };
+
+  const handleSelectAllUsers = () => {
+    if (formData.users_ids.length === engineersList.length) {
+      setFormData(prev => ({ ...prev, users_ids: [] }));
+    } else {
+      setFormData(prev => ({ ...prev, users_ids: engineersList.map(u => u.id) }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -135,7 +151,9 @@ const Tasks = () => {
         data.append('user_id', formData.users_ids[0]);
       }
     } else {
-      if (formData.users_ids) {
+      if (userRole === 'engineer' && user?.id) {
+        data.append('users_ids', user.id);
+      } else if (formData.users_ids) {
         formData.users_ids.forEach((uid) => {
           data.append('users_ids', uid);
         });
@@ -447,11 +465,19 @@ const Tasks = () => {
                         </select>
                       </td>
                       <td className="px-6 py-5 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                          <button onClick={() => openModal(task)} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-card hover:shadow-sm hover:text-primary transition-all border border-transparent hover:border-border">
+                        <div className="flex justify-end gap-1.5 items-center">
+                          <button 
+                            onClick={() => openModal(task)} 
+                            title="Edit Task"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/80 transition-colors"
+                          >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDelete(task.id)} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-card hover:shadow-sm hover:text-red-500 transition-all border border-transparent hover:border-border">
+                          <button 
+                            onClick={() => handleDelete(task.id)} 
+                            title="Delete Task"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -677,42 +703,73 @@ const Tasks = () => {
 
                   {userRole !== 'engineer' && (
                     <div className="flex flex-col gap-2 md:col-span-2 relative z-20">
-                      <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[16px] text-primary">group</span>
-                        Assign To
-                      </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {engineersList.map(eng => {
-                          const isSelected = formData.users_ids.includes(eng.id);
-                          return (
-                            <div 
-                              key={eng.id}
-                              onClick={() => toggleUserSelection(eng.id)}
-                              className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
-                                isSelected 
-                                  ? 'border-primary bg-primary/5 shadow-sm' 
-                                  : 'border-border bg-card hover:border-primary/30'
-                              }`}
-                            >
-                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-input bg-background'}`}>
-                                {isSelected && <span className="material-symbols-outlined text-[12px] text-primary-foreground font-bold">check</span>}
-                              </div>
-                              <div className="flex items-center gap-2 overflow-hidden">
-                                {eng.image ? (
-                                  <img src={eng.image} alt={eng.name} className="w-6 h-6 rounded-full object-cover" />
-                                ) : (
-                                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
-                                    {eng.name.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                                <span className="text-xs font-semibold truncate text-foreground">{eng.name}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[16px] text-primary">group</span>
+                          Assign To
+                          {!editingId && (
+                            <span className="text-xs text-muted-foreground font-normal">
+                              (Select one or multiple {getRoleNamePlural('engineer').toLowerCase()})
+                            </span>
+                          )}
+                        </label>
+                        {!editingId && engineersList.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={handleSelectAllUsers}
+                            className="text-xs font-semibold text-primary hover:underline transition-colors"
+                          >
+                            {formData.users_ids.length === engineersList.length ? 'Deselect All' : 'Select All'}
+                          </button>
+                        )}
                       </div>
+
+                      {engineersList.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic p-2 bg-muted/40 rounded-lg">
+                          No {getRoleNamePlural('engineer').toLowerCase()} assigned to this group yet.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {engineersList.map(eng => {
+                            const isSelected = formData.users_ids.includes(eng.id);
+                            return (
+                              <div 
+                                key={eng.id}
+                                onClick={() => toggleUserSelection(eng.id)}
+                                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                                  isSelected 
+                                    ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/30' 
+                                    : 'border-border bg-card hover:border-primary/30'
+                                }`}
+                              >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-primary border-primary' : 'border-input bg-background'}`}>
+                                  {isSelected && <span className="material-symbols-outlined text-[12px] text-white font-bold">check</span>}
+                                </div>
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                  {eng.image ? (
+                                    <img src={eng.image} alt={eng.name} className="w-6 h-6 rounded-full object-cover" />
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
+                                      {eng.name.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                  <span className="text-xs font-semibold truncate text-foreground">{eng.name}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {!editingId && formData.users_ids.length > 1 && (
+                        <p className="text-xs text-primary mt-1 flex items-center font-medium bg-primary/5 p-2 rounded-lg border border-primary/20">
+                          <span className="material-symbols-outlined text-[16px] mr-1.5">info</span>
+                          This task will be created separately for each of the {formData.users_ids.length} selected {getRoleNamePlural('engineer').toLowerCase()}.
+                        </p>
+                      )}
+
                       {formData.users_ids.length === 0 && (
-                        <p className="text-xs text-red-500 mt-2 flex items-center font-medium">
+                        <p className="text-xs text-red-500 mt-1 flex items-center font-medium">
                           <span className="material-symbols-outlined text-[16px] mr-1">error</span>
                           Please assign at least one {getRoleName('engineer').toLowerCase()}.
                         </p>
@@ -740,8 +797,17 @@ const Tasks = () => {
               <Button type="button" variant="outline" onClick={closeModal} className="px-6 h-11 rounded-xl font-semibold text-muted-foreground">
                 Cancel
               </Button>
-              <Button type="submit" form="task-form" disabled={mutationLoading || formData.users_ids.length === 0} className="bg-primary hover:bg-primary/90 text-white px-8 h-11 rounded-xl font-bold shadow-md">
-                {mutationLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingId ? 'Update Task' : 'Create Task')}
+              <Button 
+                type="submit" 
+                form="task-form" 
+                disabled={mutationLoading || (userRole !== 'engineer' && formData.users_ids.length === 0)} 
+                className="bg-primary hover:bg-primary/90 text-white px-8 h-11 rounded-xl font-bold shadow-md"
+              >
+                {mutationLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  editingId ? 'Update Task' : (formData.users_ids.length > 1 ? `Create ${formData.users_ids.length} Tasks` : 'Create Task')
+                )}
               </Button>
             </div>
           </div>

@@ -341,12 +341,12 @@ const ProjectDetails = () => {
                         </h3>
                         
                         {userRole !== 'engineer' && (
-                          <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                            <button onClick={(e) => { e.stopPropagation(); openModal(group); }} className="text-gray-400 hover:text-primary p-1">
+                          <div className="flex items-center gap-1">
+                            <button onClick={(e) => { e.stopPropagation(); openModal(group); }} title="Edit Group" className="text-muted-foreground hover:text-primary hover:bg-muted p-1 rounded transition-colors">
                               <Edit className="w-3.5 h-3.5" />
                             </button>
                             {userRole !== 'tester' && (
-                              <button onClick={(e) => handleDeleteGroup(group.id, e)} className="text-gray-400 hover:text-red-500 p-1">
+                              <button onClick={(e) => handleDeleteGroup(group.id, e)} title="Delete Group" className="text-muted-foreground hover:text-red-500 hover:bg-muted p-1 rounded transition-colors">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
