@@ -118,7 +118,7 @@ const VoiceAudioPlayer = ({ voice, currentUserId, userRole, onDelete }) => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const canDelete = userRole === 'admin' || userRole === 'super_admin' || voice.user_id === currentUserId;
+  const canDelete = (userRole === 'admin' || userRole === 'super_admin') || (userRole === 'tester' && voice.user_id === currentUserId);
   const isLeader = voice.user_role === 'tester';
   const isAdmin = voice.user_role === 'admin' || voice.user_role === 'super_admin';
 
@@ -924,7 +924,7 @@ export default function TaskDetails() {
             <h2 className="text-base font-bold text-foreground">Documentation</h2>
           </div>
 
-          {task.documentation && (
+          {task.documentation && canManageVoices && (
             <button
               onClick={handleDeleteDoc}
               className="text-xs font-semibold text-destructive hover:bg-destructive/10 px-2.5 py-1.5 rounded-lg border border-destructive/20 transition-colors flex items-center gap-1.5 cursor-pointer"
