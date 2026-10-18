@@ -133,6 +133,26 @@ const ProjectDetails = () => {
     });
   };
 
+  const handleDeleteDoc = async () => {
+    if (!window.confirm("Are you sure you want to delete this documentation? It will be deleted permanently from the server and database.")) return;
+    if (editingId) {
+      const res = await mutate({
+        method: 'DELETE',
+        url: `/api/admin/projectGroup/${editingId}/documentation`
+      });
+      if (res?.success) {
+        setFormData(prev => ({ ...prev, documentation: '' }));
+        setSelectedDocFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        refreshGroups();
+      }
+    } else {
+      setFormData(prev => ({ ...prev, documentation: '' }));
+      setSelectedDocFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleGroupSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData();
@@ -146,6 +166,9 @@ const ProjectDetails = () => {
 
     if (selectedDocFile) {
       data.append('documentation', selectedDocFile);
+    } else if (editingId && !formData.documentation) {
+      data.append('delete_documentation', 'true');
+      data.append('documentation', '');
     }
 
     const response = await mutate({
@@ -569,12 +592,42 @@ const ProjectDetails = () => {
                       ref={fileInputRef}
                       className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                     />
-                    {selectedDocFile ? (
+                    {selectedDocFile && (
                       <span className="text-xs text-primary font-medium whitespace-nowrap px-2">{selectedDocFile.name}</span>
-                    ) : formData.documentation ? (
-                      <a href={formData.documentation} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap px-2">View Current</a>
-                    ) : null}
+                    )}
                   </div>
+                  {formData.documentation && !selectedDocFile && (
+                    <div className="mt-2 flex items-center justify-between p-2 rounded-md bg-muted/60 border border-border">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="material-symbols-outlined text-primary text-base">description</span>
+                        <span className="text-xs font-medium text-foreground truncate max-w-[180px]">Current Documentation</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button 
+                          type="button" 
+                          onClick={(e) => handleViewDoc(e, formData.documentation)}
+                          className="text-xs text-primary hover:underline px-2 py-0.5 rounded bg-primary/10 border-none cursor-pointer font-medium"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteDoc}
+                          className="text-xs text-destructive hover:bg-destructive/10 px-1.5 py-0.5 rounded border-none cursor-pointer flex items-center gap-1 font-medium transition-colors"
+                          title="Delete documentation from server and database"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {editingId && !formData.documentation && !selectedDocFile && (
+                    <p className="text-xs text-muted-foreground mt-1">No documentation file currently uploaded.</p>
+                  )}
+                  {editingId && formData.documentation && (
+                    <p className="text-xs text-muted-foreground mt-1">Select a new file to replace, or click Delete to remove it.</p>
+                  )}
                 </div>
                 
                 <div>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
-import { Loader2, Search, Plus, Edit, Trash2, X, Calendar } from 'lucide-react';
+import { Loader2, Search, Plus, Edit, Trash2, X, Calendar, Eye } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
 
@@ -177,6 +177,9 @@ const Tasks = () => {
 
     if (selectedDocFile) {
       data.append('documentation', selectedDocFile);
+    } else if (editingId && !formData.documentation) {
+      data.append('delete_documentation', 'true');
+      data.append('documentation', '');
     }
 
     const response = await mutate({
@@ -188,6 +191,26 @@ const Tasks = () => {
     if (response?.success) {
       closeModal();
       refresh();
+    }
+  };
+
+  const handleDeleteDoc = async () => {
+    if (!window.confirm("Are you sure you want to delete this documentation? It will be deleted permanently from the server and database.")) return;
+    if (editingId) {
+      const res = await mutate({
+        method: 'DELETE',
+        url: `/api/admin/tasks/${editingId}/documentation`
+      });
+      if (res?.success) {
+        setFormData(prev => ({ ...prev, documentation: '' }));
+        setSelectedDocFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        refresh();
+      }
+    } else {
+      setFormData(prev => ({ ...prev, documentation: '' }));
+      setSelectedDocFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -391,9 +414,12 @@ const Tasks = () => {
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
                         <div className="flex flex-col">
-                          <span className={`font-plus-jakarta text-base font-bold text-foreground ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}>
+                          <Link 
+                            to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
+                            className={`font-plus-jakarta text-base font-bold text-foreground hover:text-primary transition-colors cursor-pointer ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}
+                          >
                             {task.name}
-                          </span>
+                          </Link>
                           <span className="mt-1 text-sm text-muted-foreground line-clamp-2 max-w-md">{task.description || <span className="italic">No description</span>}</span>
                           {task.tester_note && (
                             <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-700 border border-amber-100">
@@ -481,6 +507,13 @@ const Tasks = () => {
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-1.5 items-center">
+                          <Link
+                            to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
+                            title="View Task Details"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/80 transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
                           <button 
                             onClick={() => openModal(task)} 
                             title="Edit Task"
@@ -657,12 +690,42 @@ const Tasks = () => {
                         ref={fileInputRef}
                         className="w-full text-sm file:mr-4 file:py-2.5 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                       />
-                      {selectedDocFile ? (
+                      {selectedDocFile && (
                         <span className="text-xs text-primary font-medium whitespace-nowrap px-2">{selectedDocFile.name}</span>
-                      ) : formData.documentation ? (
-                        <a href={formData.documentation} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap font-medium px-2">View Current</a>
-                      ) : null}
+                      )}
                     </div>
+                    {formData.documentation && !selectedDocFile && (
+                      <div className="mt-2 flex items-center justify-between p-2 rounded-lg bg-muted/60 border border-border">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <span className="material-symbols-outlined text-primary text-base">description</span>
+                          <span className="text-xs font-medium text-foreground truncate max-w-[200px]">Current Documentation</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            type="button" 
+                            onClick={(e) => handleViewDoc(e, formData.documentation)}
+                            className="text-xs text-primary hover:underline px-2 py-1 rounded bg-primary/10 border-none cursor-pointer font-medium"
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDeleteDoc}
+                            className="text-xs text-destructive hover:bg-destructive/10 px-2 py-1 rounded border-none cursor-pointer flex items-center gap-1 font-medium transition-colors"
+                            title="Delete documentation from server and database"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {editingId && !formData.documentation && !selectedDocFile && (
+                      <p className="text-xs text-muted-foreground mt-1">No documentation file currently uploaded.</p>
+                    )}
+                    {editingId && formData.documentation && (
+                      <p className="text-xs text-muted-foreground mt-1">Select a new file to replace, or click Delete to remove it.</p>
+                    )}
                   </div>
 
                   <div>
