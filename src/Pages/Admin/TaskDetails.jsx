@@ -39,6 +39,8 @@ dayjs.extend(relativeTime);
 
 // 🎵 Professional Audio Player Component
 const VoiceAudioPlayer = ({ voice, currentUserId, userRole, onDelete }) => {
+  if (!voice || !voice.id) return null;
+
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -559,7 +561,10 @@ export default function TaskDetails() {
   useEffect(() => {
     if (task) {
       setNoteContent(task.tester_note || '');
-      setVoices(task.voices || []);
+      const validVoices = Array.isArray(task.voices)
+        ? task.voices.filter((v) => v && typeof v === 'object' && v.id)
+        : [];
+      setVoices(validVoices);
     }
   }, [task]);
 
@@ -737,7 +742,10 @@ export default function TaskDetails() {
 
   const statusStyle = getStatusStyles(task.status);
   const deliveryInfo = getDeliveryDateStatus(task.delivery_date, task.status);
-  const assignedUsers = task.assigned_users || [];
+  const assignedUsers = (Array.isArray(task.assigned_users) ? task.assigned_users : [])
+    .filter((u) => u && typeof u === 'object' && u.id);
+  const displayVoices = (Array.isArray(voices) ? voices : [])
+    .filter((v) => v && typeof v === 'object' && v.id);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-16">
@@ -867,23 +875,23 @@ export default function TaskDetails() {
             ) : (
               <div className="flex items-center -space-x-2 overflow-hidden">
                 {assignedUsers.map((u) => (
-                  <div key={u.id} className="group/u relative" title={`${u.name} (${getRoleName(u.role || 'engineer')})`}>
+                  <div key={u.id} className="group/u relative" title={`${u.name || ''} (${getRoleName(u.role || 'engineer')})`}>
                     {u.image ? (
                       <img
                         src={u.image}
-                        alt={u.name}
+                        alt={u.name || 'User'}
                         className="inline-block h-8 w-8 rounded-full ring-2 ring-card object-cover"
                       />
                     ) : (
                       <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-xs ring-2 ring-card">
-                        {u.name?.charAt(0).toUpperCase()}
+                        {u.name?.charAt(0).toUpperCase() || '?'}
                       </div>
                     )}
                   </div>
                 ))}
                 {assignedUsers.length > 0 && (
                   <span className="pl-3 text-xs font-medium text-foreground">
-                    {assignedUsers.map((u) => u.name).join(', ')}
+                    {assignedUsers.map((u) => u.name).filter(Boolean).join(', ')}
                   </span>
                 )}
               </div>
@@ -983,7 +991,7 @@ export default function TaskDetails() {
             <Volume2 className="w-5 h-5 text-primary" />
             <h2 className="text-base font-bold text-foreground">Voice Instructions & Notes</h2>
             <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-bold">
-              {voices.length}
+              {displayVoices.length}
             </span>
           </div>
         </div>
@@ -993,13 +1001,17 @@ export default function TaskDetails() {
           <div className="mb-6">
             <VoiceRecorder
               taskId={task.id}
-              onVoiceAdded={(newVoice) => setVoices((prev) => [newVoice, ...prev])}
+              onVoiceAdded={(newVoice) => {
+                if (newVoice && newVoice.id) {
+                  setVoices((prev) => [newVoice, ...(Array.isArray(prev) ? prev : []).filter((v) => v && v.id !== newVoice.id)]);
+                }
+              }}
             />
           </div>
         )}
 
         {/* Voices List */}
-        {voices.length === 0 ? (
+        {displayVoices.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground bg-muted/30 rounded-2xl border border-dashed border-border">
             <Volume2 className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
             <p className="text-sm font-medium">No voice notes recorded yet</p>
@@ -1011,7 +1023,7 @@ export default function TaskDetails() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {voices.map((voice) => (
+            {displayVoices.map((voice) => (
               <VoiceAudioPlayer
                 key={voice.id}
                 voice={voice}
