@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
@@ -14,6 +14,7 @@ import { apiClient } from '@/lib/axios';
 const Tasks = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const { projectId, groupId } = useParams();
+  const navigate = useNavigate();
   
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user?.role?.toLowerCase?.() || '';
@@ -409,13 +410,15 @@ const Tasks = () => {
                   return (
                     <tr 
                       key={task.id} 
-                      className={`group transition-colors ${task.status === 'done' ? 'opacity-70' : ''} ${task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted'}`}
+                      onClick={() => navigate(`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`)}
+                      className={`group transition-colors cursor-pointer ${task.status === 'done' ? 'opacity-70' : ''} ${task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted/80'}`}
                     >
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
                         <div className="flex flex-col">
                           <Link 
                             to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
+                            onClick={(e) => e.stopPropagation()}
                             className={`font-plus-jakarta text-base font-bold text-foreground hover:text-primary transition-colors cursor-pointer ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}
                           >
                             {task.name}
@@ -428,7 +431,13 @@ const Tasks = () => {
                             </span>
                           )}
                           {task.documentation && (
-                            <button onClick={(e) => handleViewDoc(e, task.documentation)} className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors cursor-pointer border-none">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewDoc(e, task.documentation);
+                              }} 
+                              className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors cursor-pointer border-none"
+                            >
                               <span className="material-symbols-outlined text-[14px]">link</span>
                               Documentation
                             </button>
@@ -463,6 +472,7 @@ const Tasks = () => {
                       <td className="px-6 py-5">
                         <select
                           value={task.importanc_status || 'medium'}
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleImportanceChange(task.id, e.target.value)}
                           disabled={userRole === 'engineer'}
                           className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
@@ -477,6 +487,7 @@ const Tasks = () => {
                       <td className="px-6 py-5">
                         <select
                           value={task.status}
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleStatusChange(task.id, e.target.value)}
                           disabled={task.status === 'approve' && userRole === 'engineer'}
                           className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${task.status === 'approve' && userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
@@ -506,7 +517,7 @@ const Tasks = () => {
                         </select>
                       </td>
                       <td className="px-6 py-5 text-right">
-                        <div className="flex justify-end gap-1.5 items-center">
+                        <div className="flex justify-end gap-1.5 items-center" onClick={(e) => e.stopPropagation()}>
                           <Link
                             to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
                             title="View Task Details"
@@ -515,14 +526,20 @@ const Tasks = () => {
                             <Eye className="w-4 h-4" />
                           </Link>
                           <button 
-                            onClick={() => openModal(task)} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openModal(task);
+                            }} 
                             title="Edit Task"
                             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/80 transition-colors"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button 
-                            onClick={() => handleDelete(task.id)} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(task.id);
+                            }} 
                             title="Delete Task"
                             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                           >

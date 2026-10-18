@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
@@ -10,6 +10,7 @@ import { useRoleNames } from '@/context/RoleNameContext';
 import { toast } from 'sonner';
 
 const FilteredTasks = () => {
+  const navigate = useNavigate();
   const { getRoleName } = useRoleNames();
   const { type } = useParams(); // 'pending' or 'delay'
   
@@ -233,18 +234,22 @@ const FilteredTasks = () => {
               ) : (
                 tasks.map((task) => {
                   const style = getStatusStyles(task.status);
+                  const detailsUrl = task.project_id && (task.group_id || task.project_group_id) 
+                    ? `/admin/projects/${task.project_id}/groups/${task.group_id || task.project_group_id}/tasks/${task.id}` 
+                    : `/admin/tasks/detail/${task.id}`;
+
                   return (
                     <tr 
                       key={task.id} 
-                      className={`group transition-colors ${task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted'}`}
+                      onClick={() => navigate(detailsUrl)}
+                      className={`group transition-colors cursor-pointer ${task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted/80'}`}
                     >
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
                         <div className="flex flex-col">
                           <Link
-                            to={task.project_id && (task.group_id || task.project_group_id) 
-                              ? `/admin/projects/${task.project_id}/groups/${task.group_id || task.project_group_id}/tasks/${task.id}` 
-                              : `/admin/tasks/detail/${task.id}`}
+                            to={detailsUrl}
+                            onClick={(e) => e.stopPropagation()}
                             className="font-plus-jakarta text-base font-bold text-foreground hover:text-primary transition-colors cursor-pointer"
                           >
                             {task.name}
@@ -257,7 +262,13 @@ const FilteredTasks = () => {
                             </span>
                           )}
                           {task.documentation && (
-                            <button onClick={(e) => handleViewDoc(e, task.documentation)} className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors cursor-pointer border-none">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewDoc(e, task.documentation);
+                              }} 
+                              className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors cursor-pointer border-none"
+                            >
                               <span className="material-symbols-outlined text-[14px]">link</span>
                               Documentation
                             </button>
@@ -298,6 +309,7 @@ const FilteredTasks = () => {
                       <td className="px-6 py-5">
                         <select
                           value={task.importanc_status || 'medium'}
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleImportanceChange(task.id, e.target.value)}
                           disabled={userRole === 'engineer'}
                           className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
@@ -312,6 +324,7 @@ const FilteredTasks = () => {
                       <td className="px-6 py-5">
                         <select
                           value={task.status}
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleStatusChange(task.id, e.target.value)}
                           disabled={task.status === 'approve' && userRole === 'engineer'}
                           className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${task.status === 'approve' && userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
