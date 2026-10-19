@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { Loader2, Users } from 'lucide-react';
+import { toast } from 'sonner';
 import { useRoleNames } from '@/context/RoleNameContext';
 import EngineerDashboard from './EngineerDashboard';
 import UserPointsModal from './UserPointsModal';
@@ -74,6 +75,100 @@ const Dashboard = () => {
   const leaderboardList = leaderboardRes?.leaderboard || [];
 
   const navigate = useNavigate();
+
+  const [copiedId, setCopiedId] = useState(null);
+
+  const handleCopyPhone = (e, userId, phone) => {
+    e.stopPropagation();
+    if (!phone) return;
+    navigator.clipboard.writeText(phone);
+    setCopiedId(userId);
+    toast.success('تم نسخ رقم الهاتف');
+    setTimeout(() => {
+      setCopiedId((prev) => (prev === userId ? null : prev));
+    }, 2000);
+  };
+
+  const handleOpenWhatsApp = (e, whatsapp, phone) => {
+    e.stopPropagation();
+    const rawNumber = whatsapp || phone;
+    if (!rawNumber) {
+      toast.error('لا يوجد رقم واتساب مسجل');
+      return;
+    }
+    const cleanNumber = rawNumber.replace(/[^0-9]/g, '');
+    window.open(`https://wa.me/${cleanNumber}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const getAttendanceBadge = (attendance) => {
+    if (!attendance) return null;
+    switch (attendance.type) {
+      case 'present_ontime':
+        return {
+          bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300',
+          dot: 'bg-emerald-500',
+          icon: 'check_circle',
+          label: attendance.label,
+          subtext: attendance.check_in_time ? `دخول ${attendance.check_in_time}` : ''
+        };
+      case 'present_late':
+        return {
+          bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300',
+          dot: 'bg-amber-500',
+          icon: 'warning',
+          label: attendance.label,
+          subtext: attendance.check_in_time ? `دخول ${attendance.check_in_time}` : ''
+        };
+      case 'online':
+        return {
+          bg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300',
+          dot: 'bg-blue-500',
+          icon: 'wifi',
+          label: attendance.label,
+          subtext: attendance.check_in_time ? `دخول ${attendance.check_in_time}` : ''
+        };
+      case 'absent':
+        return {
+          bg: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300',
+          dot: 'bg-rose-500',
+          icon: 'cancel',
+          label: attendance.label,
+          subtext: ''
+        };
+      case 'upcoming':
+        return {
+          bg: 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300',
+          dot: 'bg-indigo-500',
+          icon: 'schedule',
+          label: attendance.label,
+          subtext: ''
+        };
+      case 'holiday':
+        return {
+          bg: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300',
+          dot: 'bg-purple-500',
+          icon: 'beach_access',
+          label: attendance.label,
+          subtext: ''
+        };
+      case 'day_off':
+        return {
+          bg: 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300',
+          dot: 'bg-slate-400',
+          icon: 'weekend',
+          label: attendance.label,
+          subtext: ''
+        };
+      default:
+        return {
+          bg: 'bg-muted border-border text-muted-foreground',
+          dot: 'bg-muted-foreground',
+          icon: 'info',
+          label: attendance.label || 'غير محدد',
+          subtext: ''
+        };
+    }
+  };
 
   if (user?.role === 'engineer' || user?.role === 'tester') {
     return <EngineerDashboard />;
@@ -299,120 +394,212 @@ const Dashboard = () => {
                 <p>No points recorded for this period.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-                {leaderboardList.map((usr, index) => (
-                  <div 
-                    key={usr.id} 
-                    className={`relative bg-card rounded-2xl border transition-all duration-300 hover:shadow-lg flex flex-col justify-between p-5 overflow-hidden group ${
-                      index === 0 
-                        ? 'border-amber-400/50 shadow-amber-500/5 bg-gradient-to-b from-amber-500/[0.08] via-card to-card' 
-                        : index === 1 
-                        ? 'border-slate-300 dark:border-slate-700 shadow-slate-500/5 bg-gradient-to-b from-slate-400/[0.08] via-card to-card' 
-                        : index === 2 
-                        ? 'border-orange-400/50 shadow-orange-500/5 bg-gradient-to-b from-orange-500/[0.08] via-card to-card' 
-                        : 'border-border hover:border-primary/40'
-                    }`}
-                  >
-                    {/* Top Row: Rank Badge & Points Pill */}
-                    <div className="flex items-center justify-between gap-2 mb-4">
-                      {/* Rank Badge */}
-                      <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black shadow-sm ${
-                        index === 0 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-500/30 ring-2 ring-amber-400/30' :
-                        index === 1 ? 'bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-slate-400/30 ring-2 ring-slate-300/30' :
-                        index === 2 ? 'bg-gradient-to-r from-orange-500 to-amber-700 text-white shadow-orange-500/30 ring-2 ring-orange-400/30' :
-                        'bg-muted text-muted-foreground border border-border'
-                      }`}>
-                        {index < 3 && <span className="material-symbols-outlined text-[14px]">military_tech</span>}
-                        <span>#{index + 1}</span>
-                      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+                {leaderboardList.map((usr, index) => {
+                  const attBadge = getAttendanceBadge(usr.today_attendance);
+                  const tasksStats = usr.tasks_stats || { pending: 0, inprogress: 0, done: 0, approve: 0, edit: 0, total: 0 };
+                  const whatsNumber = usr.whatsapp || usr.phone || '';
 
-                      {/* Points Pill */}
-                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-xs shadow-sm">
-                        <span className="material-symbols-outlined text-[15px]">workspace_premium</span>
-                        <span className="font-black text-sm">{usr.total_points}</span>
-                        <span className="text-[10px] font-semibold text-primary/70 uppercase">pts</span>
-                      </div>
-                    </div>
-
-                    {/* User Profile Avatar & Info */}
-                    <div className="flex flex-col items-center text-center my-2">
-                      <div className="relative">
-                        {usr.image ? (
-                          <img 
-                            src={usr.image} 
-                            alt={usr.name} 
-                            className={`w-16 h-16 rounded-full object-cover shadow-sm transition-transform duration-300 group-hover:scale-105 ${
-                              index === 0 ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
-                              index === 1 ? 'ring-2 ring-slate-300 dark:ring-slate-600 ring-offset-2 ring-offset-card' :
-                              index === 2 ? 'ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
-                              'ring-2 ring-border ring-offset-2 ring-offset-card'
-                            }`} 
-                          />
-                        ) : (
-                          <div className={`w-16 h-16 rounded-full flex items-center justify-center font-black text-xl shadow-sm transition-transform duration-300 group-hover:scale-105 ${
-                            index === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
-                            index === 1 ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 ring-2 ring-slate-300 ring-offset-2 ring-offset-card' :
-                            index === 2 ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
-                            'bg-primary/10 text-primary ring-2 ring-border ring-offset-2 ring-offset-card'
+                  return (
+                    <div 
+                      key={usr.id} 
+                      className={`relative bg-card rounded-2xl border transition-all duration-300 hover:shadow-lg flex flex-col justify-between p-4.5 overflow-hidden group ${
+                        index === 0 
+                          ? 'border-amber-400/50 shadow-amber-500/5 bg-gradient-to-b from-amber-500/[0.08] via-card to-card' 
+                          : index === 1 
+                          ? 'border-slate-300 dark:border-slate-700 shadow-slate-500/5 bg-gradient-to-b from-slate-400/[0.08] via-card to-card' 
+                          : index === 2 
+                          ? 'border-orange-400/50 shadow-orange-500/5 bg-gradient-to-b from-orange-500/[0.08] via-card to-card' 
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <div>
+                        {/* Top Row: Rank Badge & Points Pill */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          {/* Rank Badge */}
+                          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black shadow-sm ${
+                            index === 0 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-500/30 ring-2 ring-amber-400/30' :
+                            index === 1 ? 'bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-slate-400/30 ring-2 ring-slate-300/30' :
+                            index === 2 ? 'bg-gradient-to-r from-orange-500 to-amber-700 text-white shadow-orange-500/30 ring-2 ring-orange-400/30' :
+                            'bg-muted text-muted-foreground border border-border'
                           }`}>
-                            {usr.name.charAt(0).toUpperCase()}
+                            {index < 3 && <span className="material-symbols-outlined text-[14px]">military_tech</span>}
+                            <span>#{index + 1}</span>
+                          </div>
+
+                          {/* Points Pill */}
+                          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-xs shadow-sm">
+                            <span className="material-symbols-outlined text-[15px]">workspace_premium</span>
+                            <span className="font-black text-sm">{usr.total_points}</span>
+                            <span className="text-[10px] font-semibold text-primary/70 uppercase">pts</span>
+                          </div>
+                        </div>
+
+                        {/* User Avatar, Name & Role */}
+                        <div className="flex flex-col items-center text-center mb-3">
+                          <div className="relative">
+                            {usr.image ? (
+                              <img 
+                                src={usr.image} 
+                                alt={usr.name} 
+                                className={`w-14 h-14 rounded-full object-cover shadow-sm transition-transform duration-300 group-hover:scale-105 ${
+                                  index === 0 ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
+                                  index === 1 ? 'ring-2 ring-slate-300 dark:ring-slate-600 ring-offset-2 ring-offset-card' :
+                                  index === 2 ? 'ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
+                                  'ring-2 ring-border ring-offset-2 ring-offset-card'
+                                }`} 
+                              />
+                            ) : (
+                              <div className={`w-14 h-14 rounded-full flex items-center justify-center font-black text-lg shadow-sm transition-transform duration-300 group-hover:scale-105 ${
+                                index === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
+                                index === 1 ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 ring-2 ring-slate-300 ring-offset-2 ring-offset-card' :
+                                index === 2 ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
+                                'bg-primary/10 text-primary ring-2 ring-border ring-offset-2 ring-offset-card'
+                              }`}>
+                                {usr.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+
+                            {/* Top 3 Trophy Badge on Avatar */}
+                            {index === 0 && (
+                              <span className="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 shadow-md flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[12px]">emoji_events</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="font-bold text-foreground text-sm mt-2 truncate max-w-full px-1" title={usr.name}>
+                            {usr.name}
+                          </h3>
+
+                          {usr.role && (
+                            <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-muted text-muted-foreground border border-border/80">
+                              {getRoleName(usr.role)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Today Attendance Status Badge */}
+                        {attBadge && (
+                          <div className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-xs font-semibold mb-3 ${attBadge.bg}`}>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${attBadge.dot}`}></span>
+                              <span className="truncate">{attBadge.label}</span>
+                            </div>
+                            {attBadge.subtext && (
+                              <span className="text-[10px] opacity-80 shrink-0 font-normal mr-1">{attBadge.subtext}</span>
+                            )}
                           </div>
                         )}
 
-                        {/* Top 3 Trophy Badge on Avatar */}
-                        {index === 0 && (
-                          <span className="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 shadow-md flex items-center justify-center">
-                            <span className="material-symbols-outlined text-[13px]">emoji_events</span>
-                          </span>
-                        )}
+                        {/* Tasks Status Breakdown */}
+                        <div className="w-full bg-muted/40 rounded-xl p-2 border border-border/60 mb-3">
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground mb-1.5 px-0.5">
+                            <span>المهام</span>
+                            <span className="font-bold text-foreground">{tasksStats.total} إجمالي</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-1 text-center">
+                            {/* Pending */}
+                            <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/60 rounded-md py-1 px-0.5" title="قيد الانتظار (Pending)">
+                              <span className="block text-[9px] text-amber-700 dark:text-amber-400 font-medium truncate">انتظار</span>
+                              <span className="block text-xs font-bold text-amber-800 dark:text-amber-300">{tasksStats.pending}</span>
+                            </div>
+                            {/* In Progress */}
+                            <div className="bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/60 rounded-md py-1 px-0.5" title="جاري العمل (In Progress)">
+                              <span className="block text-[9px] text-blue-700 dark:text-blue-400 font-medium truncate">جاري</span>
+                              <span className="block text-xs font-bold text-blue-800 dark:text-blue-300">{tasksStats.inprogress}</span>
+                            </div>
+                            {/* Done */}
+                            <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/60 rounded-md py-1 px-0.5" title="منجز (Done)">
+                              <span className="block text-[9px] text-emerald-700 dark:text-emerald-400 font-medium truncate">منجز</span>
+                              <span className="block text-xs font-bold text-emerald-800 dark:text-emerald-300">{tasksStats.done}</span>
+                            </div>
+                            {/* Approve */}
+                            <div className="bg-purple-50/80 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-800/60 rounded-md py-1 px-0.5" title="معتمد (Approved)">
+                              <span className="block text-[9px] text-purple-700 dark:text-purple-400 font-medium truncate">معتمد</span>
+                              <span className="block text-xs font-bold text-purple-800 dark:text-purple-300">{tasksStats.approve}</span>
+                            </div>
+                            {/* Edit */}
+                            <div className="bg-orange-50/80 dark:bg-orange-950/30 border border-orange-200/60 dark:border-orange-800/60 rounded-md py-1 px-0.5" title="تعديل (Needs Revision)">
+                              <span className="block text-[9px] text-orange-700 dark:text-orange-400 font-medium truncate">تعديل</span>
+                              <span className="block text-xs font-bold text-orange-800 dark:text-orange-300">{tasksStats.edit}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Info Section: Phone (Click to Copy) & WhatsApp (Click to Open) */}
+                        <div className="w-full flex items-center gap-1.5 mb-2">
+                          {/* Phone Button */}
+                          {usr.phone ? (
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyPhone(e, usr.id, usr.phone)}
+                              className="flex-1 flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-card border border-border/80 hover:bg-muted/80 text-xs text-foreground transition-all group/btn cursor-pointer shadow-2xs"
+                              title="انقر لنسخ رقم الهاتف"
+                            >
+                              <span className="flex items-center gap-1 truncate">
+                                <span className="material-symbols-outlined text-[14px] text-muted-foreground group-hover/btn:text-primary">call</span>
+                                <span className="font-medium text-[11px] truncate" dir="ltr">{usr.phone}</span>
+                              </span>
+                              {copiedId === usr.id ? (
+                                <span className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.5 rounded">
+                                  <span className="material-symbols-outlined text-[12px]">check</span>
+                                  <span>تم</span>
+                                </span>
+                              ) : (
+                                <span className="material-symbols-outlined text-[13px] text-muted-foreground/60 group-hover/btn:text-foreground">content_copy</span>
+                              )}
+                            </button>
+                          ) : (
+                            <div className="flex-1 px-2 py-1.5 rounded-lg bg-muted/40 text-[11px] text-muted-foreground text-center">
+                              لا يوجد هاتف
+                            </div>
+                          )}
+
+                          {/* WhatsApp Button */}
+                          {whatsNumber && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenWhatsApp(e, usr.whatsapp, usr.phone)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold transition-all cursor-pointer shadow-2xs shrink-0"
+                              title="فتح محادثة واتساب"
+                            >
+                              <span className="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
+                              <span className="text-[11px]">واتساب</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <h3 className="font-bold text-foreground text-sm mt-3 truncate max-w-full px-2" title={usr.name}>
-                        {usr.name}
-                      </h3>
+                      {/* Action Icons matching https://taskito.wegostation.com/admin/users (except edit, delete) */}
+                      <div className="flex items-center justify-center gap-2 pt-2.5 mt-2 border-t border-border/60 bg-muted/20 -mx-4.5 -mb-4.5 px-4 py-2">
+                        <button 
+                          onClick={() => { setAttendanceUserId(usr.id); setAttendanceUserName(usr.name); }} 
+                          className="p-1.5 text-muted-foreground hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/40 rounded-lg transition-colors cursor-pointer" 
+                          title="تقرير الحضور والغياب"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                        </button>
 
-                      {usr.phone && (
-                        <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-0.5">
-                          <span className="material-symbols-outlined text-[13px] text-muted-foreground/70">call</span>
-                          <span dir="ltr">{usr.phone}</span>
-                        </p>
-                      )}
+                        <button 
+                          onClick={() => { setPointsUserId(usr.id); setPointsUserName(usr.name); }} 
+                          className="p-1.5 text-muted-foreground hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded-lg transition-colors cursor-pointer" 
+                          title="سجل النقاط"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">analytics</span>
+                        </button>
 
-                      {usr.role && (
-                        <span className="mt-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-muted text-muted-foreground border border-border/80">
-                          {getRoleName(usr.role)}
-                        </span>
-                      )}
+                        <button 
+                          onClick={() => navigate(`/admin/tasks/all?user_id=${usr.id}`)} 
+                          className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer" 
+                          title="عرض المهام"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">task</span>
+                        </button>
+                      </div>
                     </div>
-
-                    {/* Action Icons matching https://taskito.wegostation.com/admin/users (except edit, delete) */}
-                    <div className="flex items-center justify-center gap-2 pt-3 mt-4 border-t border-border/60 bg-muted/20 -mx-5 -mb-5 px-4 py-2.5">
-                      <button 
-                        onClick={() => { setAttendanceUserId(usr.id); setAttendanceUserName(usr.name); }} 
-                        className="p-2 text-muted-foreground hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/40 rounded-lg transition-colors cursor-pointer" 
-                        title="View Attendance"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">calendar_month</span>
-                      </button>
-
-                      <button 
-                        onClick={() => { setPointsUserId(usr.id); setPointsUserName(usr.name); }} 
-                        className="p-2 text-muted-foreground hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded-lg transition-colors cursor-pointer" 
-                        title="View Points"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">analytics</span>
-                      </button>
-
-                      <button 
-                        onClick={() => navigate(`/admin/tasks/all?user_id=${usr.id}`)} 
-                        className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer" 
-                        title="View Tasks"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">task</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

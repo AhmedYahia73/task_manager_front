@@ -52,6 +52,7 @@ const Users = () => {
     name: '',
     email: '',
     phone: '',
+    whatsapp: '',
     password: '',
     status: 'active',
     yearly_holidays: false,
@@ -71,6 +72,7 @@ const Users = () => {
         name: userItem.name,
         email: userItem.email,
         phone: userItem.phone,
+        whatsapp: userItem.whatsapp || '',
         password: '', // Don't fill password on edit
         status: userItem.status,
         yearly_holidays: userItem.yearly_holidays || false,
@@ -82,7 +84,7 @@ const Users = () => {
       setSelectedImageFile(null);
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', password: '', status: 'active', yearly_holidays: false, zone_id: '', shift_id: '', department_id: '' });
+      setFormData({ name: '', email: '', phone: '', whatsapp: '', password: '', status: 'active', yearly_holidays: false, zone_id: '', shift_id: '', department_id: '' });
       setImagePreview(null);
       setSelectedImageFile(null);
     }
@@ -140,6 +142,7 @@ const Users = () => {
     data.append('name', formData.name);
     data.append('email', formData.email);
     data.append('phone', formData.phone);
+    data.append('whatsapp', formData.whatsapp || '');
     data.append('status', formData.status);
     data.append('yearly_holidays', String(!!formData.yearly_holidays));
 
@@ -200,7 +203,7 @@ const Users = () => {
         <Search className="text-muted-foreground w-5 h-5" />
         <Input 
           type="text" 
-          placeholder="Search by name, email or phone..." 
+          placeholder="Search by name, email, phone or whatsapp..." 
           className="border-none shadow-none focus-visible:ring-0 text-[15px] w-full p-0"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -255,7 +258,24 @@ const Users = () => {
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-muted-foreground">{userItem.email}</p>
-                      <p className="text-muted-foreground text-xs">{userItem.phone}</p>
+                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground mt-0.5">
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px]">call</span>
+                          {userItem.phone}
+                        </span>
+                        {userItem.whatsapp && (
+                          <a 
+                            href={`https://wa.me/${userItem.whatsapp.replace(/[^0-9]/g, '')}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 hover:underline font-medium"
+                            title="Chat on WhatsApp"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">chat</span>
+                            {userItem.whatsapp}
+                          </a>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -400,6 +420,11 @@ const Users = () => {
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-foreground">Phone Number</label>
                   <Input name="phone" value={formData.phone} onChange={handleInputChange} required className="h-11" placeholder="+1234567890" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">WhatsApp Number (Optional)</label>
+                  <Input name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} className="h-11" placeholder="+1234567890" />
                 </div>
                 
                 <div className="space-y-1.5">
