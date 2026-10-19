@@ -159,7 +159,7 @@ const EngineerDashboard = () => {
               />
               <CircularProgress 
                 value={data?.today_approve_tasks ?? 0} 
-                total={data?.today_tasks ?? 0} 
+                total={data?.all_today_tasks ?? data?.today_tasks ?? 0} 
                 colorClass="stroke-[#006c49]" 
                 label="Approved" 
               />

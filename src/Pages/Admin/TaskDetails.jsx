@@ -685,13 +685,14 @@ export default function TaskDetails() {
 
   const getDeliveryDateStatus = (dateStr, status) => {
     if (!dateStr) return { text: 'No deadline set', color: 'text-muted-foreground', badge: 'bg-muted text-muted-foreground' };
-    const delivery = dayjs(dateStr).endOf('day');
+    const dateOnly = typeof dateStr === 'string' ? dateStr.split('T')[0] : dateStr;
+    const delivery = dayjs(dateOnly).endOf('day');
     const now = dayjs();
     const isCompleted = status === 'done' || status === 'approve';
 
     if (isCompleted) {
       return {
-        text: `Delivered • ${dayjs(dateStr).format('MMM DD, YYYY')}`,
+        text: `Delivered • ${dayjs(dateOnly).format('MMM DD, YYYY')}`,
         badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
         diffText: 'Completed'
       };
@@ -700,19 +701,19 @@ export default function TaskDetails() {
     const diffDays = delivery.diff(now, 'day');
     if (diffDays < 0) {
       return {
-        text: dayjs(dateStr).format('MMM DD, YYYY'),
+        text: dayjs(dateOnly).format('MMM DD, YYYY'),
         badge: 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse',
         diffText: `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'}`
       };
     } else if (diffDays === 0) {
       return {
-        text: dayjs(dateStr).format('MMM DD, YYYY'),
+        text: dayjs(dateOnly).format('MMM DD, YYYY'),
         badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
         diffText: 'Due Today'
       };
     } else {
       return {
-        text: dayjs(dateStr).format('MMM DD, YYYY'),
+        text: dayjs(dateOnly).format('MMM DD, YYYY'),
         badge: 'bg-primary/10 text-primary border border-primary/20',
         diffText: `${diffDays} day${diffDays === 1 ? '' : 's'} remaining`
       };

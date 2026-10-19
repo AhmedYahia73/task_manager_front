@@ -303,7 +303,7 @@ const FilteredTasks = () => {
                       <td className="px-6 py-5">
                         <div className="flex items-center text-foreground font-medium">
                           <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                          {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
+                          {task.delivery_date ? (typeof task.delivery_date === 'string' ? dayjs(task.delivery_date.split('T')[0]).format('MMM DD, YYYY') : dayjs(task.delivery_date).format('MMM DD, YYYY')) : 'Not Set'}
                         </div>
                       </td>
                       <td className="px-6 py-5">

@@ -84,7 +84,7 @@ const Tasks = () => {
       setFormData({
         name: task.name,
         description: task.description || '',
-        delivery_date: task.delivery_date ? dayjs(task.delivery_date).format('YYYY-MM-DD') : '',
+        delivery_date: task.delivery_date ? (typeof task.delivery_date === 'string' ? task.delivery_date.split('T')[0] : dayjs(task.delivery_date).format('YYYY-MM-DD')) : '',
         status: task.status,
         importanc_status: task.importanc_status || 'medium',
         tester_note: task.tester_note || '',
@@ -466,7 +466,7 @@ const Tasks = () => {
                       <td className="px-6 py-5">
                         <div className="flex items-center text-foreground font-medium">
                           <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                          {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
+                          {task.delivery_date ? (typeof task.delivery_date === 'string' ? dayjs(task.delivery_date.split('T')[0]).format('MMM DD, YYYY') : dayjs(task.delivery_date).format('MMM DD, YYYY')) : 'Not Set'}
                         </div>
                       </td>
                       <td className="px-6 py-5">
