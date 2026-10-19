@@ -33,6 +33,7 @@ import Cities from '@/Pages/Admin/Applications/Cities';
 import Jobs from '@/Pages/Admin/Applications/Jobs';
 import Qualifications from '@/Pages/Admin/Applications/Qualifications';
 import ApplicationsList from '@/Pages/Admin/Applications/ApplicationsList';
+import SalesProjects from '@/Pages/Admin/SalesProjects';
 
 
 // Admin Route Wrapper - checks role
@@ -101,6 +102,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'projects', element: <Projects /> },
+      { path: 'sales-projects', element: <SalesProjects /> },
       { path: 'projects/:id', element: <ProjectDetails /> },
       { path: 'projects/:projectId/groups/:groupId/tasks', element: <Tasks /> },
       { path: 'projects/:projectId/groups/:groupId/tasks/:taskId', element: <TaskDetails /> },

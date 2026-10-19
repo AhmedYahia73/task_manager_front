@@ -50,6 +50,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         {[
           { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
+          { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront', adminOnly: true },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true },
           { 
