@@ -89,14 +89,16 @@ const Dashboard = () => {
     }, 2000);
   };
 
-  const handleOpenWhatsApp = (e, whatsapp, phone) => {
+  const handleOpenWhatsApp = (e, whatsapp) => {
     e.stopPropagation();
-    const rawNumber = whatsapp || phone;
-    if (!rawNumber) {
+    if (!whatsapp) {
       toast.error('No WhatsApp number registered');
       return;
     }
-    const cleanNumber = rawNumber.replace(/[^0-9]/g, '');
+    let cleanNumber = String(whatsapp).replace(/[^0-9]/g, '');
+    if (cleanNumber.startsWith('01') && cleanNumber.length === 11) {
+      cleanNumber = '2' + cleanNumber;
+    }
     window.open(`https://wa.me/${cleanNumber}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -383,7 +385,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {leaderboardLoading ? (
               <div className="flex justify-center items-center py-16">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -394,16 +396,22 @@ const Dashboard = () => {
                 <p>No points recorded for this period.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-7">
+              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 lg:gap-6">
                 {leaderboardList.map((usr, index) => {
                   const attBadge = getAttendanceBadge(usr.today_attendance);
                   const tasksStats = usr.tasks_stats || { pending: 0, inprogress: 0, done: 0, approve: 0, edit: 0, total: 0 };
-                  const whatsNumber = usr.whatsapp || usr.phone || '';
+                  const hasWhatsApp = Boolean(
+                    usr.whatsapp && 
+                    String(usr.whatsapp).trim() !== '' && 
+                    String(usr.whatsapp).toLowerCase() !== 'null' && 
+                    String(usr.whatsapp).toLowerCase() !== 'undefined'
+                  );
+                  const rawWhatsApp = hasWhatsApp ? String(usr.whatsapp).trim() : null;
 
                   return (
                     <div 
                       key={usr.id} 
-                      className={`relative bg-card rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between p-6 overflow-hidden group ${
+                      className={`relative bg-card rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 flex flex-col justify-between p-4 sm:p-5 md:p-6 overflow-hidden group ${
                         index === 0 
                           ? 'border-amber-400/50 shadow-amber-500/10 bg-gradient-to-b from-amber-500/[0.08] via-card to-card hover:border-amber-400' 
                           : index === 1 
@@ -415,7 +423,7 @@ const Dashboard = () => {
                     >
                       <div>
                         {/* Top Row: Rank Badge & Points Pill */}
-                        <div className="flex items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center justify-between gap-2 mb-3.5">
                           {/* Rank Badge */}
                           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-xs ${
                             index === 0 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-500/30 ring-2 ring-amber-400/30' :
@@ -430,7 +438,7 @@ const Dashboard = () => {
                           </div>
 
                           {/* Points Pill */}
-                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-xs shadow-2xs">
+                          <div className="flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-xs shadow-2xs shrink-0">
                             <span className="material-symbols-outlined text-[15px]">workspace_premium</span>
                             <span className="font-black text-sm">{usr.total_points}</span>
                             <span className="text-[10px] font-bold text-primary/70 uppercase">PTS</span>
@@ -438,13 +446,13 @@ const Dashboard = () => {
                         </div>
 
                         {/* User Identity Section: Avatar & Details */}
-                        <div className="flex items-center gap-4 mb-4">
+                        <div className="flex items-center gap-3 sm:gap-3.5 mb-3.5 min-w-0">
                           <div className="relative shrink-0">
                             {usr.image ? (
                               <img 
                                 src={usr.image} 
                                 alt={usr.name} 
-                                className={`w-14 h-14 rounded-2xl object-cover shadow-sm transition-transform duration-300 group-hover:scale-105 ${
+                                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover shadow-sm transition-transform duration-300 group-hover:scale-105 ${
                                   index === 0 ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
                                   index === 1 ? 'ring-2 ring-slate-300 dark:ring-slate-600 ring-offset-2 ring-offset-card' :
                                   index === 2 ? 'ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
@@ -452,7 +460,7 @@ const Dashboard = () => {
                                 }`} 
                               />
                             ) : (
-                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm transition-transform duration-300 group-hover:scale-105 ${
+                              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-base sm:text-lg shadow-sm transition-transform duration-300 group-hover:scale-105 ${
                                 index === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
                                 index === 1 ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 ring-2 ring-slate-300 ring-offset-2 ring-offset-card' :
                                 index === 2 ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
@@ -471,12 +479,12 @@ const Dashboard = () => {
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-bold text-foreground text-base truncate group-hover:text-primary transition-colors" title={usr.name}>
+                            <h3 className="font-bold text-foreground text-sm sm:text-base truncate group-hover:text-primary transition-colors" title={usr.name}>
                               {usr.name}
                             </h3>
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-2 mt-0.5">
                               {usr.role && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground border border-border/80">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground border border-border/80 truncate">
                                   {getRoleName(usr.role) || usr.role}
                                 </span>
                               )}
@@ -486,14 +494,14 @@ const Dashboard = () => {
 
                         {/* Today Attendance Status Badge */}
                         {attBadge && (
-                          <div className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl border text-xs font-semibold mb-3.5 ${attBadge.bg}`}>
-                            <div className="flex items-center gap-2 truncate">
-                              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${attBadge.dot}`}></span>
+                          <div className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 ${attBadge.bg}`}>
+                            <div className="flex items-center gap-1.5 min-w-0 truncate">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${attBadge.dot}`}></span>
                               <span className="material-symbols-outlined text-[16px] shrink-0">{attBadge.icon}</span>
-                              <span className="truncate font-semibold">{attBadge.label}</span>
+                              <span className="truncate font-semibold text-[11px] sm:text-xs">{attBadge.label}</span>
                             </div>
                             {attBadge.subtext && (
-                              <span className="text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
+                              <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10 whitespace-nowrap">
                                 {attBadge.subtext}
                               </span>
                             )}
@@ -501,41 +509,41 @@ const Dashboard = () => {
                         )}
 
                         {/* Tasks Pipeline Breakdown */}
-                        <div className="w-full bg-muted/30 rounded-2xl p-3 border border-border/60 mb-3.5">
+                        <div className="w-full bg-muted/30 rounded-2xl p-2.5 sm:p-3 border border-border/60 mb-3">
                           <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground mb-2 px-0.5">
-                            <span className="flex items-center gap-1.5 text-foreground font-bold">
-                              <span className="material-symbols-outlined text-[16px] text-primary">splitscreen</span>
+                            <span className="flex items-center gap-1.5 text-foreground font-bold text-[11px] sm:text-xs">
+                              <span className="material-symbols-outlined text-[15px] text-primary">splitscreen</span>
                               Task Pipeline
                             </span>
-                            <span className="bg-background px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-border/70 text-muted-foreground">
+                            <span className="bg-background px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold border border-border/70 text-muted-foreground">
                               {tasksStats.total} Total
                             </span>
                           </div>
-                          <div className="grid grid-cols-5 gap-1.5 text-center">
+                          <div className="grid grid-cols-5 gap-1 sm:gap-1.5 text-center">
                             {/* Pending */}
-                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl py-1.5 px-1" title="Pending tasks">
-                              <span className="block text-[10px] text-amber-700 dark:text-amber-400 font-semibold truncate">Pending</span>
-                              <span className="block text-sm font-black text-amber-800 dark:text-amber-300 mt-0.5">{tasksStats.pending}</span>
+                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg sm:rounded-xl py-1 sm:py-1.5 px-0.5" title="Pending tasks">
+                              <span className="block text-[9px] sm:text-[10px] text-amber-700 dark:text-amber-400 font-semibold truncate">Pending</span>
+                              <span className="block text-xs sm:text-sm font-black text-amber-800 dark:text-amber-300 mt-0.5">{tasksStats.pending}</span>
                             </div>
                             {/* In Progress */}
-                            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl py-1.5 px-1" title="In progress tasks">
-                              <span className="block text-[10px] text-blue-700 dark:text-blue-400 font-semibold truncate">Active</span>
-                              <span className="block text-sm font-black text-blue-800 dark:text-blue-300 mt-0.5">{tasksStats.inprogress}</span>
+                            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg sm:rounded-xl py-1 sm:py-1.5 px-0.5" title="In progress tasks">
+                              <span className="block text-[9px] sm:text-[10px] text-blue-700 dark:text-blue-400 font-semibold truncate">Active</span>
+                              <span className="block text-xs sm:text-sm font-black text-blue-800 dark:text-blue-300 mt-0.5">{tasksStats.inprogress}</span>
                             </div>
                             {/* Done */}
-                            <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl py-1.5 px-1" title="Completed tasks">
-                              <span className="block text-[10px] text-teal-700 dark:text-teal-400 font-semibold truncate">Done</span>
-                              <span className="block text-sm font-black text-teal-800 dark:text-teal-300 mt-0.5">{tasksStats.done}</span>
+                            <div className="bg-teal-500/10 border border-teal-500/20 rounded-lg sm:rounded-xl py-1 sm:py-1.5 px-0.5" title="Completed tasks">
+                              <span className="block text-[9px] sm:text-[10px] text-teal-700 dark:text-teal-400 font-semibold truncate">Done</span>
+                              <span className="block text-xs sm:text-sm font-black text-teal-800 dark:text-teal-300 mt-0.5">{tasksStats.done}</span>
                             </div>
                             {/* Approved */}
-                            <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl py-1.5 px-1" title="Approved tasks">
-                              <span className="block text-[10px] text-purple-700 dark:text-purple-400 font-semibold truncate">Approved</span>
-                              <span className="block text-sm font-black text-purple-800 dark:text-purple-300 mt-0.5">{tasksStats.approve}</span>
+                            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg sm:rounded-xl py-1 sm:py-1.5 px-0.5" title="Approved tasks">
+                              <span className="block text-[9px] sm:text-[10px] text-purple-700 dark:text-purple-400 font-semibold truncate">Approved</span>
+                              <span className="block text-xs sm:text-sm font-black text-purple-800 dark:text-purple-300 mt-0.5">{tasksStats.approve}</span>
                             </div>
                             {/* Revision */}
-                            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl py-1.5 px-1" title="Tasks needing revision">
-                              <span className="block text-[10px] text-rose-700 dark:text-rose-400 font-semibold truncate">Revision</span>
-                              <span className="block text-sm font-black text-rose-800 dark:text-rose-300 mt-0.5">{tasksStats.edit}</span>
+                            <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg sm:rounded-xl py-1 sm:py-1.5 px-0.5" title="Tasks needing revision">
+                              <span className="block text-[9px] sm:text-[10px] text-rose-700 dark:text-rose-400 font-semibold truncate">Revision</span>
+                              <span className="block text-xs sm:text-sm font-black text-rose-800 dark:text-rose-300 mt-0.5">{tasksStats.edit}</span>
                             </div>
                           </div>
                         </div>
@@ -547,38 +555,38 @@ const Dashboard = () => {
                             <button
                               type="button"
                               onClick={(e) => handleCopyPhone(e, usr.id, usr.phone)}
-                              className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/80 hover:bg-muted/70 text-xs text-foreground transition-all group/btn cursor-pointer shadow-2xs hover:border-primary/40"
+                              className="flex-1 min-w-0 flex items-center justify-between px-2.5 sm:px-3 py-2 rounded-xl bg-card border border-border/80 hover:bg-muted/70 text-xs text-foreground transition-all group/btn cursor-pointer shadow-2xs hover:border-primary/40"
                               title="Click to copy phone number"
                             >
-                              <span className="flex items-center gap-1.5 truncate">
-                                <span className="material-symbols-outlined text-[15px] text-muted-foreground group-hover/btn:text-primary transition-colors">call</span>
-                                <span className="font-mono text-xs font-semibold text-foreground truncate" dir="ltr">{usr.phone}</span>
+                              <span className="flex items-center gap-1.5 min-w-0 truncate">
+                                <span className="material-symbols-outlined text-[15px] text-muted-foreground group-hover/btn:text-primary transition-colors shrink-0">call</span>
+                                <span className="font-mono text-[11px] sm:text-xs font-semibold text-foreground truncate" dir="ltr">{usr.phone}</span>
                               </span>
                               {copiedId === usr.id ? (
-                                <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-md shrink-0">
+                                <span className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-md shrink-0 ml-1">
                                   <span className="material-symbols-outlined text-[12px]">check</span>
-                                  <span>Copied</span>
+                                  <span className="hidden sm:inline">Copied</span>
                                 </span>
                               ) : (
-                                <span className="material-symbols-outlined text-[14px] text-muted-foreground/60 group-hover/btn:text-foreground transition-colors shrink-0">content_copy</span>
+                                <span className="material-symbols-outlined text-[14px] text-muted-foreground/60 group-hover/btn:text-foreground transition-colors shrink-0 ml-1">content_copy</span>
                               )}
                             </button>
                           ) : (
-                            <div className="flex-1 px-3 py-2 rounded-xl bg-muted/40 text-xs text-muted-foreground text-center font-medium">
+                            <div className="flex-1 px-2.5 py-2 rounded-xl bg-muted/40 text-[11px] text-muted-foreground text-center font-medium">
                               No phone
                             </div>
                           )}
 
-                          {/* WhatsApp Button */}
-                          {whatsNumber && (
+                          {/* WhatsApp Button - Strictly from key whatsapp */}
+                          {hasWhatsApp && (
                             <button
                               type="button"
-                              onClick={(e) => handleOpenWhatsApp(e, usr.whatsapp, usr.phone)}
-                              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
-                              title="Open WhatsApp chat"
+                              onClick={(e) => handleOpenWhatsApp(e, rawWhatsApp)}
+                              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
+                              title={`Open WhatsApp: ${rawWhatsApp}`}
                             >
-                              <span className="material-symbols-outlined text-[16px] text-emerald-600 dark:text-emerald-400">chat</span>
-                              <span>WhatsApp</span>
+                              <span className="material-symbols-outlined text-[15px] text-emerald-600 dark:text-emerald-400">chat</span>
+                              <span className="text-[11px] sm:text-xs">WhatsApp</span>
                             </button>
                           )}
                         </div>
@@ -586,32 +594,35 @@ const Dashboard = () => {
 
                       {/* Action Bar matching https://taskito.wegostation.com/admin/users */}
                       <div className="flex items-center justify-between pt-3 border-t border-border/60 mt-1">
-                        <button 
-                          onClick={() => { setAttendanceUserId(usr.id); setAttendanceUserName(usr.name); }} 
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-teal-600 hover:bg-teal-500/10 rounded-lg transition-colors cursor-pointer" 
-                          title="Attendance Report"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">calendar_month</span>
-                          <span>Attendance</span>
-                        </button>
+                        <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1 select-none">
+                          <span className="material-symbols-outlined text-[15px]">shield_person</span>
+                          <span>Actions</span>
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => { setAttendanceUserId(usr.id); setAttendanceUserName(usr.name); }} 
+                            className="p-2 text-muted-foreground hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-teal-200/40" 
+                            title="View Attendance Report"
+                          >
+                            <span className="material-symbols-outlined text-[19px]">calendar_month</span>
+                          </button>
 
-                        <button 
-                          onClick={() => { setPointsUserId(usr.id); setPointsUserName(usr.name); }} 
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-purple-600 hover:bg-purple-500/10 rounded-lg transition-colors cursor-pointer" 
-                          title="Points Analytics"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">analytics</span>
-                          <span>Points</span>
-                        </button>
+                          <button 
+                            onClick={() => { setPointsUserId(usr.id); setPointsUserName(usr.name); }} 
+                            className="p-2 text-muted-foreground hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-purple-200/40" 
+                            title="View Points History"
+                          >
+                            <span className="material-symbols-outlined text-[19px]">analytics</span>
+                          </button>
 
-                        <button 
-                          onClick={() => navigate(`/admin/tasks/all?user_id=${usr.id}`)} 
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer" 
-                          title="View Assigned Tasks"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">assignment</span>
-                          <span>Tasks</span>
-                        </button>
+                          <button 
+                            onClick={() => navigate(`/admin/tasks/all?user_id=${usr.id}`)} 
+                            className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-blue-200/40" 
+                            title="View Assigned Tasks"
+                          >
+                            <span className="material-symbols-outlined text-[19px]">task</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
