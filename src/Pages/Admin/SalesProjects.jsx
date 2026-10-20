@@ -22,7 +22,10 @@ import {
   ShieldAlert,
   ChevronLeft,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Palette,
+  Layout,
+  Check
 } from 'lucide-react';
 import { isAdminRole } from '@/utils/auth';
 
@@ -56,7 +59,7 @@ const SalesProjects = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
-  const [formData, setFormData] = useState({ name: '', logo: '' });
+  const [formData, setFormData] = useState({ name: '', logo: '', design: 'design 1' });
   const [logoMode, setLogoMode] = useState('file'); // 'file' or 'url'
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -70,7 +73,7 @@ const SalesProjects = () => {
   // Open modal for Create
   const openAddModal = () => {
     setEditingProject(null);
-    setFormData({ name: '', logo: '' });
+    setFormData({ name: '', logo: '', design: 'design 1' });
     setSelectedFile(null);
     setPreviewUrl('');
     setLogoMode('file');
@@ -82,7 +85,11 @@ const SalesProjects = () => {
   // Open modal for Edit
   const openEditModal = (project) => {
     setEditingProject(project);
-    setFormData({ name: project.name, logo: project.logo });
+    setFormData({
+      name: project.name,
+      logo: project.logo,
+      design: project.design || 'design 1',
+    });
     setSelectedFile(null);
     setPreviewUrl(project.logo);
     setLogoMode(project.logo?.startsWith('http') || project.logo?.startsWith('/uploads') ? 'file' : 'url');
@@ -168,10 +175,12 @@ const SalesProjects = () => {
     if (selectedFile) {
       payload = new FormData();
       payload.append('name', formData.name.trim());
+      payload.append('design', formData.design || 'design 1');
       payload.append('logo', selectedFile);
     } else {
       payload = {
         name: formData.name.trim(),
+        design: formData.design || 'design 1',
         ...(formData.logo ? { logo: formData.logo.trim() } : {}),
       };
     }
@@ -301,107 +310,150 @@ const SalesProjects = () => {
         <>
           {/* Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {salesProjects.map((project) => (
-              <div
-                key={project.id}
-                className="group relative flex flex-col bg-card rounded-2xl border border-border/70 hover:border-primary/50 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden"
-              >
-                {/* Logo Banner Container */}
-                <div className="relative h-48 w-full bg-gradient-to-b from-muted/40 via-muted/20 to-card flex items-center justify-center p-6 overflow-hidden border-b border-border/40">
-                  {/* Subtle Background Glow */}
-                  <div className="absolute inset-0 bg-radial from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            {salesProjects.map((project) => {
+              const isDesign2 = project.design === 'design 2';
 
-                  {/* Logo Image */}
-                  <img
-                    src={project.logo}
-                    alt={project.name}
-                    className="max-h-32 max-w-[85%] object-contain drop-shadow-md group-hover:scale-108 transition-transform duration-300 relative z-10"
-                    onError={(e) => {
-                      // Fallback avatar if image link breaks
-                      e.target.style.display = 'none';
-                      const parent = e.target.parentElement;
-                      if (parent && !parent.querySelector('.fallback-logo')) {
-                        const fallback = document.createElement('div');
-                        fallback.className =
-                          'fallback-logo w-16 h-16 rounded-2xl bg-primary/10 text-primary font-bold text-xl flex items-center justify-center shadow-inner';
-                        fallback.innerText = project.name.charAt(0).toUpperCase();
-                        parent.appendChild(fallback);
-                      }
-                    }}
-                  />
+              return (
+                <div
+                  key={project.id}
+                  className={`group relative flex flex-col bg-card rounded-2xl border transition-all duration-300 overflow-hidden ${
+                    isDesign2
+                      ? 'border-indigo-500/30 hover:border-indigo-500/70 hover:shadow-2xl hover:shadow-indigo-500/10'
+                      : 'border-border/70 hover:border-primary/50 hover:shadow-xl'
+                  }`}
+                >
+                  {/* Logo Banner Container */}
+                  <div
+                    className={`relative h-48 w-full flex items-center justify-center p-6 overflow-hidden border-b ${
+                      isDesign2
+                        ? 'bg-gradient-to-br from-indigo-950/20 via-background to-card border-indigo-500/20'
+                        : 'bg-gradient-to-b from-muted/40 via-muted/20 to-card border-border/40'
+                    }`}
+                  >
+                    {/* Subtle Background Glow */}
+                    <div
+                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+                        isDesign2
+                          ? 'bg-radial from-indigo-500/15 to-transparent'
+                          : 'bg-radial from-primary/5 to-transparent'
+                      }`}
+                    />
 
-                  {/* Floating Action Buttons */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 z-20">
-                    <button
-                      onClick={() => openEditModal(project)}
-                      title="Edit Project"
-                      className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur-md text-foreground hover:text-primary hover:bg-card border border-border shadow-sm flex items-center justify-center transition-colors"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setProjectToDelete(project);
-                        setDeleteModalOpen(true);
+                    {/* Logo Image */}
+                    <img
+                      src={project.logo}
+                      alt={project.name}
+                      className="max-h-32 max-w-[85%] object-contain drop-shadow-md group-hover:scale-108 transition-transform duration-300 relative z-10"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const parent = e.target.parentElement;
+                        if (parent && !parent.querySelector('.fallback-logo')) {
+                          const fallback = document.createElement('div');
+                          fallback.className = `fallback-logo w-16 h-16 rounded-2xl font-bold text-xl flex items-center justify-center shadow-inner ${
+                            isDesign2
+                              ? 'bg-indigo-500/10 text-indigo-500'
+                              : 'bg-primary/10 text-primary'
+                          }`;
+                          fallback.innerText = project.name.charAt(0).toUpperCase();
+                          parent.appendChild(fallback);
+                        }
                       }}
-                      title="Delete Project"
-                      className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur-md text-destructive hover:bg-destructive hover:text-white border border-border shadow-sm flex items-center justify-center transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
+                    />
 
-                {/* Card Body */}
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Active
-                      </span>
-                      {project.createdAt && (
-                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
-                          <span>{new Date(project.createdAt).toLocaleDateString()}</span>
+                    {/* Floating Action Buttons */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 z-20">
+                      <button
+                        onClick={() => openEditModal(project)}
+                        title="Edit Project"
+                        className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur-md text-foreground hover:text-primary hover:bg-card border border-border shadow-sm flex items-center justify-center transition-colors"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setProjectToDelete(project);
+                          setDeleteModalOpen(true);
+                        }}
+                        title="Delete Project"
+                        className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur-md text-destructive hover:bg-destructive hover:text-white border border-border shadow-sm flex items-center justify-center transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      {/* Status & Design Badges */}
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Active
+                          </span>
+
+                          <span
+                            className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                              isDesign2
+                                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800'
+                                : 'text-primary bg-primary/10 border-primary/20'
+                            }`}
+                          >
+                            <Palette className="w-3 h-3" />
+                            <span>{isDesign2 ? 'Design 2' : 'Design 1'}</span>
+                          </span>
                         </div>
-                      )}
+
+                        {project.createdAt && (
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Calendar className="w-3 h-3" />
+                            <span>{new Date(project.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <h3
+                        className={`text-lg font-bold transition-colors tracking-tight line-clamp-2 ${
+                          isDesign2
+                            ? 'text-foreground group-hover:text-indigo-500'
+                            : 'text-foreground group-hover:text-primary'
+                        }`}
+                        title={project.name}
+                      >
+                        {project.name}
+                      </h3>
                     </div>
 
-                    <h3
-                      className="text-lg font-bold text-foreground group-hover:text-primary transition-colors tracking-tight line-clamp-2"
-                      title={project.name}
-                    >
-                      {project.name}
-                    </h3>
-                  </div>
-
-                  {/* Card Bottom Actions */}
-                  <div className="pt-4 mt-4 border-t border-border/50 flex items-center justify-between gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditModal(project)}
-                      className="flex-1 rounded-xl text-xs font-semibold h-8 border-border hover:bg-muted"
-                    >
-                      <Edit className="w-3.5 h-3.5 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setProjectToDelete(project);
-                        setDeleteModalOpen(true);
-                      }}
-                      className="rounded-xl text-xs font-semibold h-8 text-destructive hover:bg-destructive/10 hover:text-destructive px-2.5"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    {/* Card Bottom Actions */}
+                    <div className="pt-4 mt-4 border-t border-border/50 flex items-center justify-between gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditModal(project)}
+                        className={`flex-1 rounded-xl text-xs font-semibold h-8 border-border hover:bg-muted ${
+                          isDesign2 ? 'hover:border-indigo-500/40' : ''
+                        }`}
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setProjectToDelete(project);
+                          setDeleteModalOpen(true);
+                        }}
+                        className="rounded-xl text-xs font-semibold h-8 text-destructive hover:bg-destructive/10 hover:text-destructive px-2.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination Controls */}
@@ -473,7 +525,7 @@ const SalesProjects = () => {
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {editingProject
-                      ? 'Update the project name and logo.'
+                      ? 'Update the project name, logo, and design template.'
                       : 'Create a new project entry for sales showcase.'}
                   </p>
                 </div>
@@ -487,7 +539,7 @@ const SalesProjects = () => {
             </div>
 
             {/* Modal Form Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
               {/* Project Name Field */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -515,6 +567,83 @@ const SalesProjects = () => {
                     <span>{formErrors.name}</span>
                   </p>
                 )}
+              </div>
+
+              {/* Design Template Selection (Select: design 1 or design 2) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Palette className="w-4 h-4 text-primary" />
+                    <span>Design Template</span>
+                  </Label>
+                  <span className="text-xs text-muted-foreground">Select style</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Option: design 1 */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, design: 'design 1' }))}
+                    className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all ${
+                      formData.design === 'design 1'
+                        ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                        : 'border-border/80 bg-background hover:border-primary/40'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        formData.design === 'design 1'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      <Layout className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-foreground">design 1</span>
+                        {formData.design === 'design 1' && (
+                          <Check className="w-4 h-4 text-primary shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                        Default Style
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Option: design 2 */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, design: 'design 2' }))}
+                    className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all ${
+                      formData.design === 'design 2'
+                        ? 'border-indigo-500 bg-indigo-500/10 shadow-sm ring-1 ring-indigo-500/40'
+                        : 'border-border/80 bg-background hover:border-indigo-500/40'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        formData.design === 'design 2'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-foreground">design 2</span>
+                        {formData.design === 'design 2' && (
+                          <Check className="w-4 h-4 text-indigo-500 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                        Modern Accent
+                      </p>
+                    </div>
+                  </button>
+                </div>
               </div>
 
               {/* Logo Section (REQUIRED) */}

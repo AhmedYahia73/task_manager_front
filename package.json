@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:sales": "tsx src/seeds/sales/index.ts",
+    "seed:sales:fresh": "tsx src/seeds/sales/index.ts --fresh"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

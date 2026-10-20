@@ -15,6 +15,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const [isHrmOpen, setIsHrmOpen] = useState(false);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+  const [isSalesOpen, setIsSalesOpen] = useState(false);
 
   const { mutate } = useMutation();
 
@@ -50,7 +51,17 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         {[
           { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
-          { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront', adminOnly: true },
+          { 
+            name: 'Sales', 
+            icon: 'point_of_sale', 
+            adminOnly: true,
+            subItems: [
+              { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront' },
+              { name: 'Admins', path: '/admin/sales/admins', icon: 'admin_panel_settings' },
+              { name: 'Leaders', path: '/admin/sales/leaders', icon: 'supervisor_account' },
+              { name: 'Sales', path: '/admin/sales/sales', icon: 'badge' },
+            ]
+          },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true },
           { 
@@ -106,11 +117,13 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
             if (item.name === 'HRM') isOpen = isHrmOpen;
             else if (item.name === 'Applications') isOpen = isApplicationsOpen;
             else if (item.name === 'Company') isOpen = isCompanyOpen;
+            else if (item.name === 'Sales') isOpen = isSalesOpen;
 
             const toggleOpen = () => {
               if (item.name === 'HRM') setIsHrmOpen(!isHrmOpen);
               else if (item.name === 'Applications') setIsApplicationsOpen(!isApplicationsOpen);
               else if (item.name === 'Company') setIsCompanyOpen(!isCompanyOpen);
+              else if (item.name === 'Sales') setIsSalesOpen(!isSalesOpen);
             };
 
             return (
@@ -123,22 +136,23 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
                     <span className="material-symbols-outlined">{item.icon}</span>
                     <span className="admin-sidebar__link-text">{item.name}</span>
                   </div>
-                  <span className="material-symbols-outlined transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
+                  <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
                     expand_more
                   </span>
                 </button>
                 {isOpen && (
-                  <div className="pl-6 pr-4 flex flex-col gap-1 overflow-hidden transition-all duration-300">
-                    {item.subItems.map(sub => (
+                  <div className="pl-6 space-y-1 mt-1 border-l-2 border-border ml-4">
+                    {item.subItems.map((subItem) => (
                       <NavLink
-                        key={sub.name}
-                        to={sub.path}
+                        key={subItem.path}
+                        to={subItem.path}
                         className={({ isActive }) =>
-                          `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''} text-sm py-2 px-3 rounded-lg flex items-center gap-3 hover:text-foreground`
+                          `admin-sidebar__link text-sm py-2 ${isActive ? 'admin-sidebar__link--active' : ''}`
                         }
+                        onClick={onClose}
                       >
-                        <span className="material-symbols-outlined text-[18px]">{sub.icon}</span>
-                        <span>{sub.name}</span>
+                        <span className="material-symbols-outlined text-sm">{subItem.icon}</span>
+                        <span className="admin-sidebar__link-text">{subItem.name}</span>
                       </NavLink>
                     ))}
                   </div>
@@ -146,14 +160,15 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
               </div>
             );
           }
-          
+
           return (
             <NavLink
-              key={item.name}
+              key={item.path}
               to={item.path}
               className={({ isActive }) =>
                 `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
               }
+              onClick={onClose}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
               <span className="admin-sidebar__link-text">{item.name}</span>
@@ -162,28 +177,28 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         })}
       </nav>
 
-      {/* Footer */}
+      {/* Footer User Info */}
       <div className="admin-sidebar__footer">
-        <div className="mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <div className="overflow-hidden">
+              <p className="admin-sidebar__user-name truncate">{userName}</p>
+              <p className="admin-sidebar__user-role capitalize">{userRole}</p>
+            </div>
+          </div>
           <ThemeSwitcher />
         </div>
+        
         <button
           onClick={handleLogout}
-          className="admin-sidebar__link"
+          className="admin-sidebar__logout-btn"
         >
-          <span className="material-symbols-outlined">logout</span>
-          <span className="admin-sidebar__link-text">Logout</span>
+          <span className="material-symbols-outlined text-sm">logout</span>
+          <span>Logout</span>
         </button>
-
-        <div className="admin-sidebar__user">
-          <div className="admin-sidebar__avatar">
-            {userName.charAt(0).toUpperCase()}
-          </div>
-          <div className="admin-sidebar__user-info">
-            <span className="admin-sidebar__user-name">{userName}</span>
-            <span className="admin-sidebar__user-role">{userRole}</span>
-          </div>
-        </div>
       </div>
     </aside>
   );

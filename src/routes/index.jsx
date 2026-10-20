@@ -34,6 +34,9 @@ import Jobs from '@/Pages/Admin/Applications/Jobs';
 import Qualifications from '@/Pages/Admin/Applications/Qualifications';
 import ApplicationsList from '@/Pages/Admin/Applications/ApplicationsList';
 import SalesProjects from '@/Pages/Admin/SalesProjects';
+import SalesAdmins from '@/Pages/Admin/Sales/SalesAdmins';
+import SalesLeaders from '@/Pages/Admin/Sales/SalesLeaders';
+import SalesReps from '@/Pages/Admin/Sales/SalesReps';
 
 
 // Admin Route Wrapper - checks role
@@ -131,6 +134,10 @@ export const router = createBrowserRouter([
       { path: 'jobs', element: <Jobs /> },
       { path: 'qualifications', element: <Qualifications /> },
       { path: 'applications', element: <ApplicationsList /> },
+      { path: 'sales-projects', element: <SalesProjects /> },
+      { path: 'sales/admins', element: <SalesAdmins /> },
+      { path: 'sales/leaders', element: <SalesLeaders /> },
+      { path: 'sales/sales', element: <SalesReps /> },
     ],
   },
 

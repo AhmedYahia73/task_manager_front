@@ -45,6 +45,8 @@ export const isValidRole = (role) => {
     norm === 'super_admin' ||
     norm === 'superadmin' ||
     norm === 'tester' ||
-    norm === 'engineer'
+    norm === 'engineer' ||
+    norm === 'leader' ||
+    norm === 'sales'
   );
-};
+};
