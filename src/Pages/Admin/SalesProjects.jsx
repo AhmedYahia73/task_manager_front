@@ -25,15 +25,18 @@ import {
   ExternalLink,
   Palette,
   Layout,
-  Check
+  Check,
+  Users
 } from 'lucide-react';
 import { isAdminRole } from '@/utils/auth';
 import { apiClient } from '@/lib/axios';
 
 const SalesProjects = () => {
-  // Check Admin Role
+  // Check User Roles
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAdmin = isAdminRole(user?.role);
+  const role = user?.role;
+  const isAdmin = isAdminRole(role);
+  const isAllowed = isAdmin || role === 'leader' || role === 'sales';
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -50,10 +53,18 @@ const SalesProjects = () => {
 
   // Fetch Sales Projects
   const { data, loading, refresh } = useGet(
-    `/api/admin/sales-projects?page=${page}&limit=12&search=${encodeURIComponent(debouncedSearch)}`
+    isAllowed
+      ? `/api/admin/sales-projects?page=${page}&limit=12&search=${encodeURIComponent(debouncedSearch)}`
+      : null
   );
   const salesProjects = data?.salesProjects || [];
   const pagination = data?.pagination || { total: 0, page: 1, limit: 12, totalPages: 1 };
+
+  // Fetch available users for assignment (Admin only)
+  const { data: availableUsersData } = useGet(
+    isAdmin ? '/api/admin/sales-projects/available-users' : null
+  );
+  const availableUsers = availableUsersData?.users || [];
 
   const [openingProjectId, setOpeningProjectId] = useState(null);
 
@@ -81,6 +92,7 @@ const SalesProjects = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [formData, setFormData] = useState({ name: '', logo: '', design: 'design 1' });
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [logoMode, setLogoMode] = useState('file'); // 'file' or 'url'
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -95,6 +107,7 @@ const SalesProjects = () => {
   const openAddModal = () => {
     setEditingProject(null);
     setFormData({ name: '', logo: '', design: 'design 1' });
+    setSelectedUserIds([]);
     setSelectedFile(null);
     setPreviewUrl('');
     setLogoMode('file');
@@ -111,6 +124,7 @@ const SalesProjects = () => {
       logo: project.logo,
       design: project.design || 'design 1',
     });
+    setSelectedUserIds(project.user_ids || []);
     setSelectedFile(null);
     setPreviewUrl(project.logo);
     setLogoMode(project.logo?.startsWith('http') || project.logo?.startsWith('/uploads') ? 'file' : 'url');
@@ -122,6 +136,7 @@ const SalesProjects = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingProject(null);
+    setSelectedUserIds([]);
     setSelectedFile(null);
     setPreviewUrl('');
     setFormErrors({});
@@ -138,34 +153,39 @@ const SalesProjects = () => {
       setSelectedFile(file);
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
-      setFormErrors((prev) => ({ ...prev, logo: null }));
+      if (formErrors.logo) setFormErrors((prev) => ({ ...prev, logo: null }));
     }
   };
 
-  // Drag and drop handler
+  // Handle drag and drop
   const handleDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please drop a valid image file');
+        return;
+      }
       setSelectedFile(file);
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
-      setLogoMode('file');
-      setFormErrors((prev) => ({ ...prev, logo: null }));
+      if (formErrors.logo) setFormErrors((prev) => ({ ...prev, logo: null }));
     }
   };
 
-  // Validate form
+  // Form Validation
   const validateForm = () => {
     const errors = {};
     if (!formData.name.trim()) {
       errors.name = 'Project name is required';
+    } else if (formData.name.trim().length > 200) {
+      errors.name = 'Project name cannot exceed 200 characters';
     }
 
     if (!editingProject) {
-      // Create mode: logo is strictly required
+      // Create mode: logo is strictly REQUIRED
       if (logoMode === 'file' && !selectedFile) {
-        errors.logo = 'Project logo is required';
+        errors.logo = 'Project logo image is required';
       } else if (logoMode === 'url' && !formData.logo.trim()) {
         errors.logo = 'Project logo URL is required';
       }
@@ -198,11 +218,13 @@ const SalesProjects = () => {
       payload.append('name', formData.name.trim());
       payload.append('design', formData.design || 'design 1');
       payload.append('logo', selectedFile);
+      payload.append('user_ids', JSON.stringify(selectedUserIds));
     } else {
       payload = {
         name: formData.name.trim(),
         design: formData.design || 'design 1',
         ...(formData.logo ? { logo: formData.logo.trim() } : {}),
+        user_ids: selectedUserIds,
       };
     }
 
@@ -233,50 +255,54 @@ const SalesProjects = () => {
     }
   };
 
-  // If user is not admin, show access denied
-  if (!isAdmin) {
+  // If user is not allowed, show access denied
+  if (!isAllowed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
         <div className="w-16 h-16 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Access Denied</h2>
+        <h2 className="text-2xl font-bold text-foreground">Access Restricted</h2>
         <p className="text-muted-foreground mt-2 max-w-md">
-          This section is restricted to administrators only. You do not have permission to view or manage sales projects.
+          You don't have permission to access Sales Projects. Please contact your administrator if you believe this is a mistake.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-[1600px] mx-auto w-full min-h-screen">
-      {/* Top Banner & Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-              <Sparkles className="w-3 h-3" />
-              Sales Projects
-            </span>
-            <span className="text-xs text-muted-foreground font-medium">
-              Admin Exclusive
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary/20 via-primary/10 to-transparent text-primary flex items-center justify-center shadow-inner">
+              <Building2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+                <span>Sales Projects</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-primary/10 text-primary border border-primary/20">
+                  {pagination.total} {pagination.total === 1 ? 'Project' : 'Projects'}
+                </span>
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {isAdmin
+                  ? 'Manage sales projects, assign leaders & sales reps, and enter dashboards.'
+                  : 'Your assigned sales projects. Click any project to open its dashboard.'}
+              </p>
+            </div>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
-            Sales Projects
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage your sales project catalog, brand logos, and marketing presentations.
-          </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* Search Box */}
-          <div className="relative w-full sm:w-72">
+        {/* Actions Bar: Search + Add Project */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Search Input */}
+          <div className="relative flex-1 md:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search sales projects..."
+              placeholder="Search projects..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 pr-8 bg-card border-border/80 focus:border-primary shadow-sm h-10 rounded-xl"
@@ -291,7 +317,7 @@ const SalesProjects = () => {
             )}
           </div>
 
-          {/* Add Button */}
+          {/* Add Button (Admin only) */}
           {isAdmin && (
             <Button
               onClick={openAddModal}
@@ -319,63 +345,51 @@ const SalesProjects = () => {
           <p className="text-muted-foreground text-sm mt-1 max-w-md">
             {debouncedSearch
               ? `No projects matching "${debouncedSearch}". Try a different keyword.`
-              : 'Get started by creating your first sales project to showcase products and services.'}
+              : isAdmin
+              ? 'Get started by creating your first sales project to showcase products and manage visits.'
+              : 'You have not been assigned to any sales projects yet. Please contact your manager.'}
           </p>
-          <Button
-            onClick={openAddModal}
-            className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl flex items-center gap-2 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add First Project</span>
-          </Button>
+          {isAdmin && !debouncedSearch && (
+            <Button
+              onClick={openAddModal}
+              className="mt-6 rounded-xl font-semibold gap-2 shadow-md"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Project</span>
+            </Button>
+          )}
         </div>
       ) : (
         <>
-          {/* Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {salesProjects.map((project) => {
               const isDesign2 = project.design === 'design 2';
+              const membersCount = project.members_count || project.user_ids?.length || 0;
 
               return (
                 <div
                   key={project.id}
                   onClick={() => handleOpenProjectDashboard(project)}
-                  className={`group relative flex flex-col bg-card rounded-2xl border transition-all duration-300 overflow-hidden cursor-pointer hover:-translate-y-1 ${
+                  className={`group relative bg-card rounded-3xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden flex flex-col cursor-pointer ${
                     isDesign2
-                      ? 'border-indigo-500/30 hover:border-indigo-500/70 hover:shadow-2xl hover:shadow-indigo-500/10'
-                      : 'border-border/70 hover:border-primary/50 hover:shadow-xl'
+                      ? 'border-indigo-500/30 hover:border-indigo-500 shadow-indigo-500/5'
+                      : 'border-border/80 hover:border-primary/60 shadow-sm'
                   }`}
                 >
-                  {/* Opening Dashboard Loading Overlay */}
-                  {openingProjectId === project.id && (
-                    <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-30">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                      <span className="text-xs font-semibold text-muted-foreground">Opening Dashboard...</span>
+                  {/* Card Header / Logo Preview */}
+                  <div className="relative aspect-[16/10] w-full bg-gradient-to-b from-muted/50 to-muted/20 border-b border-border/50 flex items-center justify-center p-6 overflow-hidden">
+                    {/* Subtle top decoration badge */}
+                    <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-card/90 backdrop-blur-md border border-border/70 text-muted-foreground shadow-sm">
+                        Sales Project
+                      </span>
                     </div>
-                  )}
-
-                  {/* Logo Banner Container */}
-                  <div
-                    className={`relative h-48 w-full flex items-center justify-center p-6 overflow-hidden border-b ${
-                      isDesign2
-                        ? 'bg-gradient-to-br from-indigo-950/20 via-background to-card border-indigo-500/20'
-                        : 'bg-gradient-to-b from-muted/40 via-muted/20 to-card border-border/40'
-                    }`}
-                  >
-                    {/* Subtle Background Glow */}
-                    <div
-                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
-                        isDesign2
-                          ? 'bg-radial from-indigo-500/15 to-transparent'
-                          : 'bg-radial from-primary/5 to-transparent'
-                      }`}
-                    />
 
                     {/* Logo Image */}
                     <img
                       src={project.logo}
                       alt={project.name}
-                      className="max-h-32 max-w-[85%] object-contain drop-shadow-md group-hover:scale-108 transition-transform duration-300 relative z-10"
+                      className="max-h-full max-w-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         e.target.style.display = 'none';
                         const parent = e.target.parentElement;
@@ -392,7 +406,7 @@ const SalesProjects = () => {
                       }}
                     />
 
-                    {/* Floating Action Buttons */}
+                    {/* Floating Action Buttons (Admin only) */}
                     {isAdmin && (
                       <div
                         className="absolute top-3 right-3 flex items-center gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 z-20"
@@ -426,8 +440,8 @@ const SalesProjects = () => {
                   {/* Card Body */}
                   <div className="p-5 flex-1 flex flex-col justify-between">
                     <div>
-                      {/* Status & Design Badges */}
-                      <div className="flex items-center justify-between gap-2 mb-2">
+                      {/* Status, Design & Members Badges */}
+                      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -443,6 +457,11 @@ const SalesProjects = () => {
                           >
                             <Palette className="w-3 h-3" />
                             <span>{isDesign2 ? 'Design 2' : 'Design 1'}</span>
+                          </span>
+
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                            <Users className="w-3 h-3" />
+                            <span>{membersCount} {membersCount === 1 ? 'عضو' : 'أعضاء'}</span>
                           </span>
                         </div>
 
@@ -489,29 +508,21 @@ const SalesProjects = () => {
                       {isAdmin && (
                         <>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditModal(project);
-                            }}
-                            className={`rounded-xl text-xs font-semibold h-8 border-border hover:bg-muted px-2.5 ${
-                              isDesign2 ? 'hover:border-indigo-500/40' : ''
-                            }`}
-                            title="Edit"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(project)}
+                            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            size="icon"
+                            onClick={() => {
                               setProjectToDelete(project);
                               setDeleteModalOpen(true);
                             }}
-                            className="rounded-xl text-xs font-semibold h-8 text-destructive hover:bg-destructive/10 hover:text-destructive px-2.5"
-                            title="Delete"
+                            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
@@ -524,10 +535,10 @@ const SalesProjects = () => {
             })}
           </div>
 
-          {/* Pagination Controls */}
+          {/* Pagination */}
           {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-10 pt-6 border-t border-border/60">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border/60">
+              <p className="text-xs text-muted-foreground">
                 Showing{' '}
                 <span className="font-semibold text-foreground">
                   {(pagination.page - 1) * pagination.limit + 1}
@@ -573,9 +584,9 @@ const SalesProjects = () => {
       )}
 
       {/* ============================================================== */}
-      {/* 🚀 ADD / EDIT MODAL                                            */}
+      {/* 🚀 ADD / EDIT MODAL (Admin only)                                */}
       {/* ============================================================== */}
-      {isModalOpen && (
+      {isModalOpen && isAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div
             className="bg-card w-full max-w-lg rounded-3xl border border-border/80 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]"
@@ -593,8 +604,8 @@ const SalesProjects = () => {
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {editingProject
-                      ? 'Update the project name, logo, and design template.'
-                      : 'Create a new project entry for sales showcase.'}
+                      ? 'Update the project name, logo, template, and assigned team members.'
+                      : 'Create a new project and assign leaders and sales reps.'}
                   </p>
                 </div>
               </div>
@@ -637,7 +648,7 @@ const SalesProjects = () => {
                 )}
               </div>
 
-              {/* Design Template Selection (Select: design 1 or design 2) */}
+              {/* Design Template Selection */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -714,7 +725,79 @@ const SalesProjects = () => {
                 </div>
               </div>
 
-              {/* Logo Section (REQUIRED) */}
+              {/* Assigned Team Members (Leaders & Sales) */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span>فريق العمل (Team Members)</span>
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedUserIds.length} محدد
+                  </span>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto border border-border/70 rounded-2xl p-2.5 space-y-1.5 bg-muted/10">
+                  {availableUsers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      لا يوجد قادة أو مندوبي مبيعات مسجلين حالياً
+                    </p>
+                  ) : (
+                    availableUsers.map((u) => {
+                      const isSelected = selectedUserIds.includes(u.id);
+                      return (
+                        <div
+                          key={u.id}
+                          onClick={() => {
+                            setSelectedUserIds((prev) =>
+                              isSelected ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+                            );
+                          }}
+                          className={`flex items-center justify-between p-2 rounded-xl cursor-pointer text-xs transition-all ${
+                            isSelected
+                              ? 'bg-primary/10 border border-primary/30 text-foreground font-medium'
+                              : 'hover:bg-muted/40 border border-transparent text-muted-foreground'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                              {u.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </div>
+                            <div className="truncate">
+                              <p className="font-semibold text-foreground truncate">{u.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {u.email || u.phone}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                                u.role === 'leader'
+                                  ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                              }`}
+                            >
+                              {u.role}
+                            </span>
+                            <div
+                              className={`w-4 h-4 rounded-md flex items-center justify-center border transition-colors ${
+                                isSelected
+                                  ? 'bg-primary border-primary text-primary-foreground'
+                                  : 'border-border bg-card'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Logo Section */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
