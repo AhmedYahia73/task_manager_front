@@ -12,6 +12,8 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const userName = userData?.name || 'Admin User';
   const userRole = userData?.role || 'Admin';
   const isAdmin = isAdminRole(userRole);
+  const isLeader = userRole?.toLowerCase() === 'leader';
+  const isSales = userRole?.toLowerCase() === 'sales';
   const [isHrmOpen, setIsHrmOpen] = useState(false);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
@@ -54,12 +56,12 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
           { 
             name: 'Sales', 
             icon: 'point_of_sale', 
-            adminOnly: true,
+            adminOrLeaderOrSales: true,
             subItems: [
               { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront' },
-              { name: 'Admins', path: '/admin/sales/admins', icon: 'admin_panel_settings' },
-              { name: 'Leaders', path: '/admin/sales/leaders', icon: 'supervisor_account' },
-              { name: 'Sales', path: '/admin/sales/sales', icon: 'badge' },
+              { name: 'Admins', path: '/admin/sales/admins', icon: 'admin_panel_settings', adminOnly: true },
+              { name: 'Leaders', path: '/admin/sales/leaders', icon: 'supervisor_account', adminOnly: true },
+              { name: 'Sales', path: '/admin/sales/sales', icon: 'badge', adminOnly: true },
             ]
           },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
@@ -108,6 +110,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         ]
         .filter(item => {
           if (item.adminOnly && !isAdmin) return false;
+          if (item.adminOrLeaderOrSales && !isAdmin && !isLeader && !isSales) return false;
           if (item.notAdmin && isAdmin) return false;
           return true;
         })
@@ -142,7 +145,9 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
                 </button>
                 {isOpen && (
                   <div className="pl-6 space-y-1 mt-1 border-l-2 border-border ml-4">
-                    {item.subItems.map((subItem) => (
+                    {item.subItems
+                      .filter((subItem) => !subItem.adminOnly || isAdmin)
+                      .map((subItem) => (
                       <NavLink
                         key={subItem.path}
                         to={subItem.path}

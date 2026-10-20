@@ -28,6 +28,7 @@ import {
   Check
 } from 'lucide-react';
 import { isAdminRole } from '@/utils/auth';
+import { apiClient } from '@/lib/axios';
 
 const SalesProjects = () => {
   // Check Admin Role
@@ -53,6 +54,26 @@ const SalesProjects = () => {
   );
   const salesProjects = data?.salesProjects || [];
   const pagination = data?.pagination || { total: 0, page: 1, limit: 12, totalPages: 1 };
+
+  const [openingProjectId, setOpeningProjectId] = useState(null);
+
+  const handleOpenProjectDashboard = async (project) => {
+    try {
+      setOpeningProjectId(project.id);
+      const res = await apiClient.get(`/api/admin/sales-projects/${project.id}/access-token`);
+      const redirectUrl = res?.data?.data?.redirectUrl;
+      if (redirectUrl) {
+        window.open(redirectUrl, '_blank');
+      } else {
+        toast.error('لم يتم العثور على رابط لوحة التحكم');
+      }
+    } catch (err) {
+      console.error('Failed to get project access token:', err);
+      toast.error(err?.response?.data?.message || 'فشل في فتح لوحة تحكم المشروع');
+    } finally {
+      setOpeningProjectId(null);
+    }
+  };
 
   const { mutate, loading: mutationLoading } = useMutation();
 
@@ -271,13 +292,15 @@ const SalesProjects = () => {
           </div>
 
           {/* Add Button */}
-          <Button
-            onClick={openAddModal}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-200 rounded-xl h-10 px-4 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Sales Project</span>
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={openAddModal}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-200 rounded-xl h-10 px-4 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Sales Project</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -316,12 +339,21 @@ const SalesProjects = () => {
               return (
                 <div
                   key={project.id}
-                  className={`group relative flex flex-col bg-card rounded-2xl border transition-all duration-300 overflow-hidden ${
+                  onClick={() => handleOpenProjectDashboard(project)}
+                  className={`group relative flex flex-col bg-card rounded-2xl border transition-all duration-300 overflow-hidden cursor-pointer hover:-translate-y-1 ${
                     isDesign2
                       ? 'border-indigo-500/30 hover:border-indigo-500/70 hover:shadow-2xl hover:shadow-indigo-500/10'
                       : 'border-border/70 hover:border-primary/50 hover:shadow-xl'
                   }`}
                 >
+                  {/* Opening Dashboard Loading Overlay */}
+                  {openingProjectId === project.id && (
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-30">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <span className="text-xs font-semibold text-muted-foreground">Opening Dashboard...</span>
+                    </div>
+                  )}
+
                   {/* Logo Banner Container */}
                   <div
                     className={`relative h-48 w-full flex items-center justify-center p-6 overflow-hidden border-b ${
@@ -361,25 +393,34 @@ const SalesProjects = () => {
                     />
 
                     {/* Floating Action Buttons */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 z-20">
-                      <button
-                        onClick={() => openEditModal(project)}
-                        title="Edit Project"
-                        className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur-md text-foreground hover:text-primary hover:bg-card border border-border shadow-sm flex items-center justify-center transition-colors"
+                    {isAdmin && (
+                      <div
+                        className="absolute top-3 right-3 flex items-center gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 z-20"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setProjectToDelete(project);
-                          setDeleteModalOpen(true);
-                        }}
-                        title="Delete Project"
-                        className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur-md text-destructive hover:bg-destructive hover:text-white border border-border shadow-sm flex items-center justify-center transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(project);
+                          }}
+                          title="Edit Project"
+                          className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur-md text-foreground hover:text-primary hover:bg-card border border-border shadow-sm flex items-center justify-center transition-colors"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProjectToDelete(project);
+                            setDeleteModalOpen(true);
+                          }}
+                          title="Delete Project"
+                          className="w-8 h-8 rounded-lg bg-card/90 backdrop-blur-md text-destructive hover:bg-destructive hover:text-white border border-border shadow-sm flex items-center justify-center transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Card Body */}
@@ -426,29 +467,56 @@ const SalesProjects = () => {
                     </div>
 
                     {/* Card Bottom Actions */}
-                    <div className="pt-4 mt-4 border-t border-border/50 flex items-center justify-between gap-2">
+                    <div
+                      className="pt-4 mt-4 border-t border-border/50 flex items-center justify-between gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Button
-                        variant="outline"
+                        variant="default"
                         size="sm"
-                        onClick={() => openEditModal(project)}
-                        className={`flex-1 rounded-xl text-xs font-semibold h-8 border-border hover:bg-muted ${
-                          isDesign2 ? 'hover:border-indigo-500/40' : ''
-                        }`}
+                        onClick={() => handleOpenProjectDashboard(project)}
+                        disabled={openingProjectId === project.id}
+                        className="flex-1 rounded-xl text-xs font-semibold h-8 gap-1.5 shadow-sm"
                       >
-                        <Edit className="w-3.5 h-3.5 mr-1" />
-                        Edit
+                        {openingProjectId === project.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        )}
+                        Open Dashboard
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setProjectToDelete(project);
-                          setDeleteModalOpen(true);
-                        }}
-                        className="rounded-xl text-xs font-semibold h-8 text-destructive hover:bg-destructive/10 hover:text-destructive px-2.5"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(project);
+                            }}
+                            className={`rounded-xl text-xs font-semibold h-8 border-border hover:bg-muted px-2.5 ${
+                              isDesign2 ? 'hover:border-indigo-500/40' : ''
+                            }`}
+                            title="Edit"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjectToDelete(project);
+                              setDeleteModalOpen(true);
+                            }}
+                            className="rounded-xl text-xs font-semibold h-8 text-destructive hover:bg-destructive/10 hover:text-destructive px-2.5"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
