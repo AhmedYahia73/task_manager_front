@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
-import { Loader2, Search, Plus, Edit, Trash2, X, Calendar, Eye } from 'lucide-react';
+import { Loader2, Search, Plus, Edit, Trash2, X, Calendar, Eye, GripVertical } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
 
@@ -22,6 +22,7 @@ const Tasks = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const limit = 50;
   
   // Debounce search
   useEffect(() => {
@@ -33,9 +34,78 @@ const Tasks = () => {
   }, [search]);
 
   // Fetch Tasks Data with group_id filter
-  const { data: tasksData, loading: tasksLoading, refresh } = useGet(`/api/admin/tasks?group_id=${groupId}&page=${page}&limit=10&search=${debouncedSearch}`);
-  const tasks = tasksData?.tasks || [];
+  const { data: tasksData, loading: tasksLoading, refresh } = useGet(`/api/admin/tasks?group_id=${groupId}&page=${page}&limit=${limit}&search=${debouncedSearch}`);
+  const [taskList, setTaskList] = useState([]);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [isReordering, setIsReordering] = useState(false);
+
+  useEffect(() => {
+    if (tasksData?.tasks) {
+      setTaskList(tasksData.tasks);
+    }
+  }, [tasksData?.tasks]);
+
+  const tasks = taskList;
   const pagination = tasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
+
+  // Drag and Drop handlers
+  const handleDragStart = (e, index) => {
+    if (debouncedSearch) return;
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e, index) => {
+    if (debouncedSearch) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e, targetIndex) => {
+    if (debouncedSearch) return;
+    e.preventDefault();
+
+    if (draggedIndex === null || draggedIndex === undefined || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const updated = [...taskList];
+    const [movedItem] = updated.splice(draggedIndex, 1);
+    updated.splice(targetIndex, 0, movedItem);
+
+    setTaskList(updated);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    const payload = updated.map((t, idx) => ({
+      id: t.id,
+      sort: (page - 1) * limit + idx + 1
+    }));
+
+    setIsReordering(true);
+    try {
+      await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
+      toast.success('Task order updated');
+    } catch (err) {
+      console.error('Error reordering tasks:', err);
+      toast.error('Failed to update task order');
+      refresh();
+    } finally {
+      setIsReordering(false);
+    }
+  };
 
   // Fetch Users assigned to the Group for the Dropdown
   const { data: groupUsersData } = useGet(groupId ? `/api/admin/projectGroup/${groupId}/users` : null);
@@ -391,7 +461,10 @@ const Tasks = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th scope="col" className="px-6 py-5 font-semibold rounded-tl-2xl">Task Details</th>
+                <th scope="col" className="w-12 px-3 py-5 rounded-tl-2xl text-center">
+                  <span className="sr-only">Reorder</span>
+                </th>
+                <th scope="col" className="px-6 py-5 font-semibold">Task Details</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Assigned To</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Delivery Date</th>
                 <th scope="col" className="px-6 py-5 font-semibold">Importance</th>
@@ -401,18 +474,40 @@ const Tasks = () => {
             </thead>
             <tbody className="divide-y divide-[#edeeef]">
               {tasksLoading && tasks.length === 0 ? (
-                <tr><td colSpan="5" className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></td></tr>
+                <tr><td colSpan="7" className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></td></tr>
               ) : tasks.length === 0 ? (
-                <tr><td colSpan="5" className="py-12 text-center text-muted-foreground"><div className="flex flex-col items-center"><span className="material-symbols-outlined text-4xl mb-2 text-gray-300">task</span>No tasks found.</div></td></tr>
+                <tr><td colSpan="7" className="py-12 text-center text-muted-foreground"><div className="flex flex-col items-center"><span className="material-symbols-outlined text-4xl mb-2 text-gray-300">task</span>No tasks found.</div></td></tr>
               ) : (
-                tasks.map((task) => {
+                tasks.map((task, index) => {
                   const style = getStatusStyles(task.status);
+                  const isDragging = draggedIndex === index;
+                  const isOver = dragOverIndex === index && draggedIndex !== index;
                   return (
                     <tr 
                       key={task.id} 
+                      draggable={!debouncedSearch}
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e) => handleDrop(e, index)}
                       onClick={() => navigate(`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`)}
-                      className={`group transition-colors cursor-pointer ${task.status === 'done' ? 'opacity-70' : ''} ${task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted/80'}`}
+                      className={`group transition-all duration-150 cursor-pointer ${
+                        task.status === 'done' ? 'opacity-70' : ''
+                      } ${
+                        task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted/80'
+                      } ${
+                        isDragging ? 'opacity-40 scale-[0.99] bg-muted/60' : ''
+                      } ${
+                        isOver ? 'border-t-2 border-primary bg-primary/5' : ''
+                      }`}
                     >
+                      <td 
+                        className="w-12 px-3 py-5 text-center text-muted-foreground/60 group-hover:text-foreground cursor-grab active:cursor-grabbing select-none"
+                        onClick={(e) => e.stopPropagation()}
+                        title={debouncedSearch ? "Drag & drop ordering disabled while searching" : "Drag to reorder"}
+                      >
+                        <GripVertical className="w-4 h-4 mx-auto" />
+                      </td>
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
                         <div className="flex flex-col">
