@@ -6,12 +6,15 @@ import { Loader2, Search, Plus, Edit, Trash2, X, Link as LinkIcon, Image as Imag
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { useRoleNames } from '@/context/RoleNameContext';
+import { isAdminRole } from '@/utils/auth';
+import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
 
 const Projects = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user?.role?.toLowerCase?.() || '';
+  const isAdmin = isAdminRole(userRole);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -279,7 +282,7 @@ const Projects = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          {userRole !== 'engineer' && (
+          {isAdmin && (
             <Button onClick={() => openModal()} className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 whitespace-nowrap">
               <Plus className="w-4 h-4" />
               Add Project
@@ -302,10 +305,12 @@ const Projects = () => {
         ) : (
           projects.map((project, idx) => {
             const colorTheme = colors[idx % colors.length];
+            const canManage = project.user_role === 'leader' || isAdmin;
+
             return (
               <div key={project.id} className={`bg-card rounded-xl shadow-sm hover:shadow-md transition-shadow border border-border p-5 flex flex-col relative border-l-4 ${colorTheme.border}`}>
                 
-                {/* Header: Logo + Title + 3-Dots Menu */}
+                {/* Header: Logo + Title + Role Badge + 3-Dots Menu */}
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {project.logo ? (
@@ -320,14 +325,17 @@ const Projects = () => {
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-bold font-['Plus_Jakarta_Sans'] truncate text-foreground leading-tight" title={project.name}>
-                        {project.name}
-                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base font-bold font-['Plus_Jakarta_Sans'] truncate text-foreground leading-tight" title={project.name}>
+                          {project.name}
+                        </h3>
+                        <ProjectRoleBadge role={project.user_role} />
+                      </div>
                     </div>
                   </div>
 
                   {/* 3-Dots Action Menu */}
-                  {userRole !== 'engineer' && (
+                  {canManage && (
                     <div className="relative shrink-0">
                       <button 
                         onClick={(e) => {
@@ -356,7 +364,7 @@ const Projects = () => {
                             <span>Edit Project</span>
                           </button>
                           
-                          {userRole !== 'tester' && (
+                          {isAdmin && (
                             <button 
                               onClick={() => {
                                 setOpenDropdownId(null);
@@ -603,7 +611,7 @@ const Projects = () => {
                   )}
                 </div>
                 
-                {userRole !== 'tester' && (
+                {isAdmin && (
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Assign {getRoleName('tester')}</label>
                     <select 

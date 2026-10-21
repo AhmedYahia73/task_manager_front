@@ -3,7 +3,6 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { removeAuthToken } from '@/utils/auth';
 import { RoleNameProvider } from '@/context/RoleNameContext';
-import { RoleSwitcherTabs } from '@/components/RoleSwitcherTabs';
 import { CompanyHeader } from '@/components/CompanyHeader';
 import { CompanyFooter } from '@/components/CompanyFooter';
 
@@ -76,7 +75,6 @@ export const AdminLayout = () => {
 
         {/* Main Content */}
         <main className="admin-content flex flex-col h-full overflow-hidden">
-          <RoleSwitcherTabs />
           <div className="flex-1 overflow-auto flex flex-col">
             <div className="px-6 md:px-8 pt-6 md:pt-8 w-full max-w-full">
               <CompanyHeader />

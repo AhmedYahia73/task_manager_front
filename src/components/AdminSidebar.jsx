@@ -12,7 +12,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const userName = userData?.name || 'Admin User';
   const userRole = userData?.role || 'Admin';
   const isAdmin = isAdminRole(userRole);
-  const isLeader = userRole?.toLowerCase() === 'leader';
+  const isLeader = userRole?.toLowerCase() === 'leader' || userRole?.toLowerCase() === 'leader_sales';
   const isSales = userRole?.toLowerCase() === 'sales';
   const [isHrmOpen, setIsHrmOpen] = useState(false);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);

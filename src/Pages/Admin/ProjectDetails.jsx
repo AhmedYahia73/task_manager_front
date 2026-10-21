@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
 import NotesBoard from '@/components/NotesBoard';
+import { isAdminRole } from '@/utils/auth';
+import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
 
 const ProjectDetails = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
@@ -16,6 +18,7 @@ const ProjectDetails = () => {
   const navigate = useNavigate();
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = userData?.role || 'admin';
+  const isAdmin = isAdminRole(userRole);
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [groupSearch, setGroupSearch] = useState('');
   const [groupPage, setGroupPage] = useState(1);
@@ -33,6 +36,8 @@ const ProjectDetails = () => {
   // Fetch Project Details
   const { data: projectData, loading: projectLoading } = useGet(`/api/admin/project/${id}`);
   const project = projectData?.Project || {};
+  const projectUserRole = project?.user_role || (isAdmin ? 'admin' : 'engineer');
+  const isLeaderOrAdmin = projectUserRole === 'leader' || isAdmin;
 
   // Fetch Groups
   const { data: groupsData, loading: groupsLoading, refresh: refreshGroups } = useGet(`/api/admin/projectGroup?project_id=${id}&page=${groupPage}&limit=10&search=${debouncedSearch}`);
@@ -276,7 +281,10 @@ const ProjectDetails = () => {
       {/* Project Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-4xl font-bold font-['Plus_Jakarta_Sans'] text-foreground mb-2">{project.name}</h1>
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
+            <h1 className="text-4xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{project.name}</h1>
+            <ProjectRoleBadge role={projectUserRole} />
+          </div>
           <div className="flex items-center text-sm text-muted-foreground flex-wrap gap-2">
             <span>Created {dayjs(project.createdAt).format('MMM DD, YYYY')}</span>
             {project.documentation && (
@@ -300,7 +308,7 @@ const ProjectDetails = () => {
           </div>
           {project.description && <p className="mt-3 text-sm text-muted-foreground max-w-3xl">{project.description}</p>}
         </div>
-        {userRole !== 'engineer' && (
+        {isLeaderOrAdmin && (
           <div className="flex gap-3 w-full md:w-auto">
             <Button onClick={() => setIsTeamModalOpen(true)} variant="outline" className="border-border hover:bg-muted text-foreground w-full md:w-auto flex items-center justify-center gap-2">
               <Users className="w-4 h-4" />
@@ -363,12 +371,12 @@ const ProjectDetails = () => {
                           {group.name}
                         </h3>
                         
-                        {userRole !== 'engineer' && (
+                        {isLeaderOrAdmin && (
                           <div className="flex items-center gap-1">
                             <button onClick={(e) => { e.stopPropagation(); openModal(group); }} title="Edit Group" className="text-muted-foreground hover:text-primary hover:bg-muted p-1 rounded transition-colors">
                               <Edit className="w-3.5 h-3.5" />
                             </button>
-                            {userRole !== 'tester' && (
+                            {isAdmin && (
                               <button onClick={(e) => handleDeleteGroup(group.id, e)} title="Delete Group" className="text-muted-foreground hover:text-red-500 hover:bg-muted p-1 rounded transition-colors">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
