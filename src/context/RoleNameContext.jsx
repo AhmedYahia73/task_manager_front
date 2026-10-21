@@ -18,8 +18,11 @@ export const RoleNameProvider = ({ children }) => {
       case 'engineer':
         return roleNames.user;
       case 'tester':
+      case 'leader':
+      case 'project_leader':
         return roleNames.leader;
       case 'admin':
+      case 'super_admin':
         return roleNames.admin;
       default:
         return backendRole; // fallback to whatever was passed

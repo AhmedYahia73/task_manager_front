@@ -7,6 +7,7 @@ import { useMutation } from '@/hooks/useMutation';
 import { Loader2, Search, Calendar, ChevronLeft } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
+import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
 import { toast } from 'sonner';
 
 const FilteredTasks = () => {
@@ -247,13 +248,18 @@ const FilteredTasks = () => {
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
                         <div className="flex flex-col">
-                          <Link
-                            to={detailsUrl}
-                            onClick={(e) => e.stopPropagation()}
-                            className="font-plus-jakarta text-base font-bold text-foreground hover:text-primary transition-colors cursor-pointer"
-                          >
-                            {task.name}
-                          </Link>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link
+                              to={detailsUrl}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-plus-jakarta text-base font-bold text-foreground hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {task.name}
+                            </Link>
+                            {task.user_role && (
+                              <ProjectRoleBadge role={task.user_role} />
+                            )}
+                          </div>
                           <span className="mt-1 text-sm text-muted-foreground line-clamp-2 max-w-md">{task.description || <span className="italic">No description</span>}</span>
                           {task.tester_note && (
                             <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-700 border border-amber-100">

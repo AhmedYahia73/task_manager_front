@@ -189,8 +189,8 @@ const Users = () => {
       {/* Header & Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{getRoleNamePlural('engineer')} & {getRoleNamePlural('tester')}</h1>
-          <p className="text-muted-foreground mt-1">Manage {getRoleNamePlural('engineer').toLowerCase()} and {getRoleNamePlural('tester').toLowerCase()}</p>
+          <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{getRoleNamePlural('engineer')}</h1>
+          <p className="text-muted-foreground mt-1">Manage system {getRoleNamePlural('engineer').toLowerCase()}</p>
         </div>
         <Button onClick={() => openModal()} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
           <Plus className="w-4 h-4" />

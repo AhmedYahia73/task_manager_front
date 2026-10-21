@@ -172,7 +172,7 @@ const Dashboard = () => {
     }
   };
 
-  if (user?.role === 'engineer' || user?.role === 'tester') {
+  if (user?.role === 'engineer' || user?.role === 'tester' || user?.role === 'leader_sales') {
     return <EngineerDashboard />;
   }
 

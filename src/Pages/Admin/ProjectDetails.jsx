@@ -463,7 +463,7 @@ const ProjectDetails = () => {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2 xl:mt-0 w-full xl:w-auto">
-                      {userRole !== 'engineer' && (
+                      {isLeaderOrAdmin && (
                         <Button onClick={() => openModal(activeGroup)} variant="outline" className="border-primary text-primary hover:bg-primary/5 flex-1 xl:flex-none">
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Group

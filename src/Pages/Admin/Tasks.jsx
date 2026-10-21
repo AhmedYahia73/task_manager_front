@@ -7,6 +7,8 @@ import { useMutation } from '@/hooks/useMutation';
 import { Loader2, Search, Plus, Edit, Trash2, X, Calendar, Eye, GripVertical } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
+import { isAdminRole } from '@/utils/auth';
+import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
 
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/axios';
@@ -18,6 +20,10 @@ const Tasks = () => {
   
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user?.role?.toLowerCase?.() || '';
+  const isAdmin = isAdminRole(userRole);
+  const { data: projectDetailsData } = useGet(projectId ? `/api/admin/project/${projectId}` : null);
+  const projectUserRole = projectDetailsData?.Project?.user_role || (isAdmin ? 'admin' : 'engineer');
+  const isLeaderOrAdmin = projectUserRole === 'leader' || isAdmin;
   
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -236,7 +242,7 @@ const Tasks = () => {
     if (formData.importanc_status) data.append('importanc_status', formData.importanc_status);
     if (formData.tester_note) data.append('tester_note', formData.tester_note);
 
-    if (userRole === 'engineer' && user?.id) {
+    if (!isLeaderOrAdmin && user?.id) {
       data.append('users_ids', user.id);
       data.append('user_id', user.id);
     } else if (formData.users_ids && formData.users_ids.length > 0) {
@@ -511,13 +517,16 @@ const Tasks = () => {
                       <td className="relative px-6 py-5">
                         <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
                         <div className="flex flex-col">
-                          <Link 
-                            to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className={`font-plus-jakarta text-base font-bold text-foreground hover:text-primary transition-colors cursor-pointer ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}
-                          >
-                            {task.name}
-                          </Link>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link 
+                              to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className={`font-plus-jakarta text-base font-bold text-foreground hover:text-primary transition-colors cursor-pointer ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}
+                            >
+                              {task.name}
+                            </Link>
+                            <ProjectRoleBadge role={task.user_role} />
+                          </div>
                           <span className="mt-1 text-sm text-muted-foreground line-clamp-2 max-w-md">{task.description || <span className="italic">No description</span>}</span>
                           {task.tester_note && (
                             <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-700 border border-amber-100">
@@ -565,51 +574,61 @@ const Tasks = () => {
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <select
-                          value={task.importanc_status || 'medium'}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => handleImportanceChange(task.id, e.target.value)}
-                          disabled={userRole === 'engineer'}
-                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                        >
-                          <option value="low" className="bg-card text-foreground">Low</option>
-                          <option value="medium" className="bg-card text-foreground">Medium</option>
-                          <option value="high" className="bg-card text-foreground">High</option>
-                          <option value="urgent" className="bg-card text-foreground">Urgent</option>
-                        </select>
+                        {(() => {
+                          const isTaskLeader = task.user_role === 'leader' || isAdmin;
+                          return (
+                            <select
+                              value={task.importanc_status || 'medium'}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => handleImportanceChange(task.id, e.target.value)}
+                              disabled={!isTaskLeader}
+                              className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${!isTaskLeader ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
+                              style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                            >
+                              <option value="low" className="bg-card text-foreground">Low</option>
+                              <option value="medium" className="bg-card text-foreground">Medium</option>
+                              <option value="high" className="bg-card text-foreground">High</option>
+                              <option value="urgent" className="bg-card text-foreground">Urgent</option>
+                            </select>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-5">
-                        <select
-                          value={task.status}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                          disabled={task.status === 'approve' && userRole === 'engineer'}
-                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${task.status === 'approve' && userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                        >
-                          {task.status === 'approve' ? (
-                            <>
-                              <option value="approve" className="bg-card text-foreground">Approve</option>
-                              {userRole !== 'engineer' && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
-                            </>
-                          ) : (
-                            <>
-                              <option value="pending" className="bg-card text-foreground">Pending</option>
-                              <option value="inprogress" className="bg-card text-foreground">In Progress</option>
-                              <option value="done" className="bg-card text-foreground">Done</option>
-                              {userRole === 'engineer' && task.status === 'edit' && (
-                                <option value="edit" disabled hidden className="bg-card text-foreground">Needs Revision</option>
-                              )}
-                              {userRole !== 'engineer' && (
+                        {(() => {
+                          const isTaskLeader = task.user_role === 'leader' || isAdmin;
+                          return (
+                            <select
+                              value={task.status}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                              disabled={task.status === 'approve' && !isTaskLeader}
+                              className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${task.status === 'approve' && !isTaskLeader ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
+                              style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                            >
+                              {task.status === 'approve' ? (
                                 <>
-                                  <option value="edit" className="bg-card text-foreground">Needs Revision</option>
                                   <option value="approve" className="bg-card text-foreground">Approve</option>
+                                  {isTaskLeader && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
+                                </>
+                              ) : (
+                                <>
+                                  <option value="pending" className="bg-card text-foreground">Pending</option>
+                                  <option value="inprogress" className="bg-card text-foreground">In Progress</option>
+                                  <option value="done" className="bg-card text-foreground">Done</option>
+                                  {!isTaskLeader && task.status === 'edit' && (
+                                    <option value="edit" disabled hidden className="bg-card text-foreground">Needs Revision</option>
+                                  )}
+                                  {isTaskLeader && (
+                                    <>
+                                      <option value="edit" className="bg-card text-foreground">Needs Revision</option>
+                                      <option value="approve" className="bg-card text-foreground">Approve</option>
+                                    </>
+                                  )}
                                 </>
                               )}
-                            </>
-                          )}
-                        </select>
+                            </select>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-1.5 items-center" onClick={(e) => e.stopPropagation()}>
@@ -756,7 +775,7 @@ const Tasks = () => {
                       onChange={handleInputChange} 
                       placeholder="e.g. Implement Login Page" 
                       required 
-                      disabled={userRole === 'engineer' && editingId}
+                      disabled={!isLeaderOrAdmin && editingId}
                       className="border-border bg-background focus-visible:ring-primary h-11"
                     />
                   </div>
@@ -772,7 +791,7 @@ const Tasks = () => {
                       value={formData.delivery_date} 
                       onChange={handleInputChange} 
                       required 
-                      disabled={userRole === 'engineer' && editingId}
+                      disabled={!isLeaderOrAdmin && editingId}
                       className="border-border bg-background focus-visible:ring-primary h-11"
                     />
                   </div>
@@ -788,7 +807,7 @@ const Tasks = () => {
                       onChange={handleInputChange}
                       placeholder="Detailed explanation of the task..."
                       className="w-full min-h-[100px] p-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm custom-scrollbar text-foreground placeholder:text-muted-foreground"
-                      disabled={userRole === 'engineer' && editingId}
+                      disabled={!isLeaderOrAdmin && editingId}
                     />
                   </div>
 
@@ -847,7 +866,7 @@ const Tasks = () => {
                       value={formData.importanc_status} 
                       onChange={handleInputChange}
                       required
-                      disabled={userRole === 'engineer' && editingId}
+                      disabled={!isLeaderOrAdmin && editingId}
                       className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-75"
                     >
                       <option value="low">Low</option>
@@ -864,23 +883,23 @@ const Tasks = () => {
                       value={formData.status} 
                       onChange={handleInputChange}
                       required
-                      disabled={formData.status === 'approve' && userRole === 'engineer'}
+                      disabled={formData.status === 'approve' && !isLeaderOrAdmin}
                       className="flex w-full h-11 items-center justify-between rounded-xl border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-75"
                     >
                       {formData.status === 'approve' ? (
                         <>
                           <option value="approve">Approve</option>
-                          {userRole !== 'engineer' && <option value="edit">Edit (Needs Revision)</option>}
+                          {isLeaderOrAdmin && <option value="edit">Edit (Needs Revision)</option>}
                         </>
                       ) : (
                         <>
                           <option value="pending">Pending</option>
                           <option value="inprogress">In Progress</option>
                           <option value="done">Done</option>
-                          {userRole === 'engineer' && formData.status === 'edit' && (
+                          {!isLeaderOrAdmin && formData.status === 'edit' && (
                             <option value="edit" disabled hidden>Edit (Needs Revision)</option>
                           )}
-                          {userRole !== 'engineer' && (
+                          {isLeaderOrAdmin && (
                             <>
                               <option value="edit">Edit (Needs Revision)</option>
                               <option value="approve">Approve</option>
@@ -891,7 +910,7 @@ const Tasks = () => {
                     </select>
                   </div>
 
-                  {userRole !== 'engineer' && (
+                  {isLeaderOrAdmin && (
                     <div className="flex flex-col gap-2 md:col-span-2 relative z-20">
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -974,8 +993,9 @@ const Tasks = () => {
                       name="tester_note"
                       value={formData.tester_note}
                       onChange={handleInputChange}
-                      className="w-full flex min-h-[80px] rounded-xl border border-input bg-amber-50/50 px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      placeholder={`Add any QA or ${getRoleName('tester').toLowerCase()} feedback here...`}
+                      disabled={!isLeaderOrAdmin}
+                      className={`w-full flex min-h-[80px] rounded-xl border border-input bg-amber-50/50 px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!isLeaderOrAdmin ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      placeholder={isLeaderOrAdmin ? `Add any QA or ${getRoleName('tester').toLowerCase()} feedback here...` : `Only ${getRoleName('tester')} can update this note`}
                       rows={2}
                     />
                   </div>
@@ -991,7 +1011,7 @@ const Tasks = () => {
               <Button 
                 type="submit" 
                 form="task-form" 
-                disabled={mutationLoading || (userRole !== 'engineer' && formData.users_ids.length === 0)} 
+                disabled={mutationLoading || (isLeaderOrAdmin && formData.users_ids.length === 0)} 
                 className="bg-primary hover:bg-primary/90 text-white px-8 h-11 rounded-xl font-bold shadow-md"
               >
                 {mutationLoading ? (

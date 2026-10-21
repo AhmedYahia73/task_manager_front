@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { useRoleNames } from '@/context/RoleNameContext';
+import { isAdminRole } from '@/utils/auth';
+import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/axios';
 import dayjs from 'dayjs';
@@ -38,7 +40,7 @@ import {
 dayjs.extend(relativeTime);
 
 // 🎵 Professional Audio Player Component
-const VoiceAudioPlayer = ({ voice, currentUserId, userRole, onDelete }) => {
+const VoiceAudioPlayer = ({ voice, currentUserId, userRole, isTaskLeader, onDelete }) => {
   if (!voice || !voice.id) return null;
 
   const audioRef = useRef(null);
@@ -118,9 +120,10 @@ const VoiceAudioPlayer = ({ voice, currentUserId, userRole, onDelete }) => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const canDelete = (userRole === 'admin' || userRole === 'super_admin') || (userRole === 'tester' && voice.user_id === currentUserId);
-  const isLeader = voice.user_role === 'tester';
-  const isAdmin = voice.user_role === 'admin' || voice.user_role === 'super_admin';
+  const isAdmin = isAdminRole(userRole);
+  const canDelete = isAdmin || isTaskLeader || voice.user_id === currentUserId;
+  const isLeaderVoice = voice.is_leader || voice.role_at_time === 'leader' || voice.role_at_time === 'tester' || voice.user_role === 'tester';
+  const isAdminVoice = voice.user_role === 'admin' || voice.user_role === 'super_admin';
 
   return (
     <div className="group relative flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs transition-all hover:border-primary/40 hover:shadow-md">
@@ -146,13 +149,13 @@ const VoiceAudioPlayer = ({ voice, currentUserId, userRole, onDelete }) => {
                 {voice.user_name || 'Team Member'}
               </span>
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                isLeader 
+                isLeaderVoice 
                   ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                  : isAdmin
+                  : isAdminVoice
                   ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
                   : 'bg-primary/10 text-primary border border-primary/20'
               }`}>
-                {isLeader ? 'Team Leader' : isAdmin ? 'Admin' : 'Member'}
+                {isLeaderVoice ? 'Team Leader' : isAdminVoice ? 'Admin' : 'Member'}
               </span>
             </div>
             <span className="text-[11px] text-muted-foreground">
@@ -543,11 +546,14 @@ export default function TaskDetails() {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user?.role?.toLowerCase?.() || 'engineer';
-  const canManageVoices = userRole === 'admin' || userRole === 'super_admin' || userRole === 'tester';
+  const isAdmin = isAdminRole(userRole);
 
   // Fetch Task Details
   const { data: taskData, loading, refresh } = useGet(`/api/admin/tasks/${effectiveTaskId}`);
   const task = taskData?.task || taskData?.data?.task;
+
+  const taskUserRole = task?.user_role || (isAdmin ? 'admin' : 'engineer');
+  const isLeaderOrAdmin = taskUserRole === 'leader' || isAdmin;
 
   const { mutate, loading: mutating } = useMutation();
 
@@ -745,6 +751,8 @@ export default function TaskDetails() {
   const deliveryInfo = getDeliveryDateStatus(task.delivery_date, task.status);
   const assignedUsers = (Array.isArray(task.assigned_users) ? task.assigned_users : [])
     .filter((u) => u && typeof u === 'object' && u.id);
+  const isAssigned = assignedUsers.some((u) => u.id === user?.id) || task?.user_id === user?.id;
+  const canAddVoice = isLeaderOrAdmin || isAssigned;
   const displayVoices = (Array.isArray(voices) ? voices : [])
     .filter((v) => v && typeof v === 'object' && v.id);
 
@@ -821,10 +829,11 @@ export default function TaskDetails() {
           </div>
 
           {/* ثم اسم task */}
-          <div className="pt-1">
+          <div className="pt-1 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
               {task.name}
             </h1>
+            <ProjectRoleBadge role={taskUserRole} />
           </div>
         </div>
 
@@ -838,24 +847,24 @@ export default function TaskDetails() {
             <select
               value={task.status || 'pending'}
               onChange={(e) => handleStatusChange(e.target.value)}
-              disabled={task.status === 'approve' && userRole === 'engineer'}
+              disabled={task.status === 'approve' && !isLeaderOrAdmin}
               className={`inline-flex appearance-none items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer ${statusStyle.badge}`}
               style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
             >
               {task.status === 'approve' ? (
                 <>
                   <option value="approve" className="bg-card text-foreground">Approved</option>
-                  {userRole !== 'engineer' && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
+                  {isLeaderOrAdmin && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
                 </>
               ) : (
                 <>
                   <option value="pending" className="bg-card text-foreground">Pending</option>
                   <option value="inprogress" className="bg-card text-foreground">In Progress</option>
                   <option value="done" className="bg-card text-foreground">Done</option>
-                  {userRole === 'engineer' && task.status === 'edit' && (
+                  {!isLeaderOrAdmin && task.status === 'edit' && (
                     <option value="edit" disabled hidden className="bg-card text-foreground">Needs Revision</option>
                   )}
-                  {userRole !== 'engineer' && (
+                  {isLeaderOrAdmin && (
                     <>
                       <option value="edit" className="bg-card text-foreground">Needs Revision</option>
                       <option value="approve" className="bg-card text-foreground">Approve</option>
@@ -925,7 +934,7 @@ export default function TaskDetails() {
             <h2 className="text-base font-bold text-foreground">Documentation</h2>
           </div>
 
-          {task.documentation && canManageVoices && (
+          {task.documentation && isLeaderOrAdmin && (
             <button
               onClick={handleDeleteDoc}
               className="text-xs font-semibold text-destructive hover:bg-destructive/10 px-2.5 py-1.5 rounded-lg border border-destructive/20 transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -997,8 +1006,8 @@ export default function TaskDetails() {
           </div>
         </div>
 
-        {/* Voice Recorder (only for Admin and Team Leader) */}
-        {canManageVoices && (
+        {/* Voice Recorder (for Admin, Team Leader and Assigned Members) */}
+        {canAddVoice && (
           <div className="mb-6">
             <VoiceRecorder
               taskId={task.id}
@@ -1016,7 +1025,7 @@ export default function TaskDetails() {
           <div className="p-8 text-center text-muted-foreground bg-muted/30 rounded-2xl border border-dashed border-border">
             <Volume2 className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
             <p className="text-sm font-medium">No voice notes recorded yet</p>
-            {canManageVoices && (
+            {canAddVoice && (
               <p className="text-xs text-muted-foreground mt-1">
                 You can record a live voice note above to guide the team.
               </p>
@@ -1030,6 +1039,7 @@ export default function TaskDetails() {
                 voice={voice}
                 currentUserId={user?.id}
                 userRole={userRole}
+                isTaskLeader={isLeaderOrAdmin}
                 onDelete={handleDeleteVoice}
               />
             ))}
@@ -1043,11 +1053,11 @@ export default function TaskDetails() {
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <h2 className="text-base font-bold text-foreground">
-              Team Leader Notes
+              {getRoleName('tester')} Notes
             </h2>
           </div>
 
-          {canManageVoices && !isEditingNote && (
+          {isLeaderOrAdmin && !isEditingNote && (
             <button
               onClick={() => setIsEditingNote(true)}
               className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer border-none bg-transparent"
@@ -1097,7 +1107,7 @@ export default function TaskDetails() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground italic">
-                No team leader notes provided yet.
+                No {getRoleName('tester').toLowerCase()} notes provided yet.
               </p>
             )}
           </div>
