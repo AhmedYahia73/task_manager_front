@@ -228,9 +228,9 @@ const Leads = () => {
 
       <DataTable
         title="Leads Management"
-        onAdd={() => navigate("/leads/add")}
+        onAdd={() => navigate("add")}
         onDelete={handleDeleteClick}
-        onEdit={(row) => navigate(`/leads/${row.id}/edit`)}
+        onEdit={(row) => navigate(`${row.id}/edit`)}
         columns={columns}
         data={filteredLeads}
         isLoading={isLoading}

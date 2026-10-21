@@ -203,7 +203,7 @@ const WishList = () => {
 
     // ---- Actions ----
     const handleEdit = (row) => {
-        navigate(`/wishlist/${row.id}/edit/`, { state: row });
+        navigate(`${row.id}/edit`, { state: row });
     };
 
     const handleDeleteClick = (row) => {
@@ -252,7 +252,7 @@ const WishList = () => {
 
             <DataTable
                 title="Wish List Management"
-                onAdd={() => navigate("/wishlist/add")}
+                onAdd={() => navigate("add")}
                 columns={columns}
                 data={wish_list}
                 isLoading={isLoading}

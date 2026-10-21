@@ -34,7 +34,7 @@ const Target = () => {
 
     // ---- 1. دالة التعديل (Edit) ----
     const handleEdit = (row) => {
-        navigate(`/target/${row.id}/edit/`, { state: row });
+        navigate(`${row.id}/edit`, { state: row });
     };
 
     // ---- 2. دالة الحذف (Delete) ----
@@ -64,7 +64,7 @@ const Target = () => {
         <div className="w-full max-w-7xl mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
             <DataTable
                 title="Target Management"
-                onAdd={() => navigate("/target/add")}
+                onAdd={() => navigate("add")}
                 columns={columns}
                 data={targetList}
                 isLoading={isLoading}

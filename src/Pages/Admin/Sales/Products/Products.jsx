@@ -26,7 +26,7 @@ const Products = () => {
 
     // ---- 1. Edit ----
     const handleEdit = (row) => {
-        navigate(`/products/${row.id}/edit/`, { state: row });
+        navigate(`${row.id}/edit`, { state: row });
     };
 
     // ---- 2. Delete ----
@@ -56,7 +56,7 @@ const Products = () => {
         <div className="w-full max-w-7xl mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
             <DataTable
                 title="Products Management"
-                onAdd={() => navigate("/products/add")}
+                onAdd={() => navigate("add")}
                 columns={columns}
                 data={productsList}
                 isLoading={isLoading}

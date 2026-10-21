@@ -64,9 +64,9 @@ const VisitStatus = () => {
         <div className="w-full max-w-7xl mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
             <DataTable
                 title="Visit Status Management"
-                onAdd={() => navigate("/visitstatus/add")}
+                onAdd={() => navigate("add")}
                 showActions={true}
-                onEdit={(row) => navigate(`/visitstatus/${row.id}/edit`)}
+                onEdit={(row) => navigate(`${row.id}/edit`)}
                 onDelete={handleDeleteClick}
                 columns={columns}
                 data={visitStatuses}

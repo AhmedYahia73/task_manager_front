@@ -74,7 +74,7 @@ const SalesProjects = () => {
   const handleOpenProjectDashboard = (project) => {
     setActiveSalesProject(project);
     toast.success(`Opening dashboard for ${project.name}`);
-    navigate(`/admin/sales-projects/${project.id}`);
+    navigate(`/admin/sales-projects/${project.id}/dashboard`);
   };
 
   const { mutate, loading: mutationLoading } = useMutation();
@@ -452,7 +452,7 @@ const SalesProjects = () => {
 
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
                             <Users className="w-3 h-3" />
-                            <span>{membersCount} {membersCount === 1 ? 'عضو' : 'أعضاء'}</span>
+                            <span>{membersCount} {membersCount === 1 ? 'member' : 'members'}</span>
                           </span>
                         </div>
 
@@ -721,17 +721,17 @@ const SalesProjects = () => {
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-primary" />
-                    <span>فريق العمل (Team Members)</span>
+                    <span>Team Members</span>
                   </Label>
                   <span className="text-xs text-muted-foreground">
-                    {selectedUserIds.length} محدد
+                    {selectedUserIds.length} selected
                   </span>
                 </div>
 
                 <div className="max-h-48 overflow-y-auto border border-border/70 rounded-2xl p-2.5 space-y-1.5 bg-muted/10">
                   {availableUsers.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-4">
-                      لا يوجد قادة أو مندوبي مبيعات مسجلين حالياً
+                      No sales leaders or reps registered yet
                     </p>
                   ) : (
                     availableUsers.map((u) => {

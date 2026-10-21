@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { isAuthenticated, removeAuthToken, isValidRole } from '@/utils/auth';
 import { LoginPage } from '@/components/LoginPage';
@@ -60,12 +60,19 @@ import { getActiveSalesProjectId } from '@/utils/salesProject';
 // Smart guard for legacy/direct sales URLs:
 // If a sales project is active in storage, redirect to that project's subpath.
 // Otherwise, redirect to /admin/sales-projects (forces selecting a project first).
-const RequireActiveSalesProject = ({ subpath = 'dashboard' }) => {
+const RequireActiveSalesProject = ({ subpath: defaultSubpath }) => {
+  const location = useLocation();
   const activeProjectId = getActiveSalesProjectId();
-  if (activeProjectId) {
-    return <Navigate to={`/admin/sales-projects/${activeProjectId}/${subpath}`} replace />;
+  if (!activeProjectId) {
+    return <Navigate to="/admin/sales-projects" replace />;
   }
-  return <Navigate to="/admin/sales-projects" replace />;
+  let subpath = defaultSubpath;
+  if (!subpath) {
+    subpath = location.pathname.replace(/^\/(admin\/)?/, '');
+    subpath = subpath.replace(/^sales\//, '');
+  }
+  if (!subpath || subpath === 'sales') subpath = 'dashboard';
+  return <Navigate to={`/admin/sales-projects/${activeProjectId}/${subpath}`} replace />;
 };
 
 // Admin Route Wrapper - checks role
@@ -134,7 +141,6 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'projects', element: <Projects /> },
-      { path: 'sales-projects', element: <SalesProjects /> },
       { path: 'projects/:id', element: <ProjectDetails /> },
       { path: 'projects/:projectId/groups/:groupId/tasks', element: <Tasks /> },
       { path: 'projects/:projectId/groups/:groupId/tasks/:taskId', element: <TaskDetails /> },
@@ -196,6 +202,7 @@ export const router = createBrowserRouter([
           { path: 'admins', element: <SalesAdmins /> },
           { path: 'leaders', element: <SalesLeaders /> },
           { path: 'sales', element: <SalesReps /> },
+          { path: '*', element: <Navigate to="dashboard" replace /> },
         ],
       },
 
@@ -203,18 +210,24 @@ export const router = createBrowserRouter([
       { path: 'sales/dashboard', element: <RequireActiveSalesProject subpath="dashboard" /> },
       { path: 'sales/visits', element: <RequireActiveSalesProject subpath="visits" /> },
       { path: 'sales/visits/add', element: <RequireActiveSalesProject subpath="visits/add" /> },
+      { path: 'sales/visits/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'sales/leads', element: <RequireActiveSalesProject subpath="leads" /> },
       { path: 'sales/leads/add', element: <RequireActiveSalesProject subpath="leads/add" /> },
+      { path: 'sales/leads/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'sales/products', element: <RequireActiveSalesProject subpath="products" /> },
       { path: 'sales/products/add', element: <RequireActiveSalesProject subpath="products/add" /> },
+      { path: 'sales/products/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'sales/target', element: <RequireActiveSalesProject subpath="target" /> },
       { path: 'sales/target/add', element: <RequireActiveSalesProject subpath="target/add" /> },
+      { path: 'sales/target/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'sales/wishlist', element: <RequireActiveSalesProject subpath="wishlist" /> },
       { path: 'sales/wishlist/add', element: <RequireActiveSalesProject subpath="wishlist/add" /> },
+      { path: 'sales/wishlist/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'sales/requests', element: <RequireActiveSalesProject subpath="requests" /> },
       { path: 'sales/history-requests', element: <RequireActiveSalesProject subpath="history-requests" /> },
       { path: 'sales/visitstatus', element: <RequireActiveSalesProject subpath="visitstatus" /> },
       { path: 'sales/visitstatus/add', element: <RequireActiveSalesProject subpath="visitstatus/add" /> },
+      { path: 'sales/visitstatus/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'sales/admins', element: <RequireActiveSalesProject subpath="admins" /> },
       { path: 'sales/leaders', element: <RequireActiveSalesProject subpath="leaders" /> },
       { path: 'sales/sales', element: <RequireActiveSalesProject subpath="sales" /> },
@@ -222,20 +235,48 @@ export const router = createBrowserRouter([
       // Direct Aliases with Strict Guards
       { path: 'visits', element: <RequireActiveSalesProject subpath="visits" /> },
       { path: 'visits/add', element: <RequireActiveSalesProject subpath="visits/add" /> },
+      { path: 'visits/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'leads', element: <RequireActiveSalesProject subpath="leads" /> },
       { path: 'leads/add', element: <RequireActiveSalesProject subpath="leads/add" /> },
+      { path: 'leads/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'products', element: <RequireActiveSalesProject subpath="products" /> },
       { path: 'products/add', element: <RequireActiveSalesProject subpath="products/add" /> },
+      { path: 'products/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'target', element: <RequireActiveSalesProject subpath="target" /> },
       { path: 'target/add', element: <RequireActiveSalesProject subpath="target/add" /> },
+      { path: 'target/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'wishlist', element: <RequireActiveSalesProject subpath="wishlist" /> },
       { path: 'wishlist/add', element: <RequireActiveSalesProject subpath="wishlist/add" /> },
+      { path: 'wishlist/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'requests', element: <RequireActiveSalesProject subpath="requests" /> },
       { path: 'history-requests', element: <RequireActiveSalesProject subpath="history-requests" /> },
       { path: 'visitstatus', element: <RequireActiveSalesProject subpath="visitstatus" /> },
       { path: 'visitstatus/add', element: <RequireActiveSalesProject subpath="visitstatus/add" /> },
+      { path: 'visitstatus/:id/edit', element: <RequireActiveSalesProject /> },
     ],
   },
+
+  // Direct Root Aliases for Sales Modules (in case called without /admin)
+  { path: '/visits', element: <RequireActiveSalesProject subpath="visits" /> },
+  { path: '/visits/add', element: <RequireActiveSalesProject subpath="visits/add" /> },
+  { path: '/visits/:id/edit', element: <RequireActiveSalesProject /> },
+  { path: '/leads', element: <RequireActiveSalesProject subpath="leads" /> },
+  { path: '/leads/add', element: <RequireActiveSalesProject subpath="leads/add" /> },
+  { path: '/leads/:id/edit', element: <RequireActiveSalesProject /> },
+  { path: '/products', element: <RequireActiveSalesProject subpath="products" /> },
+  { path: '/products/add', element: <RequireActiveSalesProject subpath="products/add" /> },
+  { path: '/products/:id/edit', element: <RequireActiveSalesProject /> },
+  { path: '/target', element: <RequireActiveSalesProject subpath="target" /> },
+  { path: '/target/add', element: <RequireActiveSalesProject subpath="target/add" /> },
+  { path: '/target/:id/edit', element: <RequireActiveSalesProject /> },
+  { path: '/wishlist', element: <RequireActiveSalesProject subpath="wishlist" /> },
+  { path: '/wishlist/add', element: <RequireActiveSalesProject subpath="wishlist/add" /> },
+  { path: '/wishlist/:id/edit', element: <RequireActiveSalesProject /> },
+  { path: '/requests', element: <RequireActiveSalesProject subpath="requests" /> },
+  { path: '/history-requests', element: <RequireActiveSalesProject subpath="history-requests" /> },
+  { path: '/visitstatus', element: <RequireActiveSalesProject subpath="visitstatus" /> },
+  { path: '/visitstatus/add', element: <RequireActiveSalesProject subpath="visitstatus/add" /> },
+  { path: '/visitstatus/:id/edit', element: <RequireActiveSalesProject /> },
 
   {
     path: '/',
