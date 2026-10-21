@@ -30,7 +30,7 @@ const menuItems = [
 ];
 
 export const Sidebar = ({ isOpen, toggleSidebar }) => {
-  const { data, loading } = useGet('/api/admin/visits/report');
+  const { data, loading } = useGet('/api/admin/sales/visits/report');
   
   // حالة لإدارة فتح وإغلاق قائمة Requests المنسدلة
   const [isRequestsOpen, setIsRequestsOpen] = useState(false);

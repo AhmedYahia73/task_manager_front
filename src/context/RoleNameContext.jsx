@@ -42,8 +42,33 @@ export const RoleNameProvider = ({ children }) => {
 
 export const useRoleNames = () => {
   const context = useContext(RoleNameContext);
-  if (context === undefined) {
-    throw new Error('useRoleNames must be used within a RoleNameProvider');
+  if (!context) {
+    const defaultRoleNames = {
+      user: 'Engineer',
+      leader: 'Tester',
+      admin: 'Admin',
+    };
+    const getRoleName = (backendRole) => {
+      switch (backendRole?.toLowerCase()) {
+        case 'engineer':
+          return defaultRoleNames.user;
+        case 'tester':
+        case 'leader':
+        case 'project_leader':
+          return defaultRoleNames.leader;
+        case 'admin':
+        case 'super_admin':
+          return defaultRoleNames.admin;
+        default:
+          return backendRole || '';
+      }
+    };
+    return {
+      roleNames: defaultRoleNames,
+      getRoleName,
+      getRoleNamePlural: (backendRole) => getRoleName(backendRole) + 's',
+      loading: false,
+    };
   }
   return context;
 };

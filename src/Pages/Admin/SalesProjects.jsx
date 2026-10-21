@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { setActiveSalesProject } from '@/utils/salesProject';
 import {
   Plus,
   Search,
@@ -54,7 +56,7 @@ const SalesProjects = () => {
   // Fetch Sales Projects
   const { data, loading, refresh } = useGet(
     isAllowed
-      ? `/api/admin/sales-projects?page=${page}&limit=12&search=${encodeURIComponent(debouncedSearch)}`
+      ? `/api/admin/sales/projects?page=${page}&limit=12&search=${encodeURIComponent(debouncedSearch)}`
       : null
   );
   const salesProjects = data?.salesProjects || [];
@@ -62,28 +64,17 @@ const SalesProjects = () => {
 
   // Fetch available users for assignment (Admin only)
   const { data: availableUsersData } = useGet(
-    isAdmin ? '/api/admin/sales-projects/available-users' : null
+    isAdmin ? '/api/admin/sales/projects/available-users' : null
   );
   const availableUsers = availableUsersData?.users || [];
 
+  const navigate = useNavigate();
   const [openingProjectId, setOpeningProjectId] = useState(null);
 
-  const handleOpenProjectDashboard = async (project) => {
-    try {
-      setOpeningProjectId(project.id);
-      const res = await apiClient.get(`/api/admin/sales-projects/${project.id}/access-token`);
-      const redirectUrl = res?.data?.data?.redirectUrl;
-      if (redirectUrl) {
-        window.open(redirectUrl, '_blank');
-      } else {
-        toast.error('لم يتم العثور على رابط لوحة التحكم');
-      }
-    } catch (err) {
-      console.error('Failed to get project access token:', err);
-      toast.error(err?.response?.data?.message || 'فشل في فتح لوحة تحكم المشروع');
-    } finally {
-      setOpeningProjectId(null);
-    }
+  const handleOpenProjectDashboard = (project) => {
+    setActiveSalesProject(project);
+    toast.success(`Opening dashboard for ${project.name}`);
+    navigate(`/admin/sales-projects/${project.id}`);
   };
 
   const { mutate, loading: mutationLoading } = useMutation();
@@ -208,8 +199,8 @@ const SalesProjects = () => {
     if (!validateForm()) return;
 
     const url = editingProject
-      ? `/api/admin/sales-projects/${editingProject.id}`
-      : '/api/admin/sales-projects';
+      ? `/api/admin/sales/projects/${editingProject.id}`
+      : '/api/admin/sales/projects';
     const method = editingProject ? 'PUT' : 'POST';
 
     let payload;
@@ -244,7 +235,7 @@ const SalesProjects = () => {
   const confirmDelete = async () => {
     if (!projectToDelete) return;
     const res = await mutate({
-      url: `/api/admin/sales-projects/${projectToDelete.id}`,
+      url: `/api/admin/sales/projects/${projectToDelete.id}`,
       method: 'DELETE',
     });
     if (res?.success) {

@@ -18,13 +18,13 @@ const DEFAULT_DAYS = {
 };
 
 const DAY_NAMES = [
-  { key: 'sunday', label: 'الأحد' },
-  { key: 'monday', label: 'الإثنين' },
-  { key: 'tuesday', label: 'الثلاثاء' },
-  { key: 'wednesday', label: 'الأربعاء' },
-  { key: 'thursday', label: 'الخميس' },
-  { key: 'friday', label: 'الجمعة' },
-  { key: 'saturday', label: 'السبت' },
+  { key: 'sunday', label: 'Sunday' },
+  { key: 'monday', label: 'Monday' },
+  { key: 'tuesday', label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday', label: 'Thursday' },
+  { key: 'friday', label: 'Friday' },
+  { key: 'saturday', label: 'Saturday' },
 ];
 
 const Shifts = () => {
@@ -51,16 +51,18 @@ const Shifts = () => {
 
   const openEditModal = (shift) => {
     setEditingId(shift.id);
-    let parsedDays = JSON.parse(JSON.stringify(DEFAULT_DAYS));
+    let parsedDays = DEFAULT_DAYS;
     if (shift.days) {
-      const dbDays = typeof shift.days === 'string' ? JSON.parse(shift.days) : shift.days;
-      parsedDays = { ...parsedDays, ...dbDays };
+      try {
+        parsedDays = typeof shift.days === 'string' ? JSON.parse(shift.days) : shift.days;
+      } catch {
+        parsedDays = DEFAULT_DAYS;
+      }
     }
-    
     setFormData({
       name: shift.name,
       zone_id: shift.zone_id,
-      days: parsedDays
+      days: { ...DEFAULT_DAYS, ...parsedDays }
     });
     setIsModalOpen(true);
   };
@@ -115,30 +117,30 @@ const Shifts = () => {
   };
 
   return (
-    <div className="p-6 md:p-8 space-y-8 bg-gradient-to-br from-background to-muted/20 min-h-screen text-foreground" dir="rtl">
+    <div className="p-6 md:p-8 space-y-8 bg-gradient-to-br from-background to-muted/20 min-h-screen text-foreground">
       {/* Header */}
       <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
         <div>
           <h1 className="text-3xl font-black font-['Plus_Jakarta_Sans'] tracking-tight flex items-center gap-3">
-            <Clock className="w-8 h-8 text-primary" /> نظام الورديات
+            <Clock className="w-8 h-8 text-primary" /> Shifts Management
           </h1>
-          <p className="text-muted-foreground mt-1">إدارة الورديات وتحديد أوقات الدوام لكل يوم بشكل مستقل.</p>
+          <p className="text-muted-foreground mt-1">Manage shifts and configure daily working hours independently.</p>
         </div>
         <Button onClick={openAddModal} className="flex items-center gap-2 font-semibold shadow-md">
-          <Plus className="w-4 h-4" /> إضافة وردية
+          <Plus className="w-4 h-4" /> Add Shift
         </Button>
       </div>
 
       {/* Table */}
       <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-right text-sm">
+          <table className="w-full text-left text-sm">
             <thead className="bg-muted/50 text-muted-foreground border-b">
               <tr>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">اسم الوردية</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">المنطقة (Zone)</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">الجدول</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-left">إجراءات</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Shift Name</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Zone</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Schedule</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -146,13 +148,13 @@ const Shifts = () => {
                 <tr>
                   <td colSpan="4" className="px-6 py-12 text-center text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    جاري تحميل الورديات...
+                    Loading shifts...
                   </td>
                 </tr>
               ) : shiftsList.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="px-6 py-12 text-center text-muted-foreground">
-                    لا توجد ورديات حتى الآن. قم بإنشاء وردية جديدة.
+                    No shifts found yet. Create your first shift.
                   </td>
                 </tr>
               ) : (
@@ -164,7 +166,7 @@ const Shifts = () => {
                       <div className="flex flex-wrap gap-2">
                         {(() => {
                           const days = typeof shift.days === 'string' ? JSON.parse(shift.days) : shift.days;
-                          if (!days) return <span className="text-muted-foreground text-xs">غير محدد</span>;
+                          if (!days) return <span className="text-muted-foreground text-xs">Unspecified</span>;
                           return DAY_NAMES.filter(d => days[d.key]?.active).map(d => (
                             <span key={d.key} className="px-2 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-md border border-primary/20">
                               {d.label} ({days[d.key].from} - {days[d.key].to})
@@ -173,7 +175,7 @@ const Shifts = () => {
                         })()}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-left space-x-2 space-x-reverse">
+                    <td className="px-6 py-4 text-right space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => openEditModal(shift)} className="text-slate-500 hover:text-primary">
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -191,12 +193,12 @@ const Shifts = () => {
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto" dir="rtl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-card w-full max-w-2xl rounded-2xl shadow-2xl border flex flex-col my-8 max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b bg-muted/30 sticky top-0 z-10">
               <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] text-foreground flex items-center gap-2">
                 <CalendarDays className="w-5 h-5 text-primary" /> 
-                {editingId ? 'تعديل الوردية' : 'إضافة وردية جديدة'}
+                {editingId ? 'Edit Shift' : 'Add New Shift'}
               </h2>
               <Button variant="ghost" size="icon" onClick={closeModal} className="rounded-full hover:bg-destructive/10 hover:text-destructive">
                 <X className="w-5 h-5" />
@@ -206,25 +208,25 @@ const Shifts = () => {
             <form onSubmit={handleSubmit} className="p-6 space-y-8 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">اسم الوردية *</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Shift Name *</label>
                   <Input 
                     required 
                     value={formData.name} 
                     onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                    placeholder="مثال: الوردية الصباحية"
+                    placeholder="e.g. Morning Shift"
                     className="h-11"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">المنطقة الجغرافية (Zone) *</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Zone *</label>
                   <select 
                     required 
                     value={formData.zone_id} 
                     onChange={e => setFormData({ ...formData, zone_id: e.target.value })} 
                     className="flex w-full h-11 items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                   >
-                    <option value="" disabled>اختر المنطقة</option>
+                    <option value="" disabled>Select Zone</option>
                     {zonesList.map(zone => (
                       <option key={zone.id} value={zone.id}>{zone.name}</option>
                     ))}
@@ -233,7 +235,7 @@ const Shifts = () => {
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-lg font-bold border-b pb-2">أيام العمل وساعات الدوام</h3>
+                <h3 className="text-lg font-bold border-b pb-2">Working Days & Hours</h3>
                 <div className="space-y-3">
                   {DAY_NAMES.map((day) => {
                     const dayData = formData.days[day.key];
@@ -249,7 +251,7 @@ const Shifts = () => {
                         
                         <div className="flex items-center gap-3 w-full sm:w-2/3">
                           <div className="flex-1 flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground w-10">من:</span>
+                            <span className="text-sm text-muted-foreground w-12">From:</span>
                             <Input 
                               type="time" 
                               required={dayData.active}
@@ -260,7 +262,7 @@ const Shifts = () => {
                             />
                           </div>
                           <div className="flex-1 flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground w-10">إلى:</span>
+                            <span className="text-sm text-muted-foreground w-12">To:</span>
                             <Input 
                               type="time" 
                               required={dayData.active}
@@ -278,10 +280,10 @@ const Shifts = () => {
               </div>
 
               <div className="pt-4 flex justify-end gap-3 sticky bottom-0 bg-card py-4 border-t mt-0">
-                <Button type="button" variant="outline" onClick={closeModal} className="px-6">إلغاء</Button>
+                <Button type="button" variant="outline" onClick={closeModal} className="px-6">Cancel</Button>
                 <Button type="submit" disabled={mutationLoading} className="px-8 shadow-md">
                   {mutationLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? 'حفظ التعديلات' : 'إنشاء الوردية'}
+                  {editingId ? 'Save Changes' : 'Create Shift'}
                 </Button>
               </div>
             </form>

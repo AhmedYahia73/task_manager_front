@@ -37,7 +37,36 @@ import SalesProjects from '@/Pages/Admin/SalesProjects';
 import SalesAdmins from '@/Pages/Admin/Sales/SalesAdmins';
 import SalesLeaders from '@/Pages/Admin/Sales/SalesLeaders';
 import SalesReps from '@/Pages/Admin/Sales/SalesReps';
+import SalesDashboard from '@/Pages/Admin/Sales/SalesDashboard';
+import Visits from '@/Pages/Admin/Sales/Visits/Visits';
+import VisitsAdd from '@/Pages/Admin/Sales/Visits/VisitsAdd';
+import Leads from '@/Pages/Admin/Sales/Leads/Leads';
+import LeadsAdd from '@/Pages/Admin/Sales/Leads/LeadsAdd';
+import Products from '@/Pages/Admin/Sales/Products/Products';
+import ProductsAdd from '@/Pages/Admin/Sales/Products/ProductsAdd';
+import Target from '@/Pages/Admin/Sales/Target/Target';
+import TargetAdd from '@/Pages/Admin/Sales/Target/TargetAdd';
+import WishList from '@/Pages/Admin/Sales/WishList/WishList';
+import WishListAdd from '@/Pages/Admin/Sales/WishList/WishListAdd';
+import PendingRequests from '@/Pages/Admin/Sales/StatusRequests/Requests';
+import HistoryRequests from '@/Pages/Admin/Sales/StatusRequests/HistoryRequests';
+import VisitStatus from '@/Pages/Admin/Sales/VisitStatus/VisitStatus';
+import VisitStatusAdd from '@/Pages/Admin/Sales/VisitStatus/VisitStatusAdd';
 
+
+import { SalesProjectWorkspaceLayout } from '@/layouts/SalesProjectWorkspaceLayout';
+import { getActiveSalesProjectId } from '@/utils/salesProject';
+
+// Smart guard for legacy/direct sales URLs:
+// If a sales project is active in storage, redirect to that project's subpath.
+// Otherwise, redirect to /admin/sales-projects (forces selecting a project first).
+const RequireActiveSalesProject = ({ subpath = 'dashboard' }) => {
+  const activeProjectId = getActiveSalesProjectId();
+  if (activeProjectId) {
+    return <Navigate to={`/admin/sales-projects/${activeProjectId}/${subpath}`} replace />;
+  }
+  return <Navigate to="/admin/sales-projects" replace />;
+};
 
 // Admin Route Wrapper - checks role
 const AdminRoute = ({ children }) => {
@@ -134,10 +163,77 @@ export const router = createBrowserRouter([
       { path: 'jobs', element: <Jobs /> },
       { path: 'qualifications', element: <Qualifications /> },
       { path: 'applications', element: <ApplicationsList /> },
+      // Main Sales Projects Directory
       { path: 'sales-projects', element: <SalesProjects /> },
-      { path: 'sales/admins', element: <SalesAdmins /> },
-      { path: 'sales/leaders', element: <SalesLeaders /> },
-      { path: 'sales/sales', element: <SalesReps /> },
+
+      // Scoped Sales Project Workspace Layout
+      {
+        path: 'sales-projects/:projectId',
+        element: <SalesProjectWorkspaceLayout />,
+        children: [
+          { index: true, element: <SalesDashboard /> },
+          { path: 'dashboard', element: <SalesDashboard /> },
+          { path: 'visits', element: <Visits /> },
+          { path: 'visits/add', element: <VisitsAdd /> },
+          { path: 'visits/:id/edit', element: <VisitsAdd /> },
+          { path: 'leads', element: <Leads /> },
+          { path: 'leads/add', element: <LeadsAdd /> },
+          { path: 'leads/:id/edit', element: <LeadsAdd /> },
+          { path: 'products', element: <Products /> },
+          { path: 'products/add', element: <ProductsAdd /> },
+          { path: 'products/:id/edit', element: <ProductsAdd /> },
+          { path: 'target', element: <Target /> },
+          { path: 'target/add', element: <TargetAdd /> },
+          { path: 'target/:id/edit', element: <TargetAdd /> },
+          { path: 'wishlist', element: <WishList /> },
+          { path: 'wishlist/add', element: <WishListAdd /> },
+          { path: 'wishlist/:id/edit', element: <WishListAdd /> },
+          { path: 'requests', element: <PendingRequests /> },
+          { path: 'history-requests', element: <HistoryRequests /> },
+          { path: 'visitstatus', element: <VisitStatus /> },
+          { path: 'visitstatus/add', element: <VisitStatusAdd /> },
+          { path: 'visitstatus/:id/edit', element: <VisitStatusAdd /> },
+          { path: 'admins', element: <SalesAdmins /> },
+          { path: 'leaders', element: <SalesLeaders /> },
+          { path: 'sales', element: <SalesReps /> },
+        ],
+      },
+
+      // Strict Guards for legacy/direct sales routes (Forces project selection)
+      { path: 'sales/dashboard', element: <RequireActiveSalesProject subpath="dashboard" /> },
+      { path: 'sales/visits', element: <RequireActiveSalesProject subpath="visits" /> },
+      { path: 'sales/visits/add', element: <RequireActiveSalesProject subpath="visits/add" /> },
+      { path: 'sales/leads', element: <RequireActiveSalesProject subpath="leads" /> },
+      { path: 'sales/leads/add', element: <RequireActiveSalesProject subpath="leads/add" /> },
+      { path: 'sales/products', element: <RequireActiveSalesProject subpath="products" /> },
+      { path: 'sales/products/add', element: <RequireActiveSalesProject subpath="products/add" /> },
+      { path: 'sales/target', element: <RequireActiveSalesProject subpath="target" /> },
+      { path: 'sales/target/add', element: <RequireActiveSalesProject subpath="target/add" /> },
+      { path: 'sales/wishlist', element: <RequireActiveSalesProject subpath="wishlist" /> },
+      { path: 'sales/wishlist/add', element: <RequireActiveSalesProject subpath="wishlist/add" /> },
+      { path: 'sales/requests', element: <RequireActiveSalesProject subpath="requests" /> },
+      { path: 'sales/history-requests', element: <RequireActiveSalesProject subpath="history-requests" /> },
+      { path: 'sales/visitstatus', element: <RequireActiveSalesProject subpath="visitstatus" /> },
+      { path: 'sales/visitstatus/add', element: <RequireActiveSalesProject subpath="visitstatus/add" /> },
+      { path: 'sales/admins', element: <RequireActiveSalesProject subpath="admins" /> },
+      { path: 'sales/leaders', element: <RequireActiveSalesProject subpath="leaders" /> },
+      { path: 'sales/sales', element: <RequireActiveSalesProject subpath="sales" /> },
+
+      // Direct Aliases with Strict Guards
+      { path: 'visits', element: <RequireActiveSalesProject subpath="visits" /> },
+      { path: 'visits/add', element: <RequireActiveSalesProject subpath="visits/add" /> },
+      { path: 'leads', element: <RequireActiveSalesProject subpath="leads" /> },
+      { path: 'leads/add', element: <RequireActiveSalesProject subpath="leads/add" /> },
+      { path: 'products', element: <RequireActiveSalesProject subpath="products" /> },
+      { path: 'products/add', element: <RequireActiveSalesProject subpath="products/add" /> },
+      { path: 'target', element: <RequireActiveSalesProject subpath="target" /> },
+      { path: 'target/add', element: <RequireActiveSalesProject subpath="target/add" /> },
+      { path: 'wishlist', element: <RequireActiveSalesProject subpath="wishlist" /> },
+      { path: 'wishlist/add', element: <RequireActiveSalesProject subpath="wishlist/add" /> },
+      { path: 'requests', element: <RequireActiveSalesProject subpath="requests" /> },
+      { path: 'history-requests', element: <RequireActiveSalesProject subpath="history-requests" /> },
+      { path: 'visitstatus', element: <RequireActiveSalesProject subpath="visitstatus" /> },
+      { path: 'visitstatus/add', element: <RequireActiveSalesProject subpath="visitstatus/add" /> },
     ],
   },
 

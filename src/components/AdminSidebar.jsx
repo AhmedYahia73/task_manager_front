@@ -4,6 +4,7 @@ import { removeAuthToken, isAdminRole } from '@/utils/auth';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { useMutation } from '@/hooks/useMutation';
+import { getActiveSalesProject } from '@/utils/salesProject';
 
 export const AdminSidebar = ({ isOpen, onClose }) => {
   const { getRoleNamePlural } = useRoleNames();
@@ -17,7 +18,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const [isHrmOpen, setIsHrmOpen] = useState(false);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
-  const [isSalesOpen, setIsSalesOpen] = useState(false);
+  const activeSalesProject = getActiveSalesProject();
 
   const { mutate } = useMutation();
 
@@ -53,17 +54,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         {[
           { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
-          { 
-            name: 'Sales', 
-            icon: 'point_of_sale', 
-            adminOrLeaderOrSales: true,
-            subItems: [
-              { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront' },
-              { name: 'Admins', path: '/admin/sales/admins', icon: 'admin_panel_settings', adminOnly: true },
-              { name: 'Leaders', path: '/admin/sales/leaders', icon: 'supervisor_account', adminOnly: true },
-              { name: 'Sales', path: '/admin/sales/sales', icon: 'badge', adminOnly: true },
-            ]
-          },
+          { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront', adminOrLeaderOrSales: true },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true },
           { 
@@ -167,17 +158,44 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
           }
 
           return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-              }
-              onClick={onClose}
-            >
-              <span className="material-symbols-outlined">{item.icon}</span>
-              <span className="admin-sidebar__link-text">{item.name}</span>
-            </NavLink>
+            <React.Fragment key={item.path}>
+              <NavLink
+                to={item.path}
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+                onClick={onClose}
+              >
+                <span className="material-symbols-outlined">{item.icon}</span>
+                <span className="admin-sidebar__link-text">{item.name}</span>
+              </NavLink>
+              {item.name === 'Sales Projects' && activeSalesProject?.id && (
+                <NavLink
+                  to={`/admin/sales-projects/${activeSalesProject.id}/dashboard`}
+                  className={({ isActive }) =>
+                    `flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 mx-3 mb-1 ${
+                      isActive ? 'ring-1 ring-primary/40 bg-primary/15' : ''
+                    }`
+                  }
+                  onClick={onClose}
+                  title={`Active Project: ${activeSalesProject.name}`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {activeSalesProject.logo ? (
+                      <img
+                        src={activeSalesProject.logo}
+                        alt={activeSalesProject.name}
+                        className="w-3.5 h-3.5 object-contain rounded bg-background p-0.5"
+                      />
+                    ) : (
+                      <span className="material-symbols-outlined text-[14px]">storefront</span>
+                    )}
+                    <span className="truncate">{activeSalesProject.name}</span>
+                  </div>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                </NavLink>
+              )}
+            </React.Fragment>
           );
         })}
       </nav>
