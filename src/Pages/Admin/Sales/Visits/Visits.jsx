@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { DataTable } from "@/components/DataTable";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { useGet } from "@/hooks/useGet";
@@ -26,6 +26,7 @@ const statusColors = {
 
 const Visits = () => {
     const navigate = useNavigate();
+    const { projectId } = useParams();
 
     // ---- Filter, Search & Pagination States ----
     const [page, setPage] = useState(1);
@@ -103,7 +104,7 @@ const Visits = () => {
 
     // ---- Get Visits Data ----
     const { data: response, loading: isLoading, refresh } = useGet(visitsApiUrl);
-    const visits = response?.data?.allVisits || [];
+    const visits = response?.data?.allVisits || response?.allVisits || response?.data || (Array.isArray(response) ? response : []);
     
     // استخراج بيانات الـ Pagination من الـ Response
     const paginationData = response?.data?.pagination || response?.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 };
@@ -532,9 +533,9 @@ const Visits = () => {
 
             <DataTable
                 title="Visits Management"
-                onAdd={() => navigate("add")}
+                onAdd={() => navigate(projectId ? `/admin/sales-projects/${projectId}/visits/add` : "add")}
                 onDelete={handleDeleteClick}
-                onEdit={(row) => navigate(`${row.id}/edit`)}
+                onEdit={(row) => navigate(projectId ? `/admin/sales-projects/${projectId}/visits/${row.id}/edit` : `${row.id}/edit`, { state: { visitData: row } })}
                 columns={columns}
                 data={visits}
                 isLoading={isLoading}

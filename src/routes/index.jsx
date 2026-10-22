@@ -199,7 +199,7 @@ export const router = createBrowserRouter([
           { path: 'visitstatus', element: <VisitStatus /> },
           { path: 'visitstatus/add', element: <VisitStatusAdd /> },
           { path: 'visitstatus/:id/edit', element: <VisitStatusAdd /> },
-          { path: 'admins', element: <SalesAdmins /> },
+          { path: 'admins', element: <Navigate to="../dashboard" replace /> },
           { path: 'leaders', element: <SalesLeaders /> },
           { path: 'sales', element: <SalesReps /> },
           { path: '*', element: <Navigate to="dashboard" replace /> },
@@ -228,7 +228,6 @@ export const router = createBrowserRouter([
       { path: 'sales/visitstatus', element: <RequireActiveSalesProject subpath="visitstatus" /> },
       { path: 'sales/visitstatus/add', element: <RequireActiveSalesProject subpath="visitstatus/add" /> },
       { path: 'sales/visitstatus/:id/edit', element: <RequireActiveSalesProject /> },
-      { path: 'sales/admins', element: <RequireActiveSalesProject subpath="admins" /> },
       { path: 'sales/leaders', element: <RequireActiveSalesProject subpath="leaders" /> },
       { path: 'sales/sales', element: <RequireActiveSalesProject subpath="sales" /> },
 

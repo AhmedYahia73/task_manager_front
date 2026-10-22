@@ -66,6 +66,21 @@ const VisitsAdd = () => {
     productsRes?.data?.products ||
     [];
 
+  const statusItems = React.useMemo(() => {
+    return statusList.map((s) => ({
+      value: s.id && s.id.trim() !== "" ? String(s.id) : (s.name || "status"),
+      label: s.name,
+    }));
+  }, [statusList]);
+
+  const salesItems = React.useMemo(() => {
+    return salesList.map((s) => ({ value: String(s.id), label: s.name }));
+  }, [salesList]);
+
+  const productsItems = React.useMemo(() => {
+    return productsList.map((p) => ({ value: String(p.id), label: p.name }));
+  }, [productsList]);
+
   const { data: visitResponse, loading: isFetching } = useGet(
     isEdit ? `/api/admin/sales/visits/${id}` : null,
     isEdit && !state?.visitData,
@@ -174,7 +189,11 @@ const VisitsAdd = () => {
         const watchedStatusId = watch("status_id");
         const watchedProducts = watch("products") || [];
 
-        const selectedStatus = statusList.find((s) => String(s.id) === String(watchedStatusId));
+        const selectedStatus = statusList.find(
+          (s) =>
+            (s.id && String(s.id) === String(watchedStatusId)) ||
+            (s.name && String(s.name) === String(watchedStatusId))
+        );
         const statusNameLower = selectedStatus?.name?.toLowerCase() || "";
         const isSales =
           statusNameLower === "sales" ||
@@ -280,24 +299,24 @@ const VisitsAdd = () => {
                     rules={{ required: "Status field is required" }}
                     render={({ field }) => (
                       <Select
-                        value={field.value ? String(field.value) : ""}
+                        items={statusItems}
+                        value={field.value ? String(field.value) : null}
                         onValueChange={(val) => {
-                          field.onChange(val);
+                          field.onChange(val || "");
                         }}
                       >
                         <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
-                          <SelectValue placeholder="Select Status">
-                            {field.value
-                              ? (statusList.find((s) => String(s.id) === String(field.value))?.name || field.value)
-                              : undefined}
-                          </SelectValue>
+                          <SelectValue placeholder="Select Status" />
                         </SelectTrigger>
                         <SelectContent className="z-50 bg-white">
-                          {statusList.map((s) => (
-                            <SelectItem key={s.id} value={String(s.id)}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
+                          {statusList.map((s) => {
+                            const val = s.id && String(s.id).trim() !== "" ? String(s.id) : (s.name || "status");
+                            return (
+                              <SelectItem key={val} value={val}>
+                                {s.name}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     )}
@@ -318,17 +337,14 @@ const VisitsAdd = () => {
                     rules={{ required: "Sales field is required" }}
                     render={({ field }) => (
                       <Select
-                        value={field.value ? String(field.value) : ""}
+                        items={salesItems}
+                        value={field.value ? String(field.value) : null}
                         onValueChange={(val) => {
-                          field.onChange(val);
+                          field.onChange(val || "");
                         }}
                       >
                         <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
-                          <SelectValue placeholder="Select Sales">
-                            {field.value
-                              ? (salesList.find((s) => String(s.id) === String(field.value))?.name || field.value)
-                              : undefined}
-                          </SelectValue>
+                          <SelectValue placeholder="Select Sales" />
                         </SelectTrigger>
                         <SelectContent className="z-50 bg-white">
                           {salesList.map((s) => (
@@ -395,18 +411,15 @@ const VisitsAdd = () => {
                             rules={{ required: "Product is required" }}
                             render={({ field }) => (
                               <Select
-                                value={field.value ? String(field.value) : ""}
+                                items={productsItems}
+                                value={field.value ? String(field.value) : null}
                                 onValueChange={(val) => {
-                                  field.onChange(val);
+                                  field.onChange(val || "");
                                   setValue(`products.${index}.duration`, "");
                                 }}
                               >
                                 <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
-                                  <SelectValue placeholder="Select Product">
-                                    {field.value
-                                      ? (productsList.find((p) => String(p.id) === String(field.value))?.name || field.value)
-                                      : undefined}
-                                  </SelectValue>
+                                  <SelectValue placeholder="Select Product" />
                                 </SelectTrigger>
                                 <SelectContent className="z-50 bg-white">
                                   {productsList.map((p) => (
@@ -436,16 +449,14 @@ const VisitsAdd = () => {
                             rules={{ required: "Duration is required" }}
                             render={({ field }) => (
                               <Select
-                                value={field.value || ""}
+                                value={field.value || null}
                                 disabled={!currentProductId || availableDurations.length === 0}
                                 onValueChange={(val) => {
-                                  field.onChange(val);
+                                  field.onChange(val || "");
                                 }}
                               >
                                 <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
-                                  <SelectValue placeholder={!currentProductId ? "Select product first" : availableDurations.length === 0 ? "No durations" : "Select Duration"}>
-                                    {field.value || undefined}
-                                  </SelectValue>
+                                  <SelectValue placeholder={!currentProductId ? "Select product first" : availableDurations.length === 0 ? "No durations" : "Select Duration"} />
                                 </SelectTrigger>
                                 <SelectContent className="z-50 bg-white">
                                   {availableDurations.map((d) => (

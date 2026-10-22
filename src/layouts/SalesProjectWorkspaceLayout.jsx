@@ -133,7 +133,6 @@ export const SalesProjectWorkspaceLayout = () => {
     { label: 'Wishlist', path: `/admin/sales-projects/${projectId}/wishlist`, icon: Heart },
     { label: 'Status Requests', path: `/admin/sales-projects/${projectId}/requests`, icon: GitPullRequest },
     { label: 'Visit Statuses', path: `/admin/sales-projects/${projectId}/visitstatus`, icon: SlidersHorizontal },
-    { label: 'Sales Admins', path: `/admin/sales-projects/${projectId}/admins`, icon: ShieldCheck },
     { label: 'Sales Leaders', path: `/admin/sales-projects/${projectId}/leaders`, icon: Briefcase },
     { label: 'Sales Reps', path: `/admin/sales-projects/${projectId}/sales`, icon: UserCheck },
   ];

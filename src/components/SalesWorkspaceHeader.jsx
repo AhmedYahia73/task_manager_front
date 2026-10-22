@@ -36,7 +36,6 @@ export const SalesWorkspaceHeader = ({ title, subtitle, extraAction }) => {
     { label: 'Wishlist', path: projectId ? `/admin/sales-projects/${projectId}/wishlist` : '/admin/sales/wishlist', icon: Heart },
     { label: 'Status Requests', path: projectId ? `/admin/sales-projects/${projectId}/requests` : '/admin/sales/requests', icon: GitPullRequest },
     { label: 'Visit Statuses', path: projectId ? `/admin/sales-projects/${projectId}/visitstatus` : '/admin/sales/visitstatus', icon: SlidersHorizontal },
-    { label: 'Sales Admins', path: projectId ? `/admin/sales-projects/${projectId}/admins` : '/admin/sales/admins', icon: ShieldCheck },
     { label: 'Sales Leaders', path: projectId ? `/admin/sales-projects/${projectId}/leaders` : '/admin/sales/leaders', icon: Briefcase },
     { label: 'Sales Reps', path: projectId ? `/admin/sales-projects/${projectId}/sales` : '/admin/sales/sales', icon: UserCheck },
   ];
