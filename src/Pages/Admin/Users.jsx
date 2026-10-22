@@ -34,6 +34,7 @@ const Users = () => {
   const zonesList = listsData?.zones || [];
   const shiftsList = listsData?.shifts || [];
   const departmentsList = listsData?.departments || [];
+  const jobsList = listsData?.jobs || listsData?.jobs_list || [];
   
   const { data, loading, refresh } = useGet(`/api/admin/user?page=${page}&limit=10&search=${debouncedSearch}${roleFilter ? `&role=${roleFilter}` : ''}`);
   const { mutate, loading: mutationLoading } = useMutation();
@@ -59,6 +60,7 @@ const Users = () => {
     zone_id: '',
     shift_id: '',
     department_id: '',
+    job_id: '',
     image: null,
   });
 
@@ -79,12 +81,13 @@ const Users = () => {
         zone_id: userItem.zone_id || '',
         shift_id: userItem.shift_id || '',
         department_id: userItem.department_id || '',
+        job_id: userItem.job_id || userItem.job?.id || '',
       });
       setImagePreview(userItem.image || null);
       setSelectedImageFile(null);
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', whatsapp: '', password: '', status: 'active', yearly_holidays: false, zone_id: '', shift_id: '', department_id: '' });
+      setFormData({ name: '', email: '', phone: '', whatsapp: '', password: '', status: 'active', yearly_holidays: false, zone_id: '', shift_id: '', department_id: '', job_id: '' });
       setImagePreview(null);
       setSelectedImageFile(null);
     }
@@ -150,6 +153,7 @@ const Users = () => {
     if (formData.zone_id) data.append('zone_id', formData.zone_id);
     if (formData.shift_id) data.append('shift_id', formData.shift_id);
     if (formData.department_id) data.append('department_id', formData.department_id);
+    data.append('job_id', formData.job_id || '');
 
     if (selectedImageFile) {
       data.append('image', selectedImageFile);
@@ -218,6 +222,7 @@ const Users = () => {
               <tr>
                 <th className="px-6 py-4">{getRoleName('engineer').toUpperCase()}</th>
                 <th className="px-6 py-4">CONTACT</th>
+                <th className="px-6 py-4">JOB</th>
                 <th className="px-6 py-4">DEPARTMENT</th>
                 <th className="px-6 py-4">STATUS</th>
                 <th className="px-6 py-4">PROGRESS</th>
@@ -227,13 +232,13 @@ const Users = () => {
             <tbody className="divide-y divide-[#edeeef]">
               {loading && usersList.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center">
+                  <td colSpan="7" className="px-6 py-8 text-center">
                     <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
                   </td>
                 </tr>
               ) : usersList.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-muted-foreground">
+                  <td colSpan="7" className="px-6 py-8 text-center text-muted-foreground">
                     No users found.
                   </td>
                 </tr>
@@ -276,6 +281,15 @@ const Users = () => {
                           </a>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        userItem.job?.name || userItem.job_name
+                          ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' 
+                          : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                      }`}>
+                        {userItem.job?.name || userItem.job_name || 'No Job'}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -462,6 +476,21 @@ const Users = () => {
                     <option value="" disabled>Select Department</option>
                     {departmentsList.filter(dep => dep.zone_id === formData.zone_id).map(dep => (
                       <option key={dep.id} value={dep.id}>{dep.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Job</label>
+                  <select 
+                    name="job_id" 
+                    value={formData.job_id} 
+                    onChange={handleInputChange}
+                    className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Select Job (Optional)</option>
+                    {jobsList.map(job => (
+                      <option key={job.id} value={job.id}>{job.name}</option>
                     ))}
                   </select>
                 </div>
