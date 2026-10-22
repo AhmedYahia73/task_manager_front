@@ -7,6 +7,7 @@ import { useMutation } from "@/hooks/useMutation";
 import { MapPin, StickyNote, Search, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { brandConfig } from "@/utils/brand";
+import { getCurrentUser, isSalesRole } from "@/utils/auth";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,8 @@ const statusColors = {
 const Visits = () => {
     const navigate = useNavigate();
     const { projectId } = useParams();
+    const currentUser = getCurrentUser();
+    const isSales = isSalesRole(currentUser?.role);
 
     // ---- Filter, Search & Pagination States ----
     const [page, setPage] = useState(1);
@@ -343,6 +346,14 @@ const Visits = () => {
                 const currentSales = salesList.find((s) => s.name === row.sales);
                 const currentSalesId = currentSales ? currentSales.id : row.sales_id || "";
 
+                if (isSales) {
+                    return (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-muted/60 text-foreground border border-border/50">
+                            {row.sales || currentSales?.name || "-"}
+                        </span>
+                    );
+                }
+
                 return (
                     <select
                         className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-white cursor-pointer focus:ring-2 focus:ring-offset-1 transition-colors text-gray-800"
@@ -461,8 +472,9 @@ const Visits = () => {
                     </div>
 
                     {/* Controls Section: Filter & Search */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-white dark:bg-zinc-900 p-3.5 sm:p-4 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-xs">
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 ${isSales ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-3 bg-white dark:bg-zinc-900 p-3.5 sm:p-4 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-xs`}>
                         {/* Sales Filter */}
+                        {!isSales && (
                         <div className="flex flex-col gap-1.5">
                             <label htmlFor="sales-filter" className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
                                 Filter by Sales:
@@ -481,6 +493,7 @@ const Visits = () => {
                                 ))}
                             </select>
                         </div>
+                        )}
 
                         {/* Status Filter */}
                         <div className="flex flex-col gap-1.5">
