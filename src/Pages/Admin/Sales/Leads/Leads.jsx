@@ -46,6 +46,17 @@ const Leads = () => {
   const visitStatusList =
     listsResponse?.visit_status || listsResponse?.data?.visit_status || [];
 
+  const statusItems = React.useMemo(() => {
+    return visitStatusList.map((st) => ({
+      value: String(st.id),
+      label: st.name,
+    }));
+  }, [visitStatusList]);
+
+  const selectedStatus = React.useMemo(() => {
+    return visitStatusList.find((st) => String(st.id) === String(selectedStatusId));
+  }, [visitStatusList, selectedStatusId]);
+
   const filteredLeads = selectedSalesFilter
     ? allLeads.filter((l) => l.sales_id === selectedSalesFilter)
     : allLeads;
@@ -280,13 +291,16 @@ const Leads = () => {
                 Visit Status *
               </label>
               <Select
-                value={selectedStatusId || ""}
-                onValueChange={(val) => setSelectedStatusId(val)}
+                items={statusItems}
+                value={selectedStatusId ? String(selectedStatusId) : null}
+                onValueChange={(val) => setSelectedStatusId(val || "")}
               >
                 <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border border-gray-300">
-                  <SelectValue placeholder="Select Visit Status" />
+                  <SelectValue placeholder="Select Visit Status">
+                    {selectedStatus?.name}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-50 bg-white">
                   {visitStatusList.map((st) => (
                     <SelectItem key={st.id} value={String(st.id)}>
                       {st.name}

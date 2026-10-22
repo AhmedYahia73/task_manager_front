@@ -68,6 +68,17 @@ const WishList = () => {
     const { data: listsResponse } = useGet("/api/admin/sales/wish_list/lists");
     const visitStatusList =
         listsResponse?.visit_status || listsResponse?.data?.visit_status || [];
+
+    const statusItems = React.useMemo(() => {
+        return visitStatusList.map((st) => ({
+            value: String(st.id),
+            label: st.name,
+        }));
+    }, [visitStatusList]);
+
+    const selectedConvertStatus = React.useMemo(() => {
+        return visitStatusList.find((st) => String(st.id) === String(convertForm.status_id));
+    }, [visitStatusList, convertForm.status_id]);
     const productsList =
         listsResponse?.products || listsResponse?.data?.products || [];
 
@@ -355,16 +366,19 @@ const WishList = () => {
                             <div className="space-y-1.5">
                                 <Label className="text-sm font-medium">Visit Status *</Label>
                                 <Select
-                                    value={convertForm.status_id || ""}
+                                    items={statusItems}
+                                    value={convertForm.status_id ? String(convertForm.status_id) : null}
                                     onValueChange={(val) =>
                                         setConvertForm((prev) => ({
                                             ...prev,
-                                            status_id: val,
+                                            status_id: val || "",
                                         }))
                                     }
                                 >
                                     <SelectTrigger className="w-full border border-gray-300 rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white h-10">
-                                        <SelectValue placeholder="Select Visit Status" />
+                                        <SelectValue placeholder="Select Visit Status">
+                                            {selectedConvertStatus?.name}
+                                        </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent className="z-[9999] bg-white">
                                         {visitStatusList.map((st) => (
