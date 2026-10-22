@@ -81,6 +81,9 @@ const Visits = () => {
 
     // ---- Build Query Parameters for Backend ----
     const queryParams = new URLSearchParams();
+    if (projectId) {
+        queryParams.append("sales_project_id", projectId);
+    }
     queryParams.append("page", page.toString());
     queryParams.append("limit", "10");
 
@@ -121,7 +124,7 @@ const Visits = () => {
     };
 
     // ---- Get Status & Sales Lists ----
-    const { data: listsResponse } = useGet("/api/admin/sales/visits/lists");
+    const { data: listsResponse } = useGet(projectId ? `/api/admin/sales/visits/lists?sales_project_id=${projectId}` : "/api/admin/sales/visits/lists");
     const statusList = listsResponse?.visit_status || listsResponse?.data?.visit_status || [];
     const sales_statues = ["visit", "sales", "delivered"];
     const salesList = listsResponse?.sales || listsResponse?.data?.sales || [];

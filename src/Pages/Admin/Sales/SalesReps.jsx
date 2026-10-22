@@ -75,8 +75,9 @@ export default function SalesReps() {
   const { mutate, loading: mutationLoading } = useMutation();
 
   const rawSalesList = data?.sales || [];
-  // Ensure that if scoped to a project route, only members of this project are shown
-  const salesList = routeProjectId
+  // Ensure that if scoped to a project route, only members of this project are shown for admins
+  // (Leaders are already scoped to their team by backend where leader_id = user.id)
+  const salesList = (routeProjectId && !isLeader)
     ? rawSalesList.filter((rep) => {
         const pids = (rep.sales_projects || [])
           .map((p) => String(p.id))
