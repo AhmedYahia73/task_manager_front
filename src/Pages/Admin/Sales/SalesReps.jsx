@@ -39,9 +39,9 @@ export default function SalesReps() {
 
   // Fetch Dropdowns (Leaders, Sales Projects & Targets)
   const { data: listsData } = useGet('/api/admin/sales/sales/lists');
-  const salesProjectsList = listsData?.sales_projects || [];
-  const targetsList = listsData?.targets || [];
-  const leadersList = listsData?.leaders || [];
+  const salesProjectsList = listsData?.sales_projects || listsData?.data?.sales_projects || [];
+  const targetsList = listsData?.targets || listsData?.data?.targets || [];
+  const leadersList = listsData?.leaders || listsData?.data?.leaders || [];
 
   // Fetch Sales Representatives
   const queryParams = new URLSearchParams({
