@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { DataTable } from "@/components/DataTable";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { useGet } from "@/hooks/useGet";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 const Products = () => {
     const navigate = useNavigate();
+    const { projectId } = useParams();
 
     // ---- Get Products Data ----
     const { data: response, loading: isLoading, refresh } = useGet("/api/admin/sales/products");
@@ -26,10 +27,28 @@ const Products = () => {
 
     // ---- 1. Edit ----
     const handleEdit = (row) => {
-        navigate(`${row.id}/edit`, { state: row });
+        const prodId = row?.id || row?._id;
+        if (!prodId) {
+            toast.error("Product has an invalid ID");
+            return;
+        }
+        if (projectId) {
+            navigate(`/admin/sales-projects/${projectId}/products/${prodId}/edit`, { state: row });
+        } else {
+            navigate(`${prodId}/edit`, { state: row });
+        }
     };
 
-    // ---- 2. Delete ----
+    // ---- 2. Add ----
+    const handleAdd = () => {
+        if (projectId) {
+            navigate(`/admin/sales-projects/${projectId}/products/add`);
+        } else {
+            navigate("add");
+        }
+    };
+
+    // ---- 3. Delete ----
     const handleDeleteClick = (row) => {
         setProductToDelete(row);
     };
@@ -37,9 +56,10 @@ const Products = () => {
     const handleDeleteConfirm = async () => {
         if (!productToDelete) return;
 
+        const prodId = productToDelete.id || productToDelete._id || "";
         const result = await deleteProduct({
             method: "DELETE",
-            url: `/api/admin/sales/products/${productToDelete.id}`,
+            url: prodId ? `/api/admin/sales/products/${prodId}` : `/api/admin/sales/products`,
             showToast: false,
         });
 
@@ -56,7 +76,7 @@ const Products = () => {
         <div className="w-full max-w-7xl mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
             <DataTable
                 title="Products Management"
-                onAdd={() => navigate("add")}
+                onAdd={handleAdd}
                 columns={columns}
                 data={productsList}
                 isLoading={isLoading}
