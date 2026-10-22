@@ -5,25 +5,20 @@ import { useGet } from "@/hooks/useGet";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MapComponent from "@/components/MapComponent";
 
+// Shadcn UI & Icons Components
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Controller, useFieldArray } from "react-hook-form";
-import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDurationsForProduct } from "@/Pages/Admin/Sales/Visits/VisitsAdd";
 
@@ -55,6 +50,8 @@ const LeadsAdd = () => {
   );
 
   const rawData = leadResponse?.data?.Lead || leadResponse?.data?.lead;
+
+  const [locationName, setLocationName] = useState("");
 
   const initialData = React.useMemo(() => {
     if (!rawData) return {};
@@ -94,6 +91,12 @@ const LeadsAdd = () => {
       products: parsedProducts,
     };
   }, [rawData, salesList]);
+
+  React.useEffect(() => {
+    if (initialData?.address) {
+      setLocationName(initialData.address);
+    }
+  }, [initialData?.address]);
 
   if (isListsLoading || (isEdit && isFetching)) {
     return <LoadingSpinner />;
@@ -137,10 +140,6 @@ const LeadsAdd = () => {
         const watchedLat = watch("lat");
         const watchedLng = watch("lng");
         const watchedProducts = watch("products") || [];
-
-        const [locationName, setLocationName] = useState(
-          initialData?.address || "",
-        );
 
         const selectedLocation = {
           lat: watchedLat || DEFAULT_CENTER.lat,
@@ -227,67 +226,35 @@ const LeadsAdd = () => {
                   />
                 </div>
 
-                {/* 5. Sales Search Select */}
+                {/* 5. Sales Select */}
                 <div className="space-y-2 flex flex-col w-full sm:col-span-2">
                   <Label className="text-sm font-medium">Sales *</Label>
                   <Controller
                     name="sales_id"
                     control={control}
-                    rules={{ required: true }}
+                    rules={{ required: "Sales field is required" }}
                     render={({ field }) => (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              "w-full justify-between font-normal text-left h-10 px-3 text-sm rounded-md",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={(val) => {
+                          field.onChange(val);
+                        }}
+                      >
+                        <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
+                          <SelectValue placeholder="Select Sales">
                             {field.value
                               ? salesList.find((s) => s.id === field.value)?.name
-                              : "Select Sales"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[var(--radix-popover-trigger-width)] p-0"
-                          align="start"
-                        >
-                          <Command className="text-sm">
-                            <CommandInput
-                              placeholder="Search sales..."
-                              className="h-9 text-sm"
-                            />
-                            <CommandList>
-                              <CommandEmpty className="p-2 text-sm text-center text-gray-500">
-                                No results found.
-                              </CommandEmpty>
-                              <CommandGroup>
-                                {salesList.map((s) => (
-                                  <CommandItem
-                                    key={s.id}
-                                    value={s.name}
-                                    className="text-sm py-1.5 px-2 cursor-pointer"
-                                    onSelect={() => field.onChange(s.id)}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        s.id === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                    {s.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                              : undefined}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="z-50 bg-white">
+                          {salesList.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   />
                   {errors.sales_id && (
@@ -343,67 +310,28 @@ const LeadsAdd = () => {
                             control={control}
                             rules={{ required: "Product is required" }}
                             render={({ field }) => (
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className={cn(
-                                      "w-full justify-between font-normal text-left h-10 px-3 text-sm rounded-md bg-white",
-                                      !field.value && "text-muted-foreground",
-                                    )}
-                                  >
+                              <Select
+                                value={field.value || ""}
+                                onValueChange={(val) => {
+                                  field.onChange(val);
+                                  setValue(`products.${index}.duration`, "");
+                                }}
+                              >
+                                <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
+                                  <SelectValue placeholder="Select Product">
                                     {field.value
-                                      ? productsList.find(
-                                          (p) => p.id === field.value,
-                                        )?.name || "Select Product"
-                                      : "Select Product"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-[var(--radix-popover-trigger-width)] p-0"
-                                  align="start"
-                                >
-                                  <Command className="text-sm">
-                                    <CommandInput
-                                      placeholder="Search product..."
-                                      className="h-9 text-sm"
-                                    />
-                                    <CommandList>
-                                      <CommandEmpty className="p-2 text-sm text-center text-gray-500">
-                                        No results found.
-                                      </CommandEmpty>
-                                      <CommandGroup>
-                                        {productsList.map((p) => (
-                                          <CommandItem
-                                            key={p.id}
-                                            value={p.name}
-                                            className="text-sm py-1.5 px-2 cursor-pointer"
-                                            onSelect={() => {
-                                              field.onChange(p.id);
-                                              setValue(
-                                                `products.${index}.duration`,
-                                                "",
-                                              );
-                                            }}
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                p.id === field.value
-                                                  ? "opacity-100"
-                                                  : "opacity-0",
-                                              )}
-                                            />
-                                            {p.name}
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
+                                      ? productsList.find((p) => p.id === field.value)?.name
+                                      : undefined}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent className="z-50 bg-white">
+                                  {productsList.map((p) => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                      {p.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             )}
                           />
                           {errors?.products?.[index]?.product_id && (
@@ -422,56 +350,26 @@ const LeadsAdd = () => {
                             control={control}
                             rules={{ required: "Duration is required" }}
                             render={({ field }) => (
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    disabled={!currentProductId}
-                                    className={cn(
-                                      "w-full justify-between font-normal text-left h-10 px-3 text-sm rounded-md bg-white",
-                                      !field.value && "text-muted-foreground",
-                                    )}
-                                  >
-                                    {field.value
-                                      ? field.value
-                                      : "Select Duration"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-[var(--radix-popover-trigger-width)] p-0"
-                                  align="start"
-                                >
-                                  <Command className="text-sm">
-                                    <CommandList>
-                                      <CommandEmpty className="p-2 text-sm text-center text-gray-500">
-                                        No durations found for this product.
-                                      </CommandEmpty>
-                                      <CommandGroup>
-                                        {availableDurations.map((d) => (
-                                          <CommandItem
-                                            key={d}
-                                            value={d}
-                                            className="text-sm py-1.5 px-2 cursor-pointer"
-                                            onSelect={() => field.onChange(d)}
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                d === field.value
-                                                  ? "opacity-100"
-                                                  : "opacity-0",
-                                              )}
-                                            />
-                                            {d}
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
+                              <Select
+                                value={field.value || ""}
+                                disabled={!currentProductId || availableDurations.length === 0}
+                                onValueChange={(val) => {
+                                  field.onChange(val);
+                                }}
+                              >
+                                <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
+                                  <SelectValue placeholder={!currentProductId ? "Select product first" : availableDurations.length === 0 ? "No durations" : "Select Duration"}>
+                                    {field.value || undefined}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent className="z-50 bg-white">
+                                  {availableDurations.map((d) => (
+                                    <SelectItem key={d} value={d}>
+                                      {d}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             )}
                           />
                           {errors?.products?.[index]?.duration && (

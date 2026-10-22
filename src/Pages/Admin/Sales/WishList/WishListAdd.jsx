@@ -1,43 +1,34 @@
-import React, { useState } from "react";
+import React from "react";
 import AddPage from "@/components/AddPage";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { useParams } from "react-router-dom";
 import { useGet } from "@/hooks/useGet";
-import { Loader2, Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 const WishListAdd = () => {
     const { id } = useParams();
-    const [openSales, setOpenSales] = useState(false);
 
     const { data: listsResponse, loading: isLoadingLists } = useGet(
         "/api/admin/sales/wish_list/lists"
     );
     const salesList =
-        listsResponse?.data?.sales || listsResponse?.sales || [];
+        listsResponse?.sales || listsResponse?.data?.sales || [];
 
     const { data: response, loading: isLoadingData } = useGet(
         id ? `/api/admin/sales/wish_list/${id}` : null,
         Boolean(id)
     );
 
-    const fetchedData = response?.data?.WishList || response;
+    const fetchedData = response?.data?.WishList || response?.data?.wishList || response?.WishList || response;
 
     if ((id && isLoadingData) || isLoadingLists) {
         return (
@@ -99,67 +90,26 @@ const WishListAdd = () => {
                                     )}
                                 </div>
 
-                                {/* 2. Sales Combobox */}
+                                {/* 2. Sales Select */}
                                 <div className="space-y-2 flex flex-col">
                                     <Label className="text-sm font-medium">Sales Representative</Label>
-                                    <Popover open={openSales} onOpenChange={setOpenSales}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                aria-expanded={openSales}
-                                                className={cn(
-                                                    "w-full h-10 justify-between font-normal text-sm rounded-md",
-                                                    !selectedSalesId && "text-muted-foreground"
-                                                )}
-                                            >
-                                                {selectedSalesId
-                                                    ? salesList.find((s) => s.id === selectedSalesId)?.name ||
-                                                      "Select sales representative"
-                                                    : "Select sales representative"}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            className="w-[--radix-popover-trigger-width] p-0"
-                                            align="start"
-                                        >
-                                            <Command>
-                                                <CommandInput placeholder="Search sales..." />
-                                                <CommandList>
-                                                    <CommandEmpty>No sales found.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {salesList.map((salesItem) => (
-                                                            <CommandItem
-                                                                key={salesItem.id}
-                                                                value={salesItem.name}
-                                                                onSelect={() => {
-                                                                    setValue(
-                                                                        "sales_id",
-                                                                        selectedSalesId === salesItem.id
-                                                                            ? ""
-                                                                            : salesItem.id,
-                                                                        { shouldValidate: true }
-                                                                    );
-                                                                    setOpenSales(false);
-                                                                }}
-                                                            >
-                                                                <Check
-                                                                    className={cn(
-                                                                        "mr-2 h-4 w-4",
-                                                                        selectedSalesId === salesItem.id
-                                                                            ? "opacity-100"
-                                                                            : "opacity-0"
-                                                                    )}
-                                                                />
-                                                                {salesItem.name}
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <Select
+                                        value={selectedSalesId || ""}
+                                        onValueChange={(val) => {
+                                            setValue("sales_id", val, { shouldValidate: true });
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
+                                            <SelectValue placeholder="Select sales representative" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {salesList.map((salesItem) => (
+                                                <SelectItem key={salesItem.id} value={salesItem.id}>
+                                                    {salesItem.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 {/* 3. Description Field */}
