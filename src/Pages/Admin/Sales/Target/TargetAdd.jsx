@@ -65,7 +65,11 @@ const TargetAdd = () => {
                         name: fetchedData.name,
                         type: fetchedData.type,
                         // 💡 استخراج معرفات المستخدمين (user id) من الريسبونس عشان الفورم تقرأهم كـ مختارين
-                        sales: fetchedData.sales?.map((sale) => sale.user?.id || sale.user_id).filter(Boolean) || [],
+                        sales: fetchedData.sales?.map((sale) => 
+                            typeof sale === "string" 
+                                ? sale 
+                                : (sale.id || sale.user_id || sale.user?.id)
+                        ).filter(Boolean) || [],
                         items: fetchedData.items?.length > 0 
                             ? fetchedData.items.map((item) => ({
                                 ...item,
