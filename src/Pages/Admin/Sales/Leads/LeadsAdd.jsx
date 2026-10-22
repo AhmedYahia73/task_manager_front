@@ -126,6 +126,7 @@ const LeadsAdd = () => {
               lng: DEFAULT_CENTER.lng,
               place_name: "",
               place_phone: "",
+              sales_id: isSales ? (currentUser?.id || "") : "",
               products: [],
             }
       }

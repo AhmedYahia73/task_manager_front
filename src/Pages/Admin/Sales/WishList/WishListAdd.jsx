@@ -13,15 +13,20 @@ import {
 import { useParams, useLocation } from "react-router-dom";
 import { useGet } from "@/hooks/useGet";
 import { Loader2 } from "lucide-react";
+import { getCurrentUser, isSalesRole } from "@/utils/auth";
 
 const WishListAdd = () => {
-    const { id } = useParams();
+    const { id, projectId } = useParams();
     const { state } = useLocation();
     const isEdit = Boolean(id);
 
-    const { data: listsResponse, loading: isLoadingLists } = useGet(
-        "/api/admin/sales/wish_list/lists"
-    );
+    const currentUser = getCurrentUser();
+    const isSales = isSalesRole(currentUser?.role);
+
+    const listsUrl = projectId
+        ? `/api/admin/sales/wish_list/lists?sales_project_id=${projectId}`
+        : "/api/admin/sales/wish_list/lists";
+    const { data: listsResponse, loading: isLoadingLists } = useGet(listsUrl);
     const salesList =
         listsResponse?.sales || listsResponse?.data?.sales || [];
 
@@ -54,16 +59,16 @@ const WishListAdd = () => {
             return {
                 name: "",
                 description: "",
-                sales_id: "",
+                sales_id: isSales ? (currentUser?.id || "") : "",
             };
         }
         return {
             id: fetchedData?.id || id,
             name: fetchedData?.name || "",
             description: fetchedData?.description || "",
-            sales_id: fetchedData?.sales_id || matchedSales?.id || "",
+            sales_id: isSales ? (currentUser?.id || "") : (fetchedData?.sales_id || matchedSales?.id || ""),
         };
-    }, [isEdit, id, fetchedData, salesList]);
+    }, [isEdit, id, fetchedData, salesList, isSales, currentUser?.id]);
 
     if (isLoadingLists || (isEdit && isLoadingData && !fetchedData)) {
         return (
@@ -81,7 +86,8 @@ const WishListAdd = () => {
             initialData={initialData}
             transformPayload={(data) => ({
                 ...data,
-                sales_id: data.sales_id ? data.sales_id : null,
+                sales_id: isSales ? (currentUser?.id || data.sales_id) : (data.sales_id ? data.sales_id : null),
+                sales_project_id: projectId || undefined,
                 description: data.description || null,
             })}
             onSuccessAction={() => window.history.back()}
@@ -119,30 +125,39 @@ const WishListAdd = () => {
                                     )}
                                 </div>
 
-                                {/* 2. Sales Select */}
-                                <div className="space-y-2 flex flex-col">
-                                    <Label className="text-sm font-medium">Sales Representative</Label>
-                                    <Select
-                                        items={salesItems}
-                                        value={selectedSalesId ? String(selectedSalesId) : null}
-                                        onValueChange={(val) => {
-                                            setValue("sales_id", val || "", { shouldValidate: true });
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
-                                            <SelectValue placeholder="Select sales representative">
-                                                {salesList.find((s) => String(s.id) === String(selectedSalesId))?.name}
-                                            </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent className="z-50 bg-white">
-                                            {salesList.map((salesItem) => (
-                                                <SelectItem key={salesItem.id} value={String(salesItem.id)}>
-                                                    {salesItem.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                {/* 2. Sales Field */}
+                                {isSales ? (
+                                    <div className="space-y-2 flex flex-col">
+                                        <Label className="text-sm font-medium">Sales Representative</Label>
+                                        <div className="h-10 px-3 flex items-center rounded-md bg-muted/50 border border-border text-sm text-foreground font-medium">
+                                            {currentUser?.name || "Assigned to Me"}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2 flex flex-col">
+                                        <Label className="text-sm font-medium">Sales Representative</Label>
+                                        <Select
+                                            items={salesItems}
+                                            value={selectedSalesId ? String(selectedSalesId) : null}
+                                            onValueChange={(val) => {
+                                                setValue("sales_id", val || "", { shouldValidate: true });
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
+                                                <SelectValue placeholder="Select sales representative">
+                                                    {salesList.find((s) => String(s.id) === String(selectedSalesId))?.name}
+                                                </SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent className="z-50 bg-white">
+                                                {salesList.map((salesItem) => (
+                                                    <SelectItem key={salesItem.id} value={String(salesItem.id)}>
+                                                        {salesItem.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
 
                                 {/* 3. Description Field */}
                                 <div className="space-y-2">

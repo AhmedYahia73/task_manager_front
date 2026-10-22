@@ -165,6 +165,7 @@ const VisitsAdd = () => {
               lng: DEFAULT_CENTER.lng,
               owner_name: "",
               owner_phone: "",
+              sales_id: isSales ? (currentUser?.id || "") : "",
               products: [],
             }
       }
@@ -202,7 +203,7 @@ const VisitsAdd = () => {
             (s.name && String(s.name) === String(watchedStatusId))
         );
         const statusNameLower = selectedStatus?.name?.toLowerCase() || "";
-        const isSales =
+        const isStatusSales =
           statusNameLower === "sales" ||
           statusNameLower === "delivered" ||
           statusNameLower.includes("sales") ||
@@ -384,7 +385,7 @@ const VisitsAdd = () => {
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-semibold">
-                    Products {isSales ? "*" : "(Optional)"}
+                    Products {isStatusSales ? "*" : "(Optional)"}
                   </Label>
                   <Button
                     type="button"
