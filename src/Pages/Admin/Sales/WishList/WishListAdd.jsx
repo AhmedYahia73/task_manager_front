@@ -10,12 +10,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { useGet } from "@/hooks/useGet";
 import { Loader2 } from "lucide-react";
 
 const WishListAdd = () => {
     const { id } = useParams();
+    const { state } = useLocation();
+    const isEdit = Boolean(id);
 
     const { data: listsResponse, loading: isLoadingLists } = useGet(
         "/api/admin/sales/wish_list/lists"
@@ -24,13 +26,36 @@ const WishListAdd = () => {
         listsResponse?.sales || listsResponse?.data?.sales || [];
 
     const { data: response, loading: isLoadingData } = useGet(
-        id ? `/api/admin/sales/wish_list/${id}` : null,
-        Boolean(id)
+        isEdit ? `/api/admin/sales/wish_list/${id}` : null,
+        isEdit
     );
 
-    const fetchedData = response?.data?.WishList || response?.data?.wishList || response?.WishList || response;
+    const fetchedData =
+        response?.WishList ||
+        response?.wishList ||
+        response?.data?.WishList ||
+        response?.data?.wishList ||
+        response?.data ||
+        response ||
+        state;
 
-    if ((id && isLoadingData) || isLoadingLists) {
+    const initialData = React.useMemo(() => {
+        if (!isEdit) {
+            return {
+                name: "",
+                description: "",
+                sales_id: "",
+            };
+        }
+        return {
+            id: fetchedData?.id || id,
+            name: fetchedData?.name || "",
+            description: fetchedData?.description || "",
+            sales_id: fetchedData?.sales_id || "",
+        };
+    }, [isEdit, id, fetchedData]);
+
+    if (isLoadingLists || (isEdit && isLoadingData && !fetchedData)) {
         return (
             <div className="flex justify-center items-center min-h-[300px]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -42,21 +67,13 @@ const WishListAdd = () => {
         <AddPage
             title="Wish List"
             apiUrl="/api/admin/sales/wish_list"
-            method={id ? "PUT" : "POST"}
-            initialData={
-                id && fetchedData
-                    ? {
-                        id: fetchedData.id || id,
-                        name: fetchedData.name || "",
-                        description: fetchedData.description || "",
-                        sales_id: fetchedData.sales_id || "",
-                    }
-                    : {
-                        name: "",
-                        description: "",
-                        sales_id: "",
-                    }
-            }
+            method={isEdit ? "PUT" : "POST"}
+            initialData={initialData}
+            transformPayload={(data) => ({
+                ...data,
+                sales_id: data.sales_id ? data.sales_id : null,
+                description: data.description || null,
+            })}
             onSuccessAction={() => window.history.back()}
         >
             {(methods) => {

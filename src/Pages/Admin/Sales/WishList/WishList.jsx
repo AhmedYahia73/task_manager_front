@@ -366,7 +366,7 @@ const WishList = () => {
                                     <SelectTrigger className="w-full border border-gray-300 rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white h-10">
                                         <SelectValue placeholder="Select Visit Status" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="z-[9999] bg-white">
                                         {visitStatusList.map((st) => (
                                             <SelectItem key={st.id} value={String(st.id)}>
                                                 {st.name}
@@ -454,49 +454,63 @@ const WishList = () => {
                                                 <Label className="text-xs text-muted-foreground">
                                                     Product *
                                                 </Label>
-                                                <select
-                                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white h-9"
-                                                    value={item.product_id}
-                                                    onChange={(e) =>
+                                                <Select
+                                                    value={item.product_id || ""}
+                                                    onValueChange={(val) =>
                                                         handleProductChange(
                                                             idx,
                                                             "product_id",
-                                                            e.target.value
+                                                            val
                                                         )
                                                     }
                                                 >
-                                                    <option value="">Select Product</option>
-                                                    {productsList.map((p) => (
-                                                        <option key={p.id} value={p.id}>
-                                                            {p.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    <SelectTrigger className="w-full border border-gray-300 rounded-md px-3 text-sm bg-white h-9">
+                                                        <SelectValue placeholder="Select Product" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="z-[9999] bg-white">
+                                                        {productsList.map((p) => (
+                                                            <SelectItem key={p.id} value={String(p.id)}>
+                                                                {p.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
 
                                             <div className="sm:col-span-5 space-y-1">
                                                 <Label className="text-xs text-muted-foreground">
                                                     Duration *
                                                 </Label>
-                                                <select
-                                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white h-9"
-                                                    value={item.duration}
+                                                <Select
+                                                    value={item.duration || ""}
                                                     disabled={!item.product_id}
-                                                    onChange={(e) =>
+                                                    onValueChange={(val) =>
                                                         handleProductChange(
                                                             idx,
                                                             "duration",
-                                                            e.target.value
+                                                            val
                                                         )
                                                     }
                                                 >
-                                                    <option value="">Select Duration</option>
-                                                    {availableDurations.map((d) => (
-                                                        <option key={d} value={d}>
-                                                            {d}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    <SelectTrigger className="w-full border border-gray-300 rounded-md px-3 text-sm bg-white h-9">
+                                                        <SelectValue
+                                                            placeholder={
+                                                                !item.product_id
+                                                                    ? "Select product first"
+                                                                    : availableDurations.length === 0
+                                                                    ? "No durations"
+                                                                    : "Select Duration"
+                                                            }
+                                                        />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="z-[9999] bg-white">
+                                                        {availableDurations.map((d) => (
+                                                            <SelectItem key={d} value={d}>
+                                                                {d}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
 
                                             <div className="sm:col-span-1 flex justify-end">

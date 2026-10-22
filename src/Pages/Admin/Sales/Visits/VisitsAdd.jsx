@@ -24,7 +24,8 @@ import { cn } from "@/lib/utils";
 const DEFAULT_CENTER = { lat: 30.0444, lng: 31.2357 };
 
 export const getDurationsForProduct = (productsList, productId) => {
-  const selectedProduct = productsList.find((p) => p.id === productId);
+  if (!productsList || !productId) return [];
+  const selectedProduct = productsList.find((p) => String(p.id) === String(productId));
   let pointsData = selectedProduct?.points || [];
   if (typeof pointsData === "string") {
     try {
@@ -33,9 +34,13 @@ export const getDurationsForProduct = (productsList, productId) => {
       pointsData = [];
     }
   }
-  return Array.isArray(pointsData)
+  const durations = Array.isArray(pointsData)
     ? pointsData.map((p) => p.duration).filter(Boolean)
     : [];
+  if (durations.length === 0 && selectedProduct) {
+    return ["monthly", "quarterly", "semi-annually", "yearly"];
+  }
+  return durations;
 };
 
 const VisitsAdd = () => {
