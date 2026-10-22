@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { DataTable } from "@/components/DataTable";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { useGet } from "@/hooks/useGet";
@@ -7,6 +7,7 @@ import { useMutation } from "@/hooks/useMutation";
 import { MapPin, StickyNote, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { getCurrentUser, isSalesRole } from "@/utils/auth";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,10 @@ import {
 
 const Leads = () => {
   const navigate = useNavigate();
+  const { projectId } = useParams();
+
+  const currentUser = getCurrentUser();
+  const isSales = isSalesRole(currentUser?.role);
 
   const [selectedSalesFilter, setSelectedSalesFilter] = useState("");
   const [selectedNotes, setSelectedNotes] = useState(null);
@@ -31,16 +36,20 @@ const Leads = () => {
   const [leadToConvert, setLeadToConvert] = useState(null);
   const [selectedStatusId, setSelectedStatusId] = useState("");
 
-  const { data: response, loading: isLoading, refresh } = useGet(
-    "/api/admin/sales/leads"
-  );
+  const leadsUrl = projectId
+    ? `/api/admin/sales/leads?sales_project_id=${projectId}`
+    : "/api/admin/sales/leads";
+  const { data: response, loading: isLoading, refresh } = useGet(leadsUrl);
   const allLeads =
     response?.data?.allLeads ||
     response?.allLeads ||
     response?.data?.leads ||
     [];
 
-  const { data: listsResponse } = useGet("/api/admin/sales/leads/lists");
+  const listsUrl = projectId
+    ? `/api/admin/sales/leads/lists?sales_project_id=${projectId}`
+    : "/api/admin/sales/leads/lists";
+  const { data: listsResponse } = useGet(listsUrl);
   const salesList =
     listsResponse?.sales || listsResponse?.data?.sales || [];
   const visitStatusList =
@@ -220,33 +229,36 @@ const Leads = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-3.5 sm:p-4 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <label
-            htmlFor="sales-filter"
-            className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-zinc-300"
-          >
-            Filter by Sales:
-          </label>
-          <select
-            id="sales-filter"
-            className="border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 w-full sm:w-auto sm:min-w-[200px]"
-            value={selectedSalesFilter}
-            onChange={(e) => setSelectedSalesFilter(e.target.value)}
-          >
-            <option value="">All Sales (Show All)</option>
-            {salesList.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+      {!isSales && (
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-3.5 sm:p-4 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <label
+              htmlFor="sales-filter"
+              className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-zinc-300"
+            >
+              Filter by Sales:
+            </label>
+            <select
+              id="sales-filter"
+              className="border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 w-full sm:w-auto sm:min-w-[200px]"
+              value={selectedSalesFilter}
+              onChange={(e) => setSelectedSalesFilter(e.target.value)}
+            >
+              <option value="">All Sales (Show All)</option>
+              {salesList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
+      )}
 
       <DataTable
-        title="Leads Management"
-        onAdd={() => navigate("add")}
+        title={isSales ? "My Leads" : "Leads Management"}
+        onAdd={isSales ? undefined : () => navigate("add")}
+        showAdd={!isSales}
         onDelete={handleDeleteClick}
         onEdit={(row) => navigate(`${row.id}/edit`)}
         columns={columns}

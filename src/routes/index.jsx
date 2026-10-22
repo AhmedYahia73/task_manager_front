@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { isAuthenticated, removeAuthToken, isValidRole, isAdminRole } from '@/utils/auth';
+import { isAuthenticated, removeAuthToken, isValidRole, isAdminRole, isSalesRole } from '@/utils/auth';
 import { LoginPage } from '@/components/LoginPage';
 
 // Removed Visits Pages since they are from the old template
@@ -89,6 +89,43 @@ const AdminOnlySalesWorkspaceRoute = ({ children }) => {
   return children;
 };
 
+// Strict guard: Leads Add is for Leader and Admin only (sales cannot add leads)
+const LeaderOrAdminOnlyRoute = ({ children, fallback = "../leads" }) => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (isSalesRole(user?.role)) {
+      return <Navigate to={fallback} replace />;
+    }
+  } catch {
+    return <Navigate to={fallback} replace />;
+  }
+  return children;
+};
+
+// General dashboard guard: sales users are redirected to their sales project workspace
+const GeneralDashboardRoute = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (isSalesRole(user?.role)) {
+      const activeProjectId = getActiveSalesProjectId();
+      return <Navigate to={activeProjectId ? `/admin/sales-projects/${activeProjectId}/dashboard` : '/admin/sales-projects'} replace />;
+    }
+  } catch {}
+  return <Dashboard />;
+};
+
+// HRM route guard: sales users cannot access HRM modules
+const NonSalesMyHRMRoute = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (isSalesRole(user?.role)) {
+      const activeProjectId = getActiveSalesProjectId();
+      return <Navigate to={activeProjectId ? `/admin/sales-projects/${activeProjectId}/dashboard` : '/admin/sales-projects'} replace />;
+    }
+  } catch {}
+  return <MyHRM />;
+};
+
 // Admin Route Wrapper - checks role
 const AdminRoute = ({ children }) => {
   if (!isAuthenticated()) {
@@ -110,9 +147,16 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
-// Smart redirect: authenticated users go to /admin/dashboard, otherwise /login
+// Smart redirect: authenticated sales go to sales project, others to /admin/dashboard, otherwise /login
 const SmartRedirect = () => {
   if (isAuthenticated()) {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (isSalesRole(user?.role)) {
+        const activeProjectId = getActiveSalesProjectId();
+        return <Navigate to={activeProjectId ? `/admin/sales-projects/${activeProjectId}/dashboard` : '/admin/sales-projects'} replace />;
+      }
+    } catch {}
     return <Navigate to="/admin/dashboard" replace />;
   }
   return <Navigate to="/login" replace />;
@@ -120,6 +164,13 @@ const SmartRedirect = () => {
 
 const NotFoundRedirect = () => {
   if (isAuthenticated()) {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (isSalesRole(user?.role)) {
+        const activeProjectId = getActiveSalesProjectId();
+        return <Navigate to={activeProjectId ? `/admin/sales-projects/${activeProjectId}/dashboard` : '/admin/sales-projects'} replace />;
+      }
+    } catch {}
     return <Navigate to="/admin/dashboard" replace />;
   }
   return <Navigate to="/login" replace />;
@@ -152,8 +203,8 @@ export const router = createBrowserRouter([
     path: '/admin',
     element: (<AdminRoute><AdminLayout /></AdminRoute>),
     children: [
-      { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-      { path: 'dashboard', element: <Dashboard /> },
+      { index: true, element: <SmartRedirect /> },
+      { path: 'dashboard', element: <GeneralDashboardRoute /> },
       { path: 'projects', element: <Projects /> },
       { path: 'projects/:id', element: <ProjectDetails /> },
       { path: 'projects/:projectId/groups/:groupId/tasks', element: <Tasks /> },
@@ -178,7 +229,7 @@ export const router = createBrowserRouter([
       { path: 'attendance', element: <Attendance /> },
       { path: 'holidays-system', element: <HolidaysSystem /> },
       { path: 'permissions', element: <Permissions /> },
-      { path: 'my-hrm', element: <MyHRM /> },
+      { path: 'my-hrm', element: <NonSalesMyHRMRoute /> },
       { path: 'cities', element: <Cities /> },
       { path: 'jobs', element: <Jobs /> },
       { path: 'qualifications', element: <Qualifications /> },
@@ -197,8 +248,8 @@ export const router = createBrowserRouter([
           { path: 'visits/add', element: <VisitsAdd /> },
           { path: 'visits/:id/edit', element: <VisitsAdd /> },
           { path: 'leads', element: <Leads /> },
-          { path: 'leads/add', element: <LeadsAdd /> },
-          { path: 'leads/:id/edit', element: <LeadsAdd /> },
+          { path: 'leads/add', element: <LeaderOrAdminOnlyRoute><LeadsAdd /></LeaderOrAdminOnlyRoute> },
+          { path: 'leads/:id/edit', element: <LeaderOrAdminOnlyRoute><LeadsAdd /></LeaderOrAdminOnlyRoute> },
           { path: 'products', element: <AdminOnlySalesWorkspaceRoute><Products /></AdminOnlySalesWorkspaceRoute> },
           { path: 'products/add', element: <AdminOnlySalesWorkspaceRoute><ProductsAdd /></AdminOnlySalesWorkspaceRoute> },
           { path: 'products/:id/edit', element: <AdminOnlySalesWorkspaceRoute><ProductsAdd /></AdminOnlySalesWorkspaceRoute> },
@@ -229,8 +280,8 @@ export const router = createBrowserRouter([
       { path: 'sales/visits/add', element: <RequireActiveSalesProject subpath="visits/add" /> },
       { path: 'sales/visits/:id/edit', element: <RequireActiveSalesProject /> },
       { path: 'sales/leads', element: <RequireActiveSalesProject subpath="leads" /> },
-      { path: 'sales/leads/add', element: <RequireActiveSalesProject subpath="leads/add" /> },
-      { path: 'sales/leads/:id/edit', element: <RequireActiveSalesProject /> },
+      { path: 'sales/leads/add', element: <LeaderOrAdminOnlyRoute fallback="/admin/sales-projects"><RequireActiveSalesProject subpath="leads/add" /></LeaderOrAdminOnlyRoute> },
+      { path: 'sales/leads/:id/edit', element: <LeaderOrAdminOnlyRoute fallback="/admin/sales-projects"><RequireActiveSalesProject subpath="leads" /></LeaderOrAdminOnlyRoute> },
       { path: 'sales/products', element: <RequireActiveSalesProject subpath="products" /> },
       { path: 'sales/products/add', element: <RequireActiveSalesProject subpath="products/add" /> },
       { path: 'sales/products/:id/edit', element: <RequireActiveSalesProject /> },

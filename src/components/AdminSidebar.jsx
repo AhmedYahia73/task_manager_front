@@ -56,15 +56,14 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         {[
           { 
             name: 'Dashboard', 
-            path: isSales
-              ? (activeSalesProject?.id ? `/admin/sales-projects/${activeSalesProject.id}/dashboard` : '/admin/sales-projects')
-              : '/admin/dashboard', 
-            icon: 'dashboard' 
+            path: '/admin/dashboard', 
+            icon: 'dashboard',
+            notSales: true,
           },
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy', adminOrEngineerOrLeader: true },
           { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront', adminOrLeaderOrSales: true },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
-          { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true },
+          { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true, notSales: true },
           { 
             name: 'HRM', 
             icon: 'manage_accounts', 
@@ -113,6 +112,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
           if (item.adminOrEngineerOrLeader && !isAdmin && !isEngineer && !isLeader) return false;
           if (item.adminOrLeaderOrSales && !isAdmin && !isLeader && !isSales) return false;
           if (item.notAdmin && isAdmin) return false;
+          if (item.notSales && isSales) return false;
           return true;
         })
         .map((item) => {
