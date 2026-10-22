@@ -262,22 +262,22 @@ const SalesProjects = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 md:px-8 py-3 sm:py-6 space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-5 sm:pb-6">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary/20 via-primary/10 to-transparent text-primary flex items-center justify-center shadow-inner">
-              <Building2 className="w-6 h-6" />
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-primary/20 via-primary/10 to-transparent text-primary flex items-center justify-center shadow-inner shrink-0">
+              <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2 flex-wrap">
                 <span>Sales Projects</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-primary/10 text-primary border border-primary/20">
+                <span className="text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full font-semibold bg-primary/10 text-primary border border-primary/20">
                   {pagination.total} {pagination.total === 1 ? 'Project' : 'Projects'}
                 </span>
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 {isAdmin
                   ? 'Manage sales projects, assign leaders & sales reps, and enter dashboards.'
                   : 'Your assigned sales projects. Click any project to open its dashboard.'}
@@ -287,16 +287,16 @@ const SalesProjects = () => {
         </div>
 
         {/* Actions Bar: Search + Add Project */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
           {/* Search Input */}
-          <div className="relative flex-1 md:w-72">
+          <div className="relative w-full sm:w-64 md:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search projects..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-8 bg-card border-border/80 focus:border-primary shadow-sm h-10 rounded-xl"
+              className="pl-9 pr-8 bg-card border-border/80 focus:border-primary shadow-sm h-10 rounded-xl w-full text-xs sm:text-sm"
             />
             {search && (
               <button
@@ -312,7 +312,7 @@ const SalesProjects = () => {
           {isAdmin && (
             <Button
               onClick={openAddModal}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-200 rounded-xl h-10 px-4 flex items-center gap-2"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-200 rounded-xl h-10 px-4 flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto text-xs sm:text-sm"
             >
               <Plus className="w-4 h-4" />
               <span>Add Sales Project</span>

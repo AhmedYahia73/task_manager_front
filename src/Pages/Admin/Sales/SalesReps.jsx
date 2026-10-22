@@ -248,74 +248,74 @@ export default function SalesReps() {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
-              <BadgePercent className="w-6 h-6" />
+            <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 shrink-0">
+              <BadgePercent className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Sales Representatives</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Sales Representatives</h1>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Manage sales reps, their assigned team leaders, and sales project memberships.
           </p>
         </div>
 
-        <Button onClick={() => openModal()} className="flex items-center gap-2">
+        <Button onClick={() => openModal()} className="flex items-center gap-2 rounded-xl h-9 sm:h-10 text-xs sm:text-sm w-full sm:w-auto shrink-0 justify-center shadow-xs">
           <Plus className="w-4 h-4" /> Add Sales Rep
         </Button>
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-card border rounded-xl p-4">
-        <div className="relative w-full lg:w-80">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card border rounded-2xl p-3 sm:p-4 shadow-xs">
+        <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search by name, email, or phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9.5 text-xs sm:text-sm rounded-xl w-full"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
           {/* Leader Filter */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <UserCheck className="w-4 h-4" />
-            <span>Leader:</span>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+              <UserCheck className="w-3.5 h-3.5" /> Leader:
+            </span>
+            <select
+              value={leaderFilter}
+              onChange={(e) => {
+                setLeaderFilter(e.target.value);
+                setPage(1);
+              }}
+              className="bg-background border rounded-xl px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-44"
+            >
+              <option value="">All Leaders</option>
+              {leadersList.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
           </div>
-          <select
-            value={leaderFilter}
-            onChange={(e) => {
-              setLeaderFilter(e.target.value);
-              setPage(1);
-            }}
-            className="bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-48"
-          >
-            <option value="">All Leaders</option>
-            {leadersList.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
 
           {/* Project Filter - only show if NOT locked to a project route */}
           {!routeProjectId && (
-            <>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground ml-0 sm:ml-2">
-                <Filter className="w-4 h-4" />
-                <span>Project:</span>
-              </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5" /> Project:
+              </span>
               <select
                 value={projectFilter}
                 onChange={(e) => {
                   setProjectFilter(e.target.value);
                   setPage(1);
                 }}
-                className="bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-48"
+                className="bg-background border rounded-xl px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-44"
               >
                 <option value="">All Projects</option>
                 {salesProjectsList.map((p) => (
@@ -324,13 +324,13 @@ export default function SalesReps() {
                   </option>
                 ))}
               </select>
-            </>
+            </div>
           )}
         </div>
       </div>
 
       {/* Table / Grid */}
-      <div className="border rounded-xl bg-card overflow-hidden">
+      <div className="border rounded-2xl bg-card overflow-hidden shadow-xs">
         {loading ? (
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -347,16 +347,16 @@ export default function SalesReps() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-xs sm:text-sm min-w-[700px]">
               <thead className="bg-muted/50 border-b text-muted-foreground">
                 <tr>
-                  <th className="py-3 px-4 font-medium">Sales Rep</th>
-                  <th className="py-3 px-4 font-medium">Contact</th>
-                  <th className="py-3 px-4 font-medium">Assigned Leader</th>
-                  <th className="py-3 px-4 font-medium">Assigned Projects</th>
-                  <th className="py-3 px-4 font-medium">Target</th>
-                  <th className="py-3 px-4 font-medium">Status</th>
-                  <th className="py-3 px-4 font-medium text-right">Actions</th>
+                  <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Sales Rep</th>
+                  <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Contact</th>
+                  <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Assigned Leader</th>
+                  <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Assigned Projects</th>
+                  <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Target</th>
+                  <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Status</th>
+                  <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">

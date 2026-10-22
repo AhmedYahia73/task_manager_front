@@ -72,12 +72,12 @@ export default function SalesDashboard() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto px-1 sm:px-2">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
       {/* --- Filters Section --- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card p-4 sm:p-5 rounded-2xl border border-border/80 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-border/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-foreground">
               Sales Overview & KPIs
             </h1>
           </div>
@@ -86,43 +86,46 @@ export default function SalesDashboard() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2.5 sm:gap-3 w-full lg:w-auto">
           <Button
             asChild
             size="sm"
-            className="rounded-xl font-semibold bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-sm h-10 px-4 self-stretch sm:self-auto"
+            className="rounded-xl font-semibold bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-sm h-9 sm:h-10 px-4 self-stretch sm:self-auto shrink-0"
           >
             <Link to={currentProjectId ? `/admin/sales-projects/${currentProjectId}/visits/add` : '/admin/sales/visits/add'}>
               <Plus className="w-4 h-4" />
               <span>New Visit</span>
             </Link>
           </Button>
-          <div className="space-y-1 flex-1 sm:flex-initial">
-            <Label htmlFor="from" className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-primary" /> From
-            </Label>
-            <Input
-              id="from"
-              type="date"
-              name="from"
-              value={dateFilter.from}
-              onChange={handleFilterChange}
-              className="w-full sm:w-36 h-9 rounded-xl text-xs bg-background"
-            />
-          </div>
 
-          <div className="space-y-1 flex-1 sm:flex-initial">
-            <Label htmlFor="to" className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-primary" /> To
-            </Label>
-            <Input
-              id="to"
-              type="date"
-              name="to"
-              value={dateFilter.to}
-              onChange={handleFilterChange}
-              className="w-full sm:w-36 h-9 rounded-xl text-xs bg-background"
-            />
+          <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:gap-2.5">
+            <div className="space-y-1">
+              <Label htmlFor="from" className="text-[11px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-primary" /> From
+              </Label>
+              <Input
+                id="from"
+                type="date"
+                name="from"
+                value={dateFilter.from}
+                onChange={handleFilterChange}
+                className="w-full sm:w-36 h-9 rounded-xl text-xs bg-background"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="to" className="text-[11px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-primary" /> To
+              </Label>
+              <Input
+                id="to"
+                type="date"
+                name="to"
+                value={dateFilter.to}
+                onChange={handleFilterChange}
+                className="w-full sm:w-36 h-9 rounded-xl text-xs bg-background"
+              />
+            </div>
           </div>
 
           <Button
@@ -130,7 +133,7 @@ export default function SalesDashboard() {
             size="icon"
             onClick={refresh}
             disabled={loading}
-            className="h-9 w-full sm:w-9 rounded-xl hover:bg-muted border-border/80 shrink-0"
+            className="h-9 w-9 rounded-xl hover:bg-muted border-border/80 shrink-0 self-end hidden sm:flex"
             title="Refresh statistics"
           >
             <RefreshCw className={`w-4 h-4 text-muted-foreground ${loading ? "animate-spin" : ""}`} />

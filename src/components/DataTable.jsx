@@ -35,10 +35,10 @@ export const DataTable = ({
     <div className="space-y-4 w-full">
       {/* العنوان وزر الإضافة */}
       {(title || (showAdd && onAdd)) && (
-        <div className="flex justify-between items-center mb-4">
-          {title && <h2 className="text-xl font-bold text-foreground">{title}</h2>}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 sm:mb-4">
+          {title && <h2 className="text-lg sm:text-xl font-bold text-foreground">{title}</h2>}
           {showAdd && onAdd && (
-            <Button onClick={onAdd} className="gap-2">
+            <Button onClick={onAdd} className="gap-2 rounded-xl h-9 sm:h-10 text-xs sm:text-sm w-full sm:w-auto shrink-0 shadow-xs">
               <Plus className="h-4 w-4" /> Add
             </Button>
           )}
@@ -47,28 +47,28 @@ export const DataTable = ({
 
       {/* حقل البحث الداخلي (يظهر فقط إذا كان showSearchInput = true) */}
       {showSearchInput && (
-        <div className="relative w-full max-w-sm">
+        <div className="relative w-full max-w-sm mb-3">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             placeholder={searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 rounded-xl"
+            className="pl-9 h-10 rounded-xl text-xs sm:text-sm"
           />
         </div>
       )}
 
       {/* الجدول */}
-      <div className="rounded-xl border border-border overflow-hidden bg-card shadow-sm">
+      <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-xs">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
               {columns.map((col, index) => (
-                <TableHead key={col.accessorKey || index} className="font-semibold text-gray-700">
+                <TableHead key={col.accessorKey || index} className="font-semibold text-gray-700 dark:text-zinc-300 text-xs sm:text-sm whitespace-nowrap py-3 px-3 sm:px-4">
                   {col.header}
                 </TableHead>
               ))}
-              {hasActions && <TableHead className="text-center font-semibold text-gray-700">Actions</TableHead>}
+              {hasActions && <TableHead className="text-center font-semibold text-gray-700 dark:text-zinc-300 text-xs sm:text-sm whitespace-nowrap py-3 px-3 sm:px-4">Actions</TableHead>}
             </TableRow>
           </TableHeader>
 
@@ -76,7 +76,7 @@ export const DataTable = ({
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (hasActions ? 1 : 0)} className="h-32 text-center">
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs sm:text-sm">
                     <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
                     <span>Loading data...</span>
                   </div>
@@ -86,12 +86,12 @@ export const DataTable = ({
               filteredData.map((row, rowIndex) => (
                 <TableRow key={row.id || rowIndex} className="hover:bg-muted/50 transition-colors">
                   {columns.map((col, colIndex) => (
-                    <TableCell key={colIndex}>
+                    <TableCell key={colIndex} className="text-xs sm:text-sm whitespace-nowrap py-3 px-3 sm:px-4">
                       {col.render ? col.render(row) : (row[col.accessorKey] ?? "-")}
                     </TableCell>
                   ))}
                   {hasActions && (
-                    <TableCell>
+                    <TableCell className="py-3 px-3 sm:px-4">
                       <div className="flex justify-center items-center gap-1">
                         {onEdit && (
                           <Button

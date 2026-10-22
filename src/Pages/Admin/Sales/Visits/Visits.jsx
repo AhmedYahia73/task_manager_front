@@ -401,7 +401,7 @@ const Visits = () => {
     ];
 
     return (
-        <div className="w-full max-w-7xl mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="w-full max-w-7xl mx-auto py-2 sm:py-6 space-y-4 sm:space-y-6">
             <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 mb-2">
                 {/* Left Side: Filters */}
                 <div className="flex-1 flex flex-col gap-3 sm:gap-4 min-w-0">
@@ -520,12 +520,12 @@ const Visits = () => {
                 </div>
 
                 {/* Right Side: Total Visits Overview */}
-                <div className="w-full xl:w-60 shrink-0 flex items-stretch">
-                    <div className={`${brandConfig.overviewCardClass} w-full`}>
-                        <div className={brandConfig.overviewIconWrapperClass}>
+                <div className="w-full xl:w-64 shrink-0 flex items-stretch">
+                    <div className={`${brandConfig.overviewCardClass} w-full flex-row xl:flex-col items-center justify-between xl:justify-center p-4 sm:p-6`}>
+                        <div className={`${brandConfig.overviewIconWrapperClass} mb-0 xl:mb-4 shrink-0`}>
                             <MapPin className={brandConfig.overviewIconClass} />
                         </div>
-                        <p className="text-4xl sm:text-5xl font-extrabold leading-none mb-2">{paginationData.total}</p>
+                        <p className="text-3xl sm:text-4xl xl:text-5xl font-extrabold leading-none mb-1">{paginationData.total}</p>
                         <h2 className={brandConfig.overviewLabelClass}>Total Visits</h2>
                     </div>
                 </div>

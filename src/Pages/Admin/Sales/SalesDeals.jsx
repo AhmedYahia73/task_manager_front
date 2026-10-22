@@ -455,13 +455,15 @@ export default function SalesDeals() {
                 </div>
 
                 {/* Right Side: Total Sales Overview */}
-                <div className="w-full xl:w-60 shrink-0 flex items-stretch">
-                    <div className={`${brandConfig.overviewCardClass || "bg-card border rounded-2xl p-5 shadow-xs flex flex-col justify-between"} w-full`}>
-                        <div className={brandConfig.overviewIconWrapperClass || "w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3"}>
-                            <TrendingUp className={brandConfig.overviewIconClass || "w-5 h-5"} />
+                <div className="w-full xl:w-64 shrink-0 flex items-stretch">
+                    <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 dark:border-primary/30 rounded-2xl p-4 sm:p-5 flex flex-row xl:flex-col items-center justify-between xl:justify-center w-full shadow-xs">
+                        <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0 mb-0 xl:mb-3">
+                            <TrendingUp className="w-5 h-5 text-primary" />
                         </div>
-                        <p className="text-4xl sm:text-5xl font-extrabold leading-none mb-2">{paginationData.total}</p>
-                        <h2 className={brandConfig.overviewLabelClass || "text-sm text-muted-foreground font-semibold"}>Total Sales</h2>
+                        <div className="text-right xl:text-center">
+                            <p className="text-3xl sm:text-4xl xl:text-5xl font-extrabold leading-none mb-1 text-foreground">{paginationData.total}</p>
+                            <h2 className="text-xs sm:text-sm text-muted-foreground font-semibold">Total Sales</h2>
+                        </div>
                     </div>
                 </div>
             </div>
