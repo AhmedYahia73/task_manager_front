@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { removeAuthToken, isAdminRole } from '@/utils/auth';
+import { removeAuthToken, isAdminRole, isLeaderSalesRole, isSalesRole, isEngineerRole } from '@/utils/auth';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { useMutation } from '@/hooks/useMutation';
@@ -13,11 +13,13 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const userName = userData?.name || 'Admin User';
   const userRole = userData?.role || 'Admin';
   const isAdmin = isAdminRole(userRole);
-  const isLeader = userRole?.toLowerCase() === 'leader' || userRole?.toLowerCase() === 'leader_sales';
-  const isSales = userRole?.toLowerCase() === 'sales';
+  const isLeader = isLeaderSalesRole(userRole);
+  const isSales = isSalesRole(userRole);
+  const isEngineer = isEngineerRole(userRole);
   const [isHrmOpen, setIsHrmOpen] = useState(false);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+  const [isSalesWorkspaceOpen, setIsSalesWorkspaceOpen] = useState(true);
   const activeSalesProject = getActiveSalesProject();
 
   const { mutate } = useMutation();
@@ -52,8 +54,14 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
       {/* Navigation */}
       <nav className="admin-sidebar__nav">
         {[
-          { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
-          { name: 'Projects', path: '/admin/projects', icon: 'folder_copy' },
+          { 
+            name: 'Dashboard', 
+            path: (isLeader || isSales)
+              ? (activeSalesProject?.id ? `/admin/sales-projects/${activeSalesProject.id}/dashboard` : '/admin/sales-projects')
+              : '/admin/dashboard', 
+            icon: 'dashboard' 
+          },
+          { name: 'Projects', path: '/admin/projects', icon: 'folder_copy', adminOrEngineer: true },
           { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront', adminOrLeaderOrSales: true },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true },
@@ -101,6 +109,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         ]
         .filter(item => {
           if (item.adminOnly && !isAdmin) return false;
+          if (item.adminOrEngineer && !isAdmin && !isEngineer) return false;
           if (item.adminOrLeaderOrSales && !isAdmin && !isLeader && !isSales) return false;
           if (item.notAdmin && isAdmin) return false;
           return true;
@@ -170,30 +179,70 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
                 <span className="admin-sidebar__link-text">{item.name}</span>
               </NavLink>
               {item.name === 'Sales Projects' && activeSalesProject?.id && (
-                <NavLink
-                  to={`/admin/sales-projects/${activeSalesProject.id}/dashboard`}
-                  className={({ isActive }) =>
-                    `flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 mx-3 mb-1 ${
-                      isActive ? 'ring-1 ring-primary/40 bg-primary/15' : ''
-                    }`
-                  }
-                  onClick={onClose}
-                  title={`Active Project: ${activeSalesProject.name}`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    {activeSalesProject.logo ? (
-                      <img
-                        src={activeSalesProject.logo}
-                        alt={activeSalesProject.name}
-                        className="w-3.5 h-3.5 object-contain rounded bg-background p-0.5"
-                      />
-                    ) : (
-                      <span className="material-symbols-outlined text-[14px]">storefront</span>
-                    )}
-                    <span className="truncate">{activeSalesProject.name}</span>
+                <div className="space-y-1 mb-2">
+                  <NavLink
+                    to={`/admin/sales-projects/${activeSalesProject.id}/dashboard`}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 mx-3 mb-1 ${
+                        isActive ? 'ring-1 ring-primary/40 bg-primary/15' : ''
+                      }`
+                    }
+                    onClick={onClose}
+                    title={`Active Project: ${activeSalesProject.name}`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      {activeSalesProject.logo ? (
+                        <img
+                          src={activeSalesProject.logo}
+                          alt={activeSalesProject.name}
+                          className="w-3.5 h-3.5 object-contain rounded bg-background p-0.5"
+                        />
+                      ) : (
+                        <span className="material-symbols-outlined text-[14px]">storefront</span>
+                      )}
+                      <span className="truncate">{activeSalesProject.name}</span>
+                    </div>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  </NavLink>
+
+                  {/* Scoped Sales Workspace Modules */}
+                  <div className="pl-4 space-y-0.5 ml-4 border-l-2 border-border/70 my-1">
+                    {[
+                      { name: 'Dashboard', path: `/admin/sales-projects/${activeSalesProject.id}/dashboard`, icon: 'dashboard' },
+                      { name: 'Visits', path: `/admin/sales-projects/${activeSalesProject.id}/visits`, icon: 'calendar_month' },
+                      { name: 'Sales Deals', path: `/admin/sales-projects/${activeSalesProject.id}/deals`, icon: 'trending_up' },
+                      { name: 'Leads', path: `/admin/sales-projects/${activeSalesProject.id}/leads`, icon: 'contacts' },
+                      { name: 'Products', path: `/admin/sales-projects/${activeSalesProject.id}/products`, icon: 'inventory_2', adminOnly: true },
+                      { name: 'Targets', path: `/admin/sales-projects/${activeSalesProject.id}/target`, icon: 'track_changes', adminOnly: true },
+                      { name: 'Wishlist', path: `/admin/sales-projects/${activeSalesProject.id}/wishlist`, icon: 'favorite' },
+                      { name: 'Status Requests', path: `/admin/sales-projects/${activeSalesProject.id}/requests`, icon: 'pending_actions', adminOrLeader: true },
+                      { name: 'Visit Statuses', path: `/admin/sales-projects/${activeSalesProject.id}/visitstatus`, icon: 'tune', adminOnly: true },
+                      { name: 'Sales Leaders', path: `/admin/sales-projects/${activeSalesProject.id}/leaders`, icon: 'supervisor_account', adminOnly: true },
+                      { name: 'Sales Reps', path: `/admin/sales-projects/${activeSalesProject.id}/sales`, icon: 'badge', adminOrLeader: true },
+                    ]
+                      .filter((sub) => {
+                        if (isAdmin) return true;
+                        if (sub.adminOnly) return false;
+                        if (sub.adminOrLeader) return isLeader;
+                        return true;
+                      })
+                      .map((sub) => (
+                        <NavLink
+                          key={sub.path}
+                          to={sub.path}
+                          className={({ isActive }) =>
+                            `admin-sidebar__link text-xs py-1.5 px-2.5 rounded-lg ${
+                              isActive ? 'admin-sidebar__link--active' : ''
+                            }`
+                          }
+                          onClick={onClose}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">{sub.icon}</span>
+                          <span className="admin-sidebar__link-text text-xs">{sub.name}</span>
+                        </NavLink>
+                      ))}
                   </div>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                </NavLink>
+                </div>
               )}
             </React.Fragment>
           );

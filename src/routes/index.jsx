@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { isAuthenticated, removeAuthToken, isValidRole } from '@/utils/auth';
+import { isAuthenticated, removeAuthToken, isValidRole, isAdminRole } from '@/utils/auth';
 import { LoginPage } from '@/components/LoginPage';
 
 // Removed Visits Pages since they are from the old template
@@ -74,6 +74,19 @@ const RequireActiveSalesProject = ({ subpath: defaultSubpath }) => {
   }
   if (!subpath || subpath === 'sales') subpath = 'dashboard';
   return <Navigate to={`/admin/sales-projects/${activeProjectId}/${subpath}`} replace />;
+};
+
+// Strict guard for admin-only modules within a sales workspace (Products, Target, Visit Status, Leaders)
+const AdminOnlySalesWorkspaceRoute = ({ children }) => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!isAdminRole(user?.role)) {
+      return <Navigate to="dashboard" replace />;
+    }
+  } catch {
+    return <Navigate to="dashboard" replace />;
+  }
+  return children;
 };
 
 // Admin Route Wrapper - checks role
@@ -186,22 +199,22 @@ export const router = createBrowserRouter([
           { path: 'leads', element: <Leads /> },
           { path: 'leads/add', element: <LeadsAdd /> },
           { path: 'leads/:id/edit', element: <LeadsAdd /> },
-          { path: 'products', element: <Products /> },
-          { path: 'products/add', element: <ProductsAdd /> },
-          { path: 'products/:id/edit', element: <ProductsAdd /> },
-          { path: 'target', element: <Target /> },
-          { path: 'target/add', element: <TargetAdd /> },
-          { path: 'target/:id/edit', element: <TargetAdd /> },
+          { path: 'products', element: <AdminOnlySalesWorkspaceRoute><Products /></AdminOnlySalesWorkspaceRoute> },
+          { path: 'products/add', element: <AdminOnlySalesWorkspaceRoute><ProductsAdd /></AdminOnlySalesWorkspaceRoute> },
+          { path: 'products/:id/edit', element: <AdminOnlySalesWorkspaceRoute><ProductsAdd /></AdminOnlySalesWorkspaceRoute> },
+          { path: 'target', element: <AdminOnlySalesWorkspaceRoute><Target /></AdminOnlySalesWorkspaceRoute> },
+          { path: 'target/add', element: <AdminOnlySalesWorkspaceRoute><TargetAdd /></AdminOnlySalesWorkspaceRoute> },
+          { path: 'target/:id/edit', element: <AdminOnlySalesWorkspaceRoute><TargetAdd /></AdminOnlySalesWorkspaceRoute> },
           { path: 'wishlist', element: <WishList /> },
           { path: 'wishlist/add', element: <WishListAdd /> },
           { path: 'wishlist/:id/edit', element: <WishListAdd /> },
           { path: 'requests', element: <PendingRequests /> },
           { path: 'history-requests', element: <HistoryRequests /> },
-          { path: 'visitstatus', element: <VisitStatus /> },
-          { path: 'visitstatus/add', element: <VisitStatusAdd /> },
-          { path: 'visitstatus/:id/edit', element: <VisitStatusAdd /> },
+          { path: 'visitstatus', element: <AdminOnlySalesWorkspaceRoute><VisitStatus /></AdminOnlySalesWorkspaceRoute> },
+          { path: 'visitstatus/add', element: <AdminOnlySalesWorkspaceRoute><VisitStatusAdd /></AdminOnlySalesWorkspaceRoute> },
+          { path: 'visitstatus/:id/edit', element: <AdminOnlySalesWorkspaceRoute><VisitStatusAdd /></AdminOnlySalesWorkspaceRoute> },
           { path: 'admins', element: <Navigate to="../dashboard" replace /> },
-          { path: 'leaders', element: <SalesLeaders /> },
+          { path: 'leaders', element: <AdminOnlySalesWorkspaceRoute><SalesLeaders /></AdminOnlySalesWorkspaceRoute> },
           { path: 'sales', element: <SalesReps /> },
           { path: 'sales-reps', element: <SalesReps /> },
           { path: 'deals', element: <SalesDeals /> },

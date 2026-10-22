@@ -30,7 +30,7 @@ import {
   Check,
   Users
 } from 'lucide-react';
-import { isAdminRole } from '@/utils/auth';
+import { isAdminRole, isLeaderSalesRole, isSalesRole } from '@/utils/auth';
 import { apiClient } from '@/lib/axios';
 
 const SalesProjects = () => {
@@ -38,7 +38,9 @@ const SalesProjects = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const role = user?.role;
   const isAdmin = isAdminRole(role);
-  const isAllowed = isAdmin || role === 'leader' || role === 'sales';
+  const isLeader = isLeaderSalesRole(role);
+  const isSales = isSalesRole(role);
+  const isAllowed = isAdmin || isLeader || isSales;
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

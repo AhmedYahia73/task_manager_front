@@ -21,8 +21,13 @@ import {
   Filter 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { isAdminRole, isLeaderSalesRole, getCurrentUser } from '@/utils/auth';
 
 export default function SalesReps() {
+  const currentUser = getCurrentUser();
+  const isAdmin = isAdminRole(currentUser?.role);
+  const isLeader = isLeaderSalesRole(currentUser?.role);
+
   const { projectId: routeProjectId } = useParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -142,7 +147,7 @@ export default function SalesReps() {
         phone: '',
         password: '',
         status: 'active',
-        leader_id: '',
+        leader_id: isLeader ? (currentUser?.id || '') : '',
         target_id: '',
         sales_project_ids: routeProjectId ? [routeProjectId] : [],
       });
@@ -281,27 +286,29 @@ export default function SalesReps() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
-          {/* Leader Filter */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
-              <UserCheck className="w-3.5 h-3.5" /> Leader:
-            </span>
-            <select
-              value={leaderFilter}
-              onChange={(e) => {
-                setLeaderFilter(e.target.value);
-                setPage(1);
-              }}
-              className="bg-background border rounded-xl px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-44"
-            >
-              <option value="">All Leaders</option>
-              {leadersList.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Leader Filter - only show if Admin */}
+          {isAdmin && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+                <UserCheck className="w-3.5 h-3.5" /> Leader:
+              </span>
+              <select
+                value={leaderFilter}
+                onChange={(e) => {
+                  setLeaderFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-background border rounded-xl px-2.5 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-44"
+              >
+                <option value="">All Leaders</option>
+                {leadersList.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Project Filter - only show if NOT locked to a project route */}
           {!routeProjectId && (
@@ -352,7 +359,7 @@ export default function SalesReps() {
                 <tr>
                   <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Sales Rep</th>
                   <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Contact</th>
-                  <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Assigned Leader</th>
+                  {isAdmin && <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Assigned Leader</th>}
                   <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Assigned Projects</th>
                   <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Target</th>
                   <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Status</th>
@@ -400,16 +407,18 @@ export default function SalesReps() {
                     </td>
 
                     {/* Assigned Leader */}
-                    <td className="py-3 px-4">
-                      {item.leader_name ? (
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-blue-500 bg-blue-500/10 px-2.5 py-1 rounded-md w-fit">
-                          <UserCheck className="w-3.5 h-3.5" />
-                          <span>{item.leader_name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">No Leader</span>
-                      )}
-                    </td>
+                    {isAdmin && (
+                      <td className="py-3 px-4">
+                        {item.leader_name ? (
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-blue-500 bg-blue-500/10 px-2.5 py-1 rounded-md w-fit">
+                            <UserCheck className="w-3.5 h-3.5" />
+                            <span>{item.leader_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">No Leader</span>
+                        )}
+                      </td>
+                    )}
 
                     {/* Assigned Projects */}
                     <td className="py-3 px-4">
@@ -608,21 +617,31 @@ export default function SalesReps() {
 
               {/* Assigned Leader & Target */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold mb-1 block">Team Leader</label>
-                  <select
-                    value={formData.leader_id}
-                    onChange={(e) => setFormData({ ...formData, leader_id: e.target.value })}
-                    className="w-full bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">No Leader Assigned</option>
-                    {leadersList.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {isAdmin ? (
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">Team Leader</label>
+                    <select
+                      value={formData.leader_id}
+                      onChange={(e) => setFormData({ ...formData, leader_id: e.target.value })}
+                      className="w-full bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">No Leader Assigned</option>
+                      {leadersList.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">Team Leader</label>
+                    <div className="w-full bg-muted/50 border rounded-lg px-3 py-2 text-sm text-foreground font-medium flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-primary" />
+                      <span>{currentUser?.name || 'You (Leader)'}</span>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="text-xs font-semibold mb-1 block">Target (Optional)</label>
                   <select

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRoleNames } from '@/context/RoleNameContext';
+import { isLeaderSalesRole, isSalesRole } from '@/utils/auth';
+import { getActiveSalesProject } from '@/utils/salesProject';
 import EngineerDashboard from './EngineerDashboard';
 import UserPointsModal from './UserPointsModal';
 import UserAttendanceModal from './UserAttendanceModal';
@@ -172,7 +174,15 @@ const Dashboard = () => {
     }
   };
 
-  if (user?.role === 'engineer' || user?.role === 'tester' || user?.role === 'leader_sales') {
+  if (isLeaderSalesRole(user?.role) || isSalesRole(user?.role)) {
+    const activeProject = getActiveSalesProject();
+    if (activeProject?.id) {
+      return <Navigate to={`/admin/sales-projects/${activeProject.id}/dashboard`} replace />;
+    }
+    return <Navigate to="/admin/sales-projects" replace />;
+  }
+
+  if (user?.role === 'engineer' || user?.role === 'tester') {
     return <EngineerDashboard />;
   }
 

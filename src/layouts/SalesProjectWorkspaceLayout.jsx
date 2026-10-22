@@ -9,6 +9,7 @@ import {
   setActiveSalesProject,
   getActiveSalesProjectId,
 } from '@/utils/salesProject';
+import { isAdminRole, isLeaderSalesRole, isSalesRole, getCurrentUser } from '@/utils/auth';
 import { Button } from '@/components/ui/button';
 import {
   ArrowLeft,
@@ -125,19 +126,36 @@ export const SalesProjectWorkspaceLayout = () => {
     navigate(`/admin/sales-projects/${targetProject.id}/${subpath}`);
   };
 
-  const navItems = [
+  const user = getCurrentUser();
+  const userRole = user?.role;
+  const isAdmin = isAdminRole(userRole);
+  const isLeader = isLeaderSalesRole(userRole);
+  const isSales = isSalesRole(userRole);
+
+  const allNavItems = [
     { label: 'Dashboard', path: `/admin/sales-projects/${projectId}/dashboard`, icon: LayoutDashboard },
     { label: 'Visits', path: `/admin/sales-projects/${projectId}/visits`, icon: MapPin },
     { label: 'Sales Deals', path: `/admin/sales-projects/${projectId}/deals`, icon: TrendingUp },
     { label: 'Leads', path: `/admin/sales-projects/${projectId}/leads`, icon: Users },
-    { label: 'Products', path: `/admin/sales-projects/${projectId}/products`, icon: Package },
-    { label: 'Targets', path: `/admin/sales-projects/${projectId}/target`, icon: Target },
+    { label: 'Products', path: `/admin/sales-projects/${projectId}/products`, icon: Package, adminOnly: true },
+    { label: 'Targets', path: `/admin/sales-projects/${projectId}/target`, icon: Target, adminOnly: true },
     { label: 'Wishlist', path: `/admin/sales-projects/${projectId}/wishlist`, icon: Heart },
-    { label: 'Status Requests', path: `/admin/sales-projects/${projectId}/requests`, icon: GitPullRequest },
-    { label: 'Visit Statuses', path: `/admin/sales-projects/${projectId}/visitstatus`, icon: SlidersHorizontal },
-    { label: 'Sales Leaders', path: `/admin/sales-projects/${projectId}/leaders`, icon: Briefcase },
-    { label: 'Sales Reps', path: `/admin/sales-projects/${projectId}/sales`, icon: UserCheck },
+    { label: 'Status Requests', path: `/admin/sales-projects/${projectId}/requests`, icon: GitPullRequest, adminOrLeader: true },
+    { label: 'Visit Statuses', path: `/admin/sales-projects/${projectId}/visitstatus`, icon: SlidersHorizontal, adminOnly: true },
+    { label: 'Sales Leaders', path: `/admin/sales-projects/${projectId}/leaders`, icon: Briefcase, adminOnly: true },
+    { label: 'Sales Reps', path: `/admin/sales-projects/${projectId}/sales`, icon: UserCheck, adminOrLeader: true },
   ];
+
+  // Exact matching with Systego-Sales Leader Portal:
+  // Leader sees: Dashboard, Visits, Deals, Leads, Wishlist, Status Requests, Sales Reps
+  // Sales sees: Dashboard, Visits, Deals, Leads, Wishlist
+  // Admin sees all 11 modules
+  const navItems = allNavItems.filter((item) => {
+    if (isAdmin) return true;
+    if (item.adminOnly) return false;
+    if (item.adminOrLeader) return isLeader;
+    return true;
+  });
 
   return (
     <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-4 space-y-4 sm:space-y-6">
@@ -243,7 +261,7 @@ export const SalesProjectWorkspaceLayout = () => {
                       }}
                       className="w-full text-right px-2.5 py-1.5 text-xs text-primary font-medium hover:bg-muted rounded-lg"
                     >
-                      Manage All Projects...
+                      {isAdmin ? 'Manage All Projects...' : 'View All Projects...'}
                     </button>
                   </div>
                 )}

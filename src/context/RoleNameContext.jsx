@@ -24,6 +24,10 @@ export const RoleNameProvider = ({ children }) => {
       case 'admin':
       case 'super_admin':
         return roleNames.admin;
+      case 'leader_sales':
+        return 'Sales Leader';
+      case 'sales':
+        return 'Sales Rep';
       default:
         return backendRole; // fallback to whatever was passed
     }
@@ -59,6 +63,10 @@ export const useRoleNames = () => {
         case 'admin':
         case 'super_admin':
           return defaultRoleNames.admin;
+        case 'leader_sales':
+          return 'Sales Leader';
+        case 'sales':
+          return 'Sales Rep';
         default:
           return backendRole || '';
       }

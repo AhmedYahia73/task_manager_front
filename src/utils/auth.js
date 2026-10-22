@@ -57,6 +57,16 @@ export const isLeaderSalesRole = (role) => {
   return norm === 'leader_sales' || norm === 'leader';
 };
 
+export const isSalesRole = (role) => {
+  const norm = normalizeRole(role);
+  return norm === 'sales';
+};
+
+export const isAnySalesRole = (role) => {
+  const norm = normalizeRole(role);
+  return norm === 'sales' || norm === 'leader_sales' || norm === 'leader';
+};
+
 export const isEngineerRole = (role) => {
   const norm = normalizeRole(role);
   return norm === 'engineer' || norm === 'tester';
@@ -68,7 +78,6 @@ export const canViewEngineering = (role) => {
     norm === 'admin' ||
     norm === 'super_admin' ||
     norm === 'engineer' ||
-    norm === 'leader_sales' ||
-    norm === 'leader'
+    norm === 'tester'
   );
 };
