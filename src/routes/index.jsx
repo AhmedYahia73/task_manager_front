@@ -37,6 +37,7 @@ import SalesProjects from '@/Pages/Admin/SalesProjects';
 import SalesAdmins from '@/Pages/Admin/Sales/SalesAdmins';
 import SalesLeaders from '@/Pages/Admin/Sales/SalesLeaders';
 import SalesReps from '@/Pages/Admin/Sales/SalesReps';
+import SalesDeals from '@/Pages/Admin/Sales/SalesDeals';
 import SalesDashboard from '@/Pages/Admin/Sales/SalesDashboard';
 import Visits from '@/Pages/Admin/Sales/Visits/Visits';
 import VisitsAdd from '@/Pages/Admin/Sales/Visits/VisitsAdd';
@@ -202,6 +203,9 @@ export const router = createBrowserRouter([
           { path: 'admins', element: <Navigate to="../dashboard" replace /> },
           { path: 'leaders', element: <SalesLeaders /> },
           { path: 'sales', element: <SalesReps /> },
+          { path: 'sales-reps', element: <SalesReps /> },
+          { path: 'deals', element: <SalesDeals /> },
+          { path: 'sales-deals', element: <SalesDeals /> },
           { path: '*', element: <Navigate to="dashboard" replace /> },
         ],
       },

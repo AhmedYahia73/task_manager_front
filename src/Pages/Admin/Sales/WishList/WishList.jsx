@@ -68,6 +68,10 @@ const WishList = () => {
     const { data: listsResponse } = useGet("/api/admin/sales/wish_list/lists");
     const visitStatusList =
         listsResponse?.visit_status || listsResponse?.data?.visit_status || [];
+    const salesList =
+        listsResponse?.sales || listsResponse?.data?.sales || [];
+    const productsList =
+        listsResponse?.products || listsResponse?.data?.products || [];
 
     const statusItems = React.useMemo(() => {
         return visitStatusList.map((st) => ({
@@ -76,11 +80,19 @@ const WishList = () => {
         }));
     }, [visitStatusList]);
 
-    const selectedConvertStatus = React.useMemo(() => {
-        return visitStatusList.find((st) => String(st.id) === String(convertForm.status_id));
-    }, [visitStatusList, convertForm.status_id]);
-    const productsList =
-        listsResponse?.products || listsResponse?.data?.products || [];
+    const salesItems = React.useMemo(() => {
+        return salesList.map((s) => ({
+            value: String(s.id),
+            label: s.name,
+        }));
+    }, [salesList]);
+
+    const productsItems = React.useMemo(() => {
+        return productsList.map((p) => ({
+            value: String(p.id),
+            label: p.name,
+        }));
+    }, [productsList]);
 
     const [wishListToDelete, setWishListToDelete] = useState(null);
     const { mutate: deleteWishList, loading: isDeleting } = useMutation();
@@ -90,6 +102,7 @@ const WishList = () => {
     const [convertForm, setConvertForm] = useState({
         phone: "",
         status_id: "",
+        sales_id: "",
         owner_name: "",
         owner_phone: "",
         notes: "",
@@ -99,6 +112,10 @@ const WishList = () => {
         products: [],
     });
     const { mutate: convertWishList, loading: isConverting } = useMutation();
+
+    const selectedConvertStatus = React.useMemo(() => {
+        return visitStatusList.find((st) => String(st.id) === String(convertForm.status_id));
+    }, [visitStatusList, convertForm.status_id]);
 
     const handleOpenConvertModal = (row) => {
         setWishListToConvert(row);
@@ -196,7 +213,12 @@ const WishList = () => {
         {
             accessorKey: "sales",
             header: "Sales",
-            render: (row) => row.sales || "-",
+            render: (row) => {
+                const sObj = salesList.find(
+                    (s) => String(s.id) === String(row.sales_id) || String(s.id) === String(row.sales)
+                );
+                return sObj ? sObj.name : (row.sales || "-");
+            },
         },
         {
             accessorKey: "convert",
@@ -332,12 +354,12 @@ const WishList = () => {
                             <span className="font-semibold text-gray-900">
                                 {wishListToConvert?.name}
                             </span>
-                            {wishListToConvert?.sales ? (
+                            {wishListToConvert?.sales || wishListToConvert?.sales_id ? (
                                 <>
                                     {" "}
                                     (Sales:{" "}
                                     <span className="font-semibold text-gray-900">
-                                        {wishListToConvert.sales}
+                                        {salesList.find((s) => String(s.id) === String(wishListToConvert?.sales_id) || String(s.id) === String(wishListToConvert?.sales))?.name || wishListToConvert.sales}
                                     </span>
                                     )
                                 </>
@@ -469,17 +491,20 @@ const WishList = () => {
                                                     Product *
                                                 </Label>
                                                 <Select
-                                                    value={item.product_id || ""}
+                                                    items={productsItems}
+                                                    value={item.product_id ? String(item.product_id) : null}
                                                     onValueChange={(val) =>
                                                         handleProductChange(
                                                             idx,
                                                             "product_id",
-                                                            val
+                                                            val || ""
                                                         )
                                                     }
                                                 >
                                                     <SelectTrigger className="w-full border border-gray-300 rounded-md px-3 text-sm bg-white h-9">
-                                                        <SelectValue placeholder="Select Product" />
+                                                        <SelectValue placeholder="Select Product">
+                                                            {productsList.find((p) => String(p.id) === String(item.product_id))?.name}
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                     <SelectContent className="z-[9999] bg-white">
                                                         {productsList.map((p) => (
@@ -496,13 +521,14 @@ const WishList = () => {
                                                     Duration *
                                                 </Label>
                                                 <Select
-                                                    value={item.duration || ""}
+                                                    items={availableDurations.map((d) => ({ value: d, label: d }))}
+                                                    value={item.duration || null}
                                                     disabled={!item.product_id}
                                                     onValueChange={(val) =>
                                                         handleProductChange(
                                                             idx,
                                                             "duration",
-                                                            val
+                                                            val || ""
                                                         )
                                                     }
                                                 >
@@ -515,7 +541,9 @@ const WishList = () => {
                                                                     ? "No durations"
                                                                     : "Select Duration"
                                                             }
-                                                        />
+                                                        >
+                                                            {item.duration || undefined}
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                     <SelectContent className="z-[9999] bg-white">
                                                         {availableDurations.map((d) => (

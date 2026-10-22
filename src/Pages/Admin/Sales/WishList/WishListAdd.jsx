@@ -25,6 +25,13 @@ const WishListAdd = () => {
     const salesList =
         listsResponse?.sales || listsResponse?.data?.sales || [];
 
+    const salesItems = React.useMemo(() => {
+        return salesList.map((s) => ({
+            value: String(s.id),
+            label: s.name,
+        }));
+    }, [salesList]);
+
     const { data: response, loading: isLoadingData } = useGet(
         isEdit ? `/api/admin/sales/wish_list/${id}` : null,
         isEdit
@@ -40,6 +47,9 @@ const WishListAdd = () => {
         state;
 
     const initialData = React.useMemo(() => {
+        const matchedSales = salesList.find(
+            (s) => String(s.id) === String(fetchedData?.sales_id) || s.name === fetchedData?.sales || String(s.id) === String(fetchedData?.sales)
+        );
         if (!isEdit) {
             return {
                 name: "",
@@ -51,9 +61,9 @@ const WishListAdd = () => {
             id: fetchedData?.id || id,
             name: fetchedData?.name || "",
             description: fetchedData?.description || "",
-            sales_id: fetchedData?.sales_id || "",
+            sales_id: fetchedData?.sales_id || matchedSales?.id || "",
         };
-    }, [isEdit, id, fetchedData]);
+    }, [isEdit, id, fetchedData, salesList]);
 
     if (isLoadingLists || (isEdit && isLoadingData && !fetchedData)) {
         return (
@@ -113,17 +123,20 @@ const WishListAdd = () => {
                                 <div className="space-y-2 flex flex-col">
                                     <Label className="text-sm font-medium">Sales Representative</Label>
                                     <Select
-                                        value={selectedSalesId || ""}
+                                        items={salesItems}
+                                        value={selectedSalesId ? String(selectedSalesId) : null}
                                         onValueChange={(val) => {
-                                            setValue("sales_id", val, { shouldValidate: true });
+                                            setValue("sales_id", val || "", { shouldValidate: true });
                                         }}
                                     >
                                         <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
-                                            <SelectValue placeholder="Select sales representative" />
+                                            <SelectValue placeholder="Select sales representative">
+                                                {salesList.find((s) => String(s.id) === String(selectedSalesId))?.name}
+                                            </SelectValue>
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="z-50 bg-white">
                                             {salesList.map((salesItem) => (
-                                                <SelectItem key={salesItem.id} value={salesItem.id}>
+                                                <SelectItem key={salesItem.id} value={String(salesItem.id)}>
                                                     {salesItem.name}
                                                 </SelectItem>
                                             ))}

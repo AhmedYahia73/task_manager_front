@@ -27,8 +27,15 @@ export default function SalesReps() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [projectFilter, setProjectFilter] = useState('');
+  const [projectFilter, setProjectFilter] = useState(routeProjectId || '');
   const [leaderFilter, setLeaderFilter] = useState('');
+
+  // Keep project filter in sync with route parameter
+  useEffect(() => {
+    if (routeProjectId) {
+      setProjectFilter(routeProjectId);
+    }
+  }, [routeProjectId]);
 
   // Debounce search
   useEffect(() => {
@@ -39,8 +46,13 @@ export default function SalesReps() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch Dropdowns (Leaders, Sales Projects & Targets)
-  const { data: listsData } = useGet('/api/admin/sales/sales/lists');
+  const effectiveProjectId = routeProjectId || projectFilter;
+
+  // Fetch Dropdowns (Leaders, Sales Projects & Targets - scoped to project if available)
+  const listsUrl = effectiveProjectId
+    ? `/api/admin/sales/sales/lists?sales_project_id=${effectiveProjectId}`
+    : '/api/admin/sales/sales/lists';
+  const { data: listsData } = useGet(listsUrl);
   const salesProjectsList = listsData?.sales_projects || listsData?.data?.sales_projects || [];
   const targetsList = listsData?.targets || listsData?.data?.targets || [];
   const leadersList = listsData?.leaders || listsData?.data?.leaders || [];
@@ -51,13 +63,23 @@ export default function SalesReps() {
     limit: '10',
     search: debouncedSearch,
   });
-  if (projectFilter) queryParams.append('sales_project_id', projectFilter);
+  if (effectiveProjectId) queryParams.append('sales_project_id', effectiveProjectId);
   if (leaderFilter) queryParams.append('leader_id', leaderFilter);
 
   const { data, loading, refresh } = useGet(`/api/admin/sales/sales?${queryParams.toString()}`);
   const { mutate, loading: mutationLoading } = useMutation();
 
-  const salesList = data?.sales || [];
+  const rawSalesList = data?.sales || [];
+  // Ensure that if scoped to a project route, only members of this project are shown
+  const salesList = routeProjectId
+    ? rawSalesList.filter((rep) => {
+        const pids = (rep.sales_projects || [])
+          .map((p) => String(p.id))
+          .concat(Array.isArray(rep.sales_project_ids) ? rep.sales_project_ids.map(String) : [])
+          .concat(rep.sales_project_id ? [String(rep.sales_project_id)] : []);
+        return pids.includes(String(routeProjectId));
+      })
+    : rawSalesList;
   const pagination = data?.pagination || { totalPages: 1, page: 1, total: 0 };
 
   // Modal State
@@ -280,26 +302,30 @@ export default function SalesReps() {
             ))}
           </select>
 
-          {/* Project Filter */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground ml-0 sm:ml-2">
-            <Filter className="w-4 h-4" />
-            <span>Project:</span>
-          </div>
-          <select
-            value={projectFilter}
-            onChange={(e) => {
-              setProjectFilter(e.target.value);
-              setPage(1);
-            }}
-            className="bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-48"
-          >
-            <option value="">All Projects</option>
-            {salesProjectsList.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          {/* Project Filter - only show if NOT locked to a project route */}
+          {!routeProjectId && (
+            <>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground ml-0 sm:ml-2">
+                <Filter className="w-4 h-4" />
+                <span>Project:</span>
+              </div>
+              <select
+                value={projectFilter}
+                onChange={(e) => {
+                  setProjectFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-48"
+              >
+                <option value="">All Projects</option>
+                {salesProjectsList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
       </div>
 

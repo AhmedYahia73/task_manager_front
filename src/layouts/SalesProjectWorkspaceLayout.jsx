@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Sparkles,
   Check,
+  TrendingUp,
 } from 'lucide-react';
 
 export const SalesProjectWorkspaceLayout = () => {
@@ -127,6 +128,7 @@ export const SalesProjectWorkspaceLayout = () => {
   const navItems = [
     { label: 'Dashboard', path: `/admin/sales-projects/${projectId}/dashboard`, icon: LayoutDashboard },
     { label: 'Visits', path: `/admin/sales-projects/${projectId}/visits`, icon: MapPin },
+    { label: 'Sales Deals', path: `/admin/sales-projects/${projectId}/deals`, icon: TrendingUp },
     { label: 'Leads', path: `/admin/sales-projects/${projectId}/leads`, icon: Users },
     { label: 'Products', path: `/admin/sales-projects/${projectId}/products`, icon: Package },
     { label: 'Targets', path: `/admin/sales-projects/${projectId}/target`, icon: Target },

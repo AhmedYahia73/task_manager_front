@@ -18,7 +18,8 @@ import {
   Briefcase,
   UserCheck,
   Building2,
-  Sparkles
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 
 export const SalesWorkspaceHeader = ({ title, subtitle, extraAction }) => {
@@ -30,6 +31,7 @@ export const SalesWorkspaceHeader = ({ title, subtitle, extraAction }) => {
   const navItems = [
     { label: 'Dashboard', path: projectId ? `/admin/sales-projects/${projectId}/dashboard` : '/admin/sales/dashboard', icon: LayoutDashboard },
     { label: 'Visits', path: projectId ? `/admin/sales-projects/${projectId}/visits` : '/admin/sales/visits', icon: MapPin },
+    { label: 'Sales Deals', path: projectId ? `/admin/sales-projects/${projectId}/deals` : '/admin/sales/deals', icon: TrendingUp },
     { label: 'Leads', path: projectId ? `/admin/sales-projects/${projectId}/leads` : '/admin/sales/leads', icon: Users },
     { label: 'Products', path: projectId ? `/admin/sales-projects/${projectId}/products` : '/admin/sales/products', icon: Package },
     { label: 'Targets', path: projectId ? `/admin/sales-projects/${projectId}/target` : '/admin/sales/target', icon: Target },

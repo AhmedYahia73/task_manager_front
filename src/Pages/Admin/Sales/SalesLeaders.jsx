@@ -26,7 +26,14 @@ export default function SalesLeaders() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [projectFilter, setProjectFilter] = useState('');
+  const [projectFilter, setProjectFilter] = useState(routeProjectId || '');
+
+  // Keep project filter in sync with route parameter
+  useEffect(() => {
+    if (routeProjectId) {
+      setProjectFilter(routeProjectId);
+    }
+  }, [routeProjectId]);
 
   // Debounce search
   useEffect(() => {
@@ -37,8 +44,13 @@ export default function SalesLeaders() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch Dropdowns (Sales Projects & Targets)
-  const { data: listsData } = useGet('/api/admin/sales/leader/lists');
+  const effectiveProjectId = routeProjectId || projectFilter;
+
+  // Fetch Dropdowns (Sales Projects & Targets - scoped to project if available)
+  const listsUrl = effectiveProjectId
+    ? `/api/admin/sales/leader/lists?sales_project_id=${effectiveProjectId}`
+    : '/api/admin/sales/leader/lists';
+  const { data: listsData } = useGet(listsUrl);
   const salesProjectsList = listsData?.sales_projects || [];
   const targetsList = listsData?.targets || [];
 
@@ -48,12 +60,22 @@ export default function SalesLeaders() {
     limit: '10',
     search: debouncedSearch,
   });
-  if (projectFilter) queryParams.append('sales_project_id', projectFilter);
+  if (effectiveProjectId) queryParams.append('sales_project_id', effectiveProjectId);
 
   const { data, loading, refresh } = useGet(`/api/admin/sales/leader?${queryParams.toString()}`);
   const { mutate, loading: mutationLoading } = useMutation();
 
-  const leadersList = data?.leaders || [];
+  const rawLeadersList = data?.leaders || [];
+  // Ensure that if scoped to a project route, only leaders of this project are shown
+  const leadersList = routeProjectId
+    ? rawLeadersList.filter((leader) => {
+        const pids = (leader.sales_projects || [])
+          .map((p) => String(p.id))
+          .concat(Array.isArray(leader.sales_project_ids) ? leader.sales_project_ids.map(String) : [])
+          .concat(leader.sales_project_id ? [String(leader.sales_project_id)] : []);
+        return pids.includes(String(routeProjectId));
+      })
+    : rawLeadersList;
   const pagination = data?.pagination || { totalPages: 1, page: 1, total: 0 };
 
   // Modal State
@@ -250,27 +272,29 @@ export default function SalesLeaders() {
           />
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Filter className="w-4 h-4" />
-            <span>Project:</span>
+        {!routeProjectId && (
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Filter className="w-4 h-4" />
+              <span>Project:</span>
+            </div>
+            <select
+              value={projectFilter}
+              onChange={(e) => {
+                setProjectFilter(e.target.value);
+                setPage(1);
+              }}
+              className="bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-56"
+            >
+              <option value="">All Projects</option>
+              {salesProjectsList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
-          <select
-            value={projectFilter}
-            onChange={(e) => {
-              setProjectFilter(e.target.value);
-              setPage(1);
-            }}
-            className="bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-56"
-          >
-            <option value="">All Projects</option>
-            {salesProjectsList.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        )}
       </div>
 
       {/* Table / Grid */}
