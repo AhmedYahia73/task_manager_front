@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import {
 import { toast } from 'sonner';
 
 export default function SalesReps() {
+  const { projectId: routeProjectId } = useParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -81,6 +83,22 @@ export default function SalesReps() {
 
   const openModal = (item = null) => {
     if (item) {
+      let initialProjectIds = [];
+      if (Array.isArray(item.sales_project_ids)) {
+        initialProjectIds = item.sales_project_ids;
+      } else if (typeof item.sales_project_ids === 'string' && item.sales_project_ids.trim()) {
+        try {
+          const parsed = JSON.parse(item.sales_project_ids);
+          if (Array.isArray(parsed)) initialProjectIds = parsed;
+        } catch {}
+      }
+      if (initialProjectIds.length === 0 && Array.isArray(item.sales_projects)) {
+        initialProjectIds = item.sales_projects.map((p) => p.id || p._id).filter(Boolean);
+      }
+      if (initialProjectIds.length === 0 && item.sales_project_id) {
+        initialProjectIds = [item.sales_project_id];
+      }
+
       setEditingId(item.id);
       setFormData({
         name: item.name || '',
@@ -90,7 +108,7 @@ export default function SalesReps() {
         status: item.status || 'active',
         leader_id: item.leader_id || '',
         target_id: item.target_id || '',
-        sales_project_ids: item.sales_project_ids || (item.sales_project_id ? [item.sales_project_id] : []),
+        sales_project_ids: initialProjectIds,
       });
       setImagePreview(item.image || null);
       setSelectedFile(null);
@@ -104,7 +122,7 @@ export default function SalesReps() {
         status: 'active',
         leader_id: '',
         target_id: '',
-        sales_project_ids: [],
+        sales_project_ids: routeProjectId ? [routeProjectId] : [],
       });
       setImagePreview(null);
       setSelectedFile(null);
@@ -131,12 +149,13 @@ export default function SalesReps() {
 
   const toggleProjectSelection = (projectId) => {
     setFormData((prev) => {
-      const exists = prev.sales_project_ids.includes(projectId);
+      const currentIds = Array.isArray(prev.sales_project_ids) ? prev.sales_project_ids : [];
+      const exists = currentIds.includes(projectId);
       return {
         ...prev,
         sales_project_ids: exists
-          ? prev.sales_project_ids.filter((id) => id !== projectId)
-          : [...prev.sales_project_ids, projectId],
+          ? currentIds.filter((id) => id !== projectId)
+          : [...currentIds, projectId],
       };
     });
   };
@@ -161,6 +180,9 @@ export default function SalesReps() {
       if (formData.target_id) payload.append('target_id', formData.target_id);
       if (selectedFile) payload.append('image', selectedFile);
       payload.append('sales_project_ids', JSON.stringify(formData.sales_project_ids));
+      if (formData.sales_project_ids && formData.sales_project_ids.length > 0) {
+        payload.append('sales_project_id', formData.sales_project_ids[0]);
+      }
 
       if (editingId) {
         await mutate({
