@@ -78,6 +78,8 @@ export const canViewEngineering = (role) => {
     norm === 'admin' ||
     norm === 'super_admin' ||
     norm === 'engineer' ||
-    norm === 'tester'
+    norm === 'tester' ||
+    norm === 'leader_sales' ||
+    norm === 'leader'
   );
 };

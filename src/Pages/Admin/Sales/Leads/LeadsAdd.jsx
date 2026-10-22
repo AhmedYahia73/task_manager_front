@@ -4,6 +4,7 @@ import AddPage from "@/components/AddPage";
 import { useGet } from "@/hooks/useGet";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MapComponent from "@/components/MapComponent";
+import { getCurrentUser, isSalesRole } from "@/utils/auth";
 
 // Shadcn UI & Icons Components
 import {
@@ -25,12 +26,16 @@ import { getDurationsForProduct } from "@/Pages/Admin/Sales/Visits/VisitsAdd";
 const DEFAULT_CENTER = { lat: 30.0444, lng: 31.2357 };
 
 const LeadsAdd = () => {
-  const { id } = useParams();
+  const { id, projectId } = useParams();
   const isEdit = !!id;
 
-  const { data: listsResponse, loading: isListsLoading } = useGet(
-    "/api/admin/sales/leads/lists",
-  );
+  const currentUser = getCurrentUser();
+  const isSales = isSalesRole(currentUser?.role);
+
+  const listsUrl = projectId
+    ? `/api/admin/sales/leads/lists?sales_project_id=${projectId}`
+    : "/api/admin/sales/leads/lists";
+  const { data: listsResponse, loading: isListsLoading } = useGet(listsUrl);
 
   const salesList =
     listsResponse?.sales || listsResponse?.data?.sales || [];
@@ -93,10 +98,10 @@ const LeadsAdd = () => {
       notes: rawData.notes || "",
       lat: rawData.lat ?? DEFAULT_CENTER.lat,
       lng: rawData.lng ?? DEFAULT_CENTER.lng,
-      sales_id: rawData.sales_id ?? matchedSales?.id ?? "",
+      sales_id: isSales ? (currentUser?.id || "") : (rawData.sales_id ?? matchedSales?.id ?? ""),
       products: parsedProducts,
     };
-  }, [rawData, salesList]);
+  }, [rawData, salesList, isSales, currentUser?.id]);
 
   React.useEffect(() => {
     if (initialData?.address) {
@@ -127,6 +132,8 @@ const LeadsAdd = () => {
       onSuccessAction={() => window.history.back()}
       transformPayload={(data) => ({
         ...data,
+        sales_id: isSales ? (currentUser?.id || data.sales_id) : data.sales_id,
+        sales_project_id: projectId || undefined,
         products: (data.products || []).filter((p) => p && p.product_id),
       })}
     >
@@ -233,43 +240,52 @@ const LeadsAdd = () => {
                   />
                 </div>
 
-                {/* 5. Sales Select */}
-                <div className="space-y-2 flex flex-col w-full sm:col-span-2">
-                  <Label className="text-sm font-medium">Sales *</Label>
-                  <Controller
-                    name="sales_id"
-                    control={control}
-                    rules={{ required: "Sales field is required" }}
-                    render={({ field }) => (
-                      <Select
-                        value={field.value || ""}
-                        onValueChange={(val) => {
-                          field.onChange(val);
-                        }}
-                      >
-                        <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
-                          <SelectValue placeholder="Select Sales">
-                            {field.value
-                              ? salesList.find((s) => s.id === field.value)?.name
-                              : undefined}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent className="z-50 bg-white">
-                          {salesList.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                {/* 5. Sales Representative Field */}
+                {isSales ? (
+                  <div className="space-y-2 flex flex-col w-full sm:col-span-2">
+                    <Label className="text-sm font-medium">Sales Representative</Label>
+                    <div className="h-10 px-3 flex items-center rounded-md bg-muted/50 border border-border text-sm text-foreground font-medium">
+                      {currentUser?.name || "Assigned to Me"}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 flex flex-col w-full sm:col-span-2">
+                    <Label className="text-sm font-medium">Sales *</Label>
+                    <Controller
+                      name="sales_id"
+                      control={control}
+                      rules={{ required: "Sales field is required" }}
+                      render={({ field }) => (
+                        <Select
+                          value={field.value || ""}
+                          onValueChange={(val) => {
+                            field.onChange(val);
+                          }}
+                        >
+                          <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
+                            <SelectValue placeholder="Select Sales">
+                              {field.value
+                                ? salesList.find((s) => s.id === field.value)?.name
+                                : undefined}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className="z-50 bg-white">
+                            {salesList.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.sales_id && (
+                      <span className="text-xs text-red-500">
+                        Sales field is required
+                      </span>
                     )}
-                  />
-                  {errors.sales_id && (
-                    <span className="text-xs text-red-500">
-                      Sales field is required
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Multi-Products Section */}

@@ -56,12 +56,12 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         {[
           { 
             name: 'Dashboard', 
-            path: (isLeader || isSales)
+            path: isSales
               ? (activeSalesProject?.id ? `/admin/sales-projects/${activeSalesProject.id}/dashboard` : '/admin/sales-projects')
               : '/admin/dashboard', 
             icon: 'dashboard' 
           },
-          { name: 'Projects', path: '/admin/projects', icon: 'folder_copy', adminOrEngineer: true },
+          { name: 'Projects', path: '/admin/projects', icon: 'folder_copy', adminOrEngineerOrLeader: true },
           { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront', adminOrLeaderOrSales: true },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true },
@@ -110,6 +110,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         .filter(item => {
           if (item.adminOnly && !isAdmin) return false;
           if (item.adminOrEngineer && !isAdmin && !isEngineer) return false;
+          if (item.adminOrEngineerOrLeader && !isAdmin && !isEngineer && !isLeader) return false;
           if (item.adminOrLeaderOrSales && !isAdmin && !isLeader && !isSales) return false;
           if (item.notAdmin && isAdmin) return false;
           return true;

@@ -4,6 +4,7 @@ import AddPage from "@/components/AddPage";
 import { useGet } from "@/hooks/useGet";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MapComponent from "@/components/MapComponent";
+import { getCurrentUser, isSalesRole } from "@/utils/auth";
 
 // Shadcn UI & Icons Components
 import {
@@ -44,13 +45,17 @@ export const getDurationsForProduct = (productsList, productId) => {
 };
 
 const VisitsAdd = () => {
-  const { id } = useParams();
+  const { id, projectId } = useParams();
   const { state } = useLocation();
   const isEdit = !!id;
 
-  const { data: listsResponse, loading: isListsLoading } = useGet(
-    "/api/admin/sales/visits/lists",
-  );
+  const currentUser = getCurrentUser();
+  const isSales = isSalesRole(currentUser?.role);
+
+  const listsUrl = projectId
+    ? `/api/admin/sales/visits/lists?sales_project_id=${projectId}`
+    : "/api/admin/sales/visits/lists";
+  const { data: listsResponse, loading: isListsLoading } = useGet(listsUrl);
 
   const statusList =
     listsResponse?.visit_status || listsResponse?.data?.visit_status || [];
@@ -132,10 +137,10 @@ const VisitsAdd = () => {
       lat: rawData.lat ?? DEFAULT_CENTER.lat,
       lng: rawData.lng ?? DEFAULT_CENTER.lng,
       status_id: rawData.status_id,
-      sales_id: rawData.sales_id ?? matchedSales?.id ?? "",
+      sales_id: isSales ? (currentUser?.id || "") : (rawData.sales_id ?? matchedSales?.id ?? ""),
       products: parsedProducts,
     };
-  }, [rawData, salesList]);
+  }, [rawData, salesList, isSales, currentUser?.id]);
 
   React.useEffect(() => {
     if (initialData?.address) {
@@ -167,6 +172,8 @@ const VisitsAdd = () => {
       transformPayload={(data) => ({
         ...data,
         status: "visit",
+        sales_id: isSales ? (currentUser?.id || data.sales_id) : data.sales_id,
+        sales_project_id: projectId || undefined,
         products: (data.products || []).filter((p) => p && p.product_id),
       })}
     >
@@ -328,40 +335,49 @@ const VisitsAdd = () => {
                   )}
                 </div>
 
-                {/* 4. Sales Select */}
-                <div className="space-y-2 flex flex-col w-full">
-                  <Label className="text-sm font-medium">Sales *</Label>
-                  <Controller
-                    name="sales_id"
-                    control={control}
-                    rules={{ required: "Sales field is required" }}
-                    render={({ field }) => (
-                      <Select
-                        items={salesItems}
-                        value={field.value ? String(field.value) : null}
-                        onValueChange={(val) => {
-                          field.onChange(val || "");
-                        }}
-                      >
-                        <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
-                          <SelectValue placeholder="Select Sales" />
-                        </SelectTrigger>
-                        <SelectContent className="z-50 bg-white">
-                          {salesList.map((s) => (
-                            <SelectItem key={s.id} value={String(s.id)}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                {/* 4. Sales Representative Field */}
+                {isSales ? (
+                  <div className="space-y-2 flex flex-col w-full">
+                    <Label className="text-sm font-medium">Sales Representative</Label>
+                    <div className="h-10 px-3 flex items-center rounded-md bg-muted/50 border border-border text-sm text-foreground font-medium">
+                      {currentUser?.name || "Assigned to Me"}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 flex flex-col w-full">
+                    <Label className="text-sm font-medium">Sales *</Label>
+                    <Controller
+                      name="sales_id"
+                      control={control}
+                      rules={{ required: "Sales field is required" }}
+                      render={({ field }) => (
+                        <Select
+                          items={salesItems}
+                          value={field.value ? String(field.value) : null}
+                          onValueChange={(val) => {
+                            field.onChange(val || "");
+                          }}
+                        >
+                          <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border">
+                            <SelectValue placeholder="Select Sales" />
+                          </SelectTrigger>
+                          <SelectContent className="z-50 bg-white">
+                            {salesList.map((s) => (
+                              <SelectItem key={s.id} value={String(s.id)}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.sales_id && (
+                      <span className="text-xs text-red-500">
+                        Sales field is required
+                      </span>
                     )}
-                  />
-                  {errors.sales_id && (
-                    <span className="text-xs text-red-500">
-                      Sales field is required
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Multi-Products Section */}

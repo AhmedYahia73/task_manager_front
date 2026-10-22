@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { SalesWorkspaceHeader } from "@/components/SalesWorkspaceHeader";
 import { setActiveSalesProject, getActiveSalesProjectId } from "@/utils/salesProject";
+import { getCurrentUser, isSalesRole, isLeaderSalesRole } from "@/utils/auth";
 import {
   Plus,
   Calendar,
@@ -71,6 +72,10 @@ export default function SalesDashboard() {
     setDateFilter((prev) => ({ ...prev, [name]: value }));
   };
 
+  const currentUser = getCurrentUser();
+  const isSales = isSalesRole(currentUser?.role);
+  const isLeader = isLeaderSalesRole(currentUser?.role);
+
   return (
     <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
       {/* --- Filters Section --- */}
@@ -78,11 +83,25 @@ export default function SalesDashboard() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-foreground">
-              Sales Overview & KPIs
+              {isSales ? 'My Sales Dashboard' : isLeader ? 'Team Sales Dashboard' : 'Sales Overview & KPIs'}
             </h1>
+            {isSales && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                Personal View
+              </span>
+            )}
+            {isLeader && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                Team Leader View
+              </span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Track achievements, visits, and sales against set targets in real-time
+            {isSales 
+              ? 'Track your personal visits, deals, and points progress against your target' 
+              : isLeader 
+              ? 'Track your team achievements, visits, and sales against set targets in real-time' 
+              : 'Track overall achievements, visits, and sales against set targets in real-time'}
           </p>
         </div>
 

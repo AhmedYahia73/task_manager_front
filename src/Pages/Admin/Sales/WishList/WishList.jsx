@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { DataTable } from "@/components/DataTable";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { useGet } from "@/hooks/useGet";
@@ -31,6 +31,7 @@ const DEFAULT_CENTER = { lat: 30.0444, lng: 31.2357 };
 
 const WishList = () => {
     const navigate = useNavigate();
+    const { projectId } = useParams();
 
     // ---- Search & Pagination States ----
     const [searchQuery, setSearchQuery] = useState("");
@@ -49,6 +50,9 @@ const WishList = () => {
 
     // ---- Build Query Parameters for Backend ----
     const queryParams = new URLSearchParams();
+    if (projectId) {
+        queryParams.append("sales_project_id", projectId);
+    }
     queryParams.append("page", page.toString());
     queryParams.append("limit", "10");
 
@@ -65,7 +69,10 @@ const WishList = () => {
     const paginationData = response?.data?.pagination || response?.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 };
 
     // ---- Fetch Lists (sales, visit_status, products) ----
-    const { data: listsResponse } = useGet("/api/admin/sales/wish_list/lists");
+    const listsUrl = projectId
+        ? `/api/admin/sales/wish_list/lists?sales_project_id=${projectId}`
+        : "/api/admin/sales/wish_list/lists";
+    const { data: listsResponse } = useGet(listsUrl);
     const visitStatusList =
         listsResponse?.visit_status || listsResponse?.data?.visit_status || [];
     const salesList =

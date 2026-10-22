@@ -54,7 +54,6 @@ const CircularProgress = ({ value, total, colorClass, label }) => {
 const Dashboard = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const { data, loading } = useGet('/api/admin/dashboard');
 
   const [pointsUserId, setPointsUserId] = useState(null);
   const [pointsUserName, setPointsUserName] = useState('');
@@ -72,6 +71,8 @@ const Dashboard = () => {
 
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(defaultTo);
+
+  const { data, loading } = useGet(`/api/admin/dashboard${fromDate && toDate ? `?from=${fromDate}&to=${toDate}` : ''}`);
 
   const { data: leaderboardRes, loading: leaderboardLoading } = useGet(`/api/admin/dashboard/leaderboard?from=${fromDate}&to=${toDate}`);
   const leaderboardList = leaderboardRes?.leaderboard || [];
@@ -174,7 +175,7 @@ const Dashboard = () => {
     }
   };
 
-  if (isLeaderSalesRole(user?.role) || isSalesRole(user?.role)) {
+  if (isSalesRole(user?.role)) {
     const activeProject = getActiveSalesProject();
     if (activeProject?.id) {
       return <Navigate to={`/admin/sales-projects/${activeProject.id}/dashboard`} replace />;
@@ -190,9 +191,46 @@ const Dashboard = () => {
     <div className="p-6 md:p-8 space-y-8 bg-background min-h-screen relative text-foreground">
       
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Overview and management of the system</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Overview and management of the system</p>
+        </div>
+
+        {/* Date Filter Bar */}
+        <div className="flex items-center gap-3 bg-card p-2 rounded-xl border border-border shadow-sm self-start sm:self-auto">
+          <div className="flex items-center gap-2 px-2">
+            <span className="text-xs font-semibold text-muted-foreground">From:</span>
+            <input 
+              type="date" 
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 text-foreground cursor-pointer"
+            />
+          </div>
+          <div className="w-px h-6 bg-border"></div>
+          <div className="flex items-center gap-2 px-2">
+            <span className="text-xs font-semibold text-muted-foreground">To:</span>
+            <input 
+              type="date" 
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 text-foreground cursor-pointer"
+            />
+          </div>
+          {(fromDate !== defaultFrom || toDate !== defaultTo) && (
+            <button
+              onClick={() => {
+                setFromDate(defaultFrom);
+                setToDate(defaultTo);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded bg-muted transition-colors font-medium"
+              title="Reset to current month"
+            >
+              Reset
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
