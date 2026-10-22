@@ -49,7 +49,13 @@ const LeadsAdd = () => {
     isEdit,
   );
 
-  const rawData = leadResponse?.data?.Lead || leadResponse?.data?.lead;
+  const rawData =
+    leadResponse?.Lead ||
+    leadResponse?.lead ||
+    leadResponse?.data?.Lead ||
+    leadResponse?.data?.lead ||
+    leadResponse?.data ||
+    leadResponse;
 
   const [locationName, setLocationName] = useState("");
 
@@ -106,6 +112,7 @@ const LeadsAdd = () => {
     <AddPage
       title="Lead"
       apiUrl="/api/admin/sales/leads"
+      method={isEdit ? "PUT" : "POST"}
       initialData={
         isEdit
           ? initialData

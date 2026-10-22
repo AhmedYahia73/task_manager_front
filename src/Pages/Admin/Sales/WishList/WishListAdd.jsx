@@ -42,9 +42,11 @@ const WishListAdd = () => {
         <AddPage
             title="Wish List"
             apiUrl="/api/admin/sales/wish_list"
+            method={id ? "PUT" : "POST"}
             initialData={
                 id && fetchedData
                     ? {
+                        id: fetchedData.id || id,
                         name: fetchedData.name || "",
                         description: fetchedData.description || "",
                         sales_id: fetchedData.sales_id || "",

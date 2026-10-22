@@ -10,6 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     Dialog,
     DialogContent,
     DialogHeader,
@@ -347,23 +354,26 @@ const WishList = () => {
 
                             <div className="space-y-1.5">
                                 <Label className="text-sm font-medium">Visit Status *</Label>
-                                <select
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white h-10"
-                                    value={convertForm.status_id}
-                                    onChange={(e) =>
+                                <Select
+                                    value={convertForm.status_id || ""}
+                                    onValueChange={(val) =>
                                         setConvertForm((prev) => ({
                                             ...prev,
-                                            status_id: e.target.value,
+                                            status_id: val,
                                         }))
                                     }
                                 >
-                                    <option value="">Select Visit Status</option>
-                                    {visitStatusList.map((st) => (
-                                        <option key={st.id} value={st.id}>
-                                            {st.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <SelectTrigger className="w-full border border-gray-300 rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white h-10">
+                                        <SelectValue placeholder="Select Visit Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {visitStatusList.map((st) => (
+                                            <SelectItem key={st.id} value={String(st.id)}>
+                                                {st.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="space-y-1.5">

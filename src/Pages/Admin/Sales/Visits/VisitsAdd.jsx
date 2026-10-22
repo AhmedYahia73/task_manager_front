@@ -66,7 +66,14 @@ const VisitsAdd = () => {
     isEdit && !state?.visitData,
   );
 
-  const rawData = visitResponse?.data?.Visit;
+  const rawData =
+    visitResponse?.Visit ||
+    visitResponse?.visit ||
+    visitResponse?.data?.Visit ||
+    visitResponse?.data?.visit ||
+    visitResponse?.data ||
+    visitResponse ||
+    state?.visitData;
 
   const [locationName, setLocationName] = useState("");
 
@@ -124,6 +131,7 @@ const VisitsAdd = () => {
     <AddPage
       title="Visit"
       apiUrl="/api/admin/sales/visits"
+      method={isEdit ? "PUT" : "POST"}
       initialData={
         isEdit
           ? initialData

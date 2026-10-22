@@ -8,6 +8,13 @@ import { MapPin, StickyNote, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -69,7 +76,7 @@ const Leads = () => {
 
   const handleOpenConvertModal = (lead) => {
     setLeadToConvert(lead);
-    setSelectedStatusId(visitStatusList?.[0]?.id || "");
+    setSelectedStatusId(visitStatusList?.[0]?.id ? String(visitStatusList[0].id) : "");
   };
 
   const handleConvertToVisit = async () => {
@@ -272,18 +279,21 @@ const Leads = () => {
               <label className="text-sm font-medium text-gray-700">
                 Visit Status *
               </label>
-              <select
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                value={selectedStatusId}
-                onChange={(e) => setSelectedStatusId(e.target.value)}
+              <Select
+                value={selectedStatusId || ""}
+                onValueChange={(val) => setSelectedStatusId(val)}
               >
-                <option value="">Select Visit Status</option>
-                {visitStatusList.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-10 px-3 text-sm rounded-md bg-white border border-gray-300">
+                  <SelectValue placeholder="Select Visit Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {visitStatusList.map((st) => (
+                    <SelectItem key={st.id} value={String(st.id)}>
+                      {st.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
