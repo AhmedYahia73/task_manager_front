@@ -81,15 +81,38 @@ export const requestNotificationPermissionAndGetToken = async () => {
       }
     }
 
-    // 3. Retrieve FCM device token
-    const tokenOptions = { serviceWorkerRegistration: readyRegistration };
-    if (vapidKey) {
-      tokenOptions.vapidKey = vapidKey;
+    // 3. Retrieve FCM device token with graceful fallback
+    let token = null;
+    const cleanVapidKey = vapidKey ? String(vapidKey).trim().replace(/^["']|["']$/g, "").trim() : "";
+    const isValidVapidFormat = cleanVapidKey.length > 70 && cleanVapidKey.startsWith("B");
+
+    if (isValidVapidFormat) {
+      try {
+        token = await getToken(messaging, {
+          vapidKey: cleanVapidKey,
+          serviceWorkerRegistration: readyRegistration,
+        });
+      } catch (vapidErr) {
+        console.warn("[Firebase FCM] getToken with vapidKey failed, attempting fallback:", vapidErr.message);
+        try {
+          token = await getToken(messaging, { serviceWorkerRegistration: readyRegistration });
+        } catch (fbErr) {
+          console.error("[Firebase FCM] Fallback getToken failed:", fbErr);
+        }
+      }
+    } else {
+      if (cleanVapidKey && !isValidVapidFormat) {
+        console.warn("[Firebase FCM] Notice: VITE_FIREBASE_VAPID_KEY is not a valid 88-char Web Push Key Pair. Using default certificate.");
+      }
+      try {
+        token = await getToken(messaging, { serviceWorkerRegistration: readyRegistration });
+      } catch (fbErr) {
+        console.error("[Firebase FCM] getToken failed:", fbErr);
+      }
     }
 
-    const token = await getToken(messaging, tokenOptions);
     if (!token) {
-      console.warn("[Firebase FCM] No registration token available.");
+      console.warn("[Firebase FCM] No registration token returned.");
       return null;
     }
 
