@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { X, CalendarDays, Clock, Globe } from 'lucide-react';
+import { X, CalendarDays, Clock, Globe, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useMutation } from '@/hooks/useMutation';
 import { toast } from 'sonner';
 
 export default function UserRequestsModal({ onClose }) {
-  const [requestType, setRequestType] = useState('holiday'); // holiday, online, permission
+  const [requestType, setRequestType] = useState('holiday'); // holiday, online, permission, extra_time
   const [date, setDate] = useState('');
   const [hours, setHours] = useState('');
   const [reason, setReason] = useState('');
+  const [earlyAttend, setEarlyAttend] = useState(true);
+  const [lateLeave, setLateLeave] = useState(false);
   
   const { mutate, loading } = useMutation();
 
@@ -28,6 +30,16 @@ export default function UserRequestsModal({ onClose }) {
       if (!hours) return toast.error('Please specify hours');
       endpoint = '/api/user/requests/permission';
       payload = { date, hours: Number(hours), reason };
+    } else if (requestType === 'extra_time') {
+      if (!earlyAttend && !lateLeave) {
+        return toast.error('Please select at least Early Attendance or Late Leave');
+      }
+      endpoint = '/api/user/requests/extra-time';
+      payload = {
+        date,
+        early_attend: Boolean(earlyAttend),
+        late_leave: Boolean(lateLeave),
+      };
     }
 
     const res = await mutate({
@@ -54,33 +66,46 @@ export default function UserRequestsModal({ onClose }) {
         
         <div className="p-5">
           {/* Request Type Selector */}
-          <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className="grid grid-cols-4 gap-2 mb-6">
             <button
+              type="button"
               onClick={() => setRequestType('holiday')}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                requestType === 'holiday' ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border text-muted-foreground hover:bg-muted'
+              className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all ${
+                requestType === 'holiday' ? 'bg-primary/10 border-primary text-primary shadow-sm' : 'bg-background border-border text-muted-foreground hover:bg-muted'
               }`}
             >
-              <CalendarDays className="w-5 h-5 mb-1" />
-              <span className="text-xs font-semibold">Holiday</span>
+              <CalendarDays className="w-4 h-4 mb-1" />
+              <span className="text-[11px] font-semibold">Holiday</span>
             </button>
             <button
+              type="button"
               onClick={() => setRequestType('online')}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                requestType === 'online' ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border text-muted-foreground hover:bg-muted'
+              className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all ${
+                requestType === 'online' ? 'bg-primary/10 border-primary text-primary shadow-sm' : 'bg-background border-border text-muted-foreground hover:bg-muted'
               }`}
             >
-              <Globe className="w-5 h-5 mb-1" />
-              <span className="text-xs font-semibold">Online</span>
+              <Globe className="w-4 h-4 mb-1" />
+              <span className="text-[11px] font-semibold">Online</span>
             </button>
             <button
+              type="button"
               onClick={() => setRequestType('permission')}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                requestType === 'permission' ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border text-muted-foreground hover:bg-muted'
+              className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all ${
+                requestType === 'permission' ? 'bg-primary/10 border-primary text-primary shadow-sm' : 'bg-background border-border text-muted-foreground hover:bg-muted'
               }`}
             >
-              <Clock className="w-5 h-5 mb-1" />
-              <span className="text-xs font-semibold">Permission</span>
+              <Clock className="w-4 h-4 mb-1" />
+              <span className="text-[11px] font-semibold">Permission</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRequestType('extra_time')}
+              className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all ${
+                requestType === 'extra_time' ? 'bg-primary/10 border-primary text-primary shadow-sm' : 'bg-background border-border text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <Timer className="w-4 h-4 mb-1" />
+              <span className="text-[11px] font-semibold">Extra Time</span>
             </button>
           </div>
 
@@ -108,6 +133,37 @@ export default function UserRequestsModal({ onClose }) {
                   <Input type="text" value={reason} onChange={e => setReason(e.target.value)} className="h-11" placeholder="Reason for permission" />
                 </div>
               </>
+            )}
+
+            {requestType === 'extra_time' && (
+              <div className="space-y-3 pt-1 bg-muted/40 p-3.5 rounded-xl border border-border/60">
+                <p className="text-xs font-semibold text-muted-foreground">Select Extra Time Request Type:</p>
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={earlyAttend}
+                    onChange={(e) => setEarlyAttend(e.target.checked)}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-foreground">Early Attendance (حضور مبكر)</span>
+                    <p className="text-[11px] text-muted-foreground">Allow check-in before early_max limit</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={lateLeave}
+                    onChange={(e) => setLateLeave(e.target.checked)}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-foreground">Late Leave (انصراف متأخر)</span>
+                    <p className="text-[11px] text-muted-foreground">Allow check-out after late_max limit</p>
+                  </div>
+                </label>
+              </div>
             )}
 
             <div className="pt-4 flex justify-end gap-3">

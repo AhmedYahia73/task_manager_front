@@ -6,11 +6,13 @@ import { RoleNameProvider } from '@/context/RoleNameContext';
 import { CompanyHeader } from '@/components/CompanyHeader';
 import { CompanyFooter } from '@/components/CompanyFooter';
 import { NotificationBell } from '@/components/NotificationBell';
+import UserRequestsModal from '@/components/UserRequestsModal';
 
 export const AdminLayout = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = userData?.name || 'Admin';
   const userRole = userData?.role || 'Admin';
@@ -50,6 +52,16 @@ export const AdminLayout = () => {
           </div>
 
           <div className="admin-topbar__actions">
+            <button
+              onClick={() => setIsRequestModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all active:scale-95 shadow-xs"
+              title="Submit Request (تقديم طلب)"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_task</span>
+              <span className="hidden sm:inline">New Request</span>
+            </button>
+
             <NotificationBell />
             <button className="admin-topbar__icon-btn" title="Mail">
               <span className="material-symbols-outlined">mail</span>
@@ -88,6 +100,10 @@ export const AdminLayout = () => {
             </div>
           </div>
         </main>
+
+        {isRequestModalOpen && (
+          <UserRequestsModal onClose={() => setIsRequestModalOpen(false)} />
+        )}
       </div>
     </RoleNameProvider>
   );

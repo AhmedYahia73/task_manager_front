@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ChevronLeft, User, Menu } from 'lucide-react';
+import { LogOut, ChevronLeft, User, Menu, Timer } from 'lucide-react';
 import { removeAuthToken } from '@/utils/auth';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/NotificationBell';
+import UserRequestsModal from '@/components/UserRequestsModal';
 
 export const Navbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   // استرجاع بيانات المستخدم من LocalStorage
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -47,7 +49,17 @@ export const Navbar = ({ toggleSidebar }) => {
       </div>
 
       {/* قسم المستخدم وتسجيل الخروج */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setIsRequestModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all active:scale-95 shadow-xs"
+          title="Submit Request (تقديم طلب)"
+          type="button"
+        >
+          <Timer className="w-3.5 h-3.5" />
+          <span>New Request</span>
+        </button>
+
         <NotificationBell />
         <div className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
           <User className="w-4 h-4" />
@@ -64,6 +76,10 @@ export const Navbar = ({ toggleSidebar }) => {
           Logout
         </Button>
       </div>
+
+      {isRequestModalOpen && (
+        <UserRequestsModal onClose={() => setIsRequestModalOpen(false)} />
+      )}
     </nav>
   );
 };

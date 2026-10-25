@@ -47,40 +47,77 @@ export const NotificationBell = () => {
     } catch (e) {}
 
     const handleNewNotification = (data) => {
-      // Add new notification to list
-      const newNotif = {
-        id: data.id || `notif_${Date.now()}`,
-        target: data.target || "user",
-        type: data.type || "general",
-        link: data.link || null,
-        description: data.description,
-        createdAt: data.created_at || new Date().toISOString(),
-        is_read: false,
-      };
+      if (!data) return;
 
-      setNotifications((prev) => [newNotif, ...prev]);
-      setUnreadCount((prev) => prev + 1);
+      let currentUser = null;
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) currentUser = JSON.parse(storedUser);
+      } catch (e) {}
 
-      // Show real-time toast alert
-      const title =
-        data.type === "online_days"
-          ? "Online Work Days Assigned"
-          : data.type === "task_status"
-          ? "Task Status Updated"
-          : "New Notification";
+      if (!currentUser?.id) return;
 
-      toast.info(data.description, {
-        description: title,
-        duration: 7000,
+      const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
+
+      // 🔒 Rule 1: If notification is targeted to admins only, current user MUST be an admin
+      if (data.target === "admin" && !isAdmin) {
+        return;
+      }
+
+      // 🔒 Rule 2: If notification is targeted to a specific user, ensure user_id matches
+      if (data.user_id && data.user_id !== currentUser.id && !isAdmin && data.target === "user") {
+        return;
+      }
+
+      // 🔒 Rule 3: Deduplication - prevent duplicate notifications in state and duplicate toast
+      setNotifications((prev) => {
+        // If an item with the same ID already exists, do not duplicate
+        if (data.id && prev.some((n) => n.id === data.id)) {
+          return prev;
+        }
+
+        // Check if an identical notification was added in the last 4 seconds
+        const isRecentDuplicate = prev.slice(0, 5).some(
+          (n) => n.description === data.description &&
+                 Math.abs(Date.now() - new Date(n.createdAt).getTime()) < 4000
+        );
+        if (isRecentDuplicate) {
+          return prev;
+        }
+
+        // Show real-time toast alert EXACTLY ONCE
+        const title =
+          data.type === "online_days"
+            ? "Online Work Days Assigned"
+            : data.type === "task_status"
+            ? "Task Status Updated"
+            : "New Notification";
+
+        toast.info(data.description, {
+          description: title,
+          duration: 6000,
+        });
+
+        setUnreadCount((c) => c + 1);
+
+        const newNotif = {
+          id: data.id || `notif_${Date.now()}`,
+          target: data.target || "user",
+          type: data.type || "general",
+          link: data.link || null,
+          description: data.description,
+          createdAt: data.created_at || new Date().toISOString(),
+          is_read: false,
+        };
+
+        return [newNotif, ...prev];
       });
     };
 
     socket.on("new_notification", handleNewNotification);
-    socket.on("admin_notification", handleNewNotification);
 
     return () => {
       socket.off("new_notification", handleNewNotification);
-      socket.off("admin_notification", handleNewNotification);
     };
   }, []);
 

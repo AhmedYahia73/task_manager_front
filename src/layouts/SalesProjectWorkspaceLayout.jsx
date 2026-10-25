@@ -29,13 +29,16 @@ import {
   Sparkles,
   Check,
   TrendingUp,
+  Timer,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
+import UserRequestsModal from '@/components/UserRequestsModal';
 
 export const SalesProjectWorkspaceLayout = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   const [currentProject, setCurrentProject] = useState(() => {
     const cached = getActiveSalesProject();
@@ -281,6 +284,16 @@ export const SalesProjectWorkspaceLayout = () => {
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+            <button
+              onClick={() => setIsRequestModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all active:scale-95 shadow-xs"
+              title="Submit Request (تقديم طلب)"
+              type="button"
+            >
+              <Timer className="w-3.5 h-3.5" />
+              <span>New Request</span>
+            </button>
+
             <NotificationBell />
             <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-medium border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -325,6 +338,10 @@ export const SalesProjectWorkspaceLayout = () => {
       <div>
         <Outlet />
       </div>
+
+      {isRequestModalOpen && (
+        <UserRequestsModal onClose={() => setIsRequestModalOpen(false)} />
+      )}
     </div>
   );
 };

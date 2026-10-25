@@ -8,8 +8,12 @@ import AttendanceAdminModal from '../Pages/Admin/HRM/AttendanceAdminModal';
 
 export default function AttendanceReport({ userId }) {
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  const pad = (n) => String(n).padStart(2, '0');
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDay = `${year}-${pad(month)}-01`;
+  const lastDay = `${year}-${pad(month)}-${pad(daysInMonth)}`;
 
   const [from, setFrom] = useState(firstDay);
   const [to, setTo] = useState(lastDay);
