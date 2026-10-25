@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCheck, Trash2, Clock, Check, AlertCircle, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Bell, CheckCheck, Trash2, Clock, Check, AlertCircle, CalendarDays, CheckCircle2, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/axios";
 import { getSocket } from "@/utils/socket";
 import { toast } from "sonner";
@@ -13,26 +13,79 @@ export const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const dropdownRef = useRef(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_LIMIT = 15;
 
-  // Fetch notifications from API
-  const fetchNotifications = async () => {
+  const dropdownRef = useRef(null);
+  const listRef = useRef(null);
+
+  // Fetch notifications from API with pagination
+  const fetchNotifications = async (targetPage = 1, isAppend = false) => {
     try {
-      setLoading(true);
-      const res = await apiClient.get("/api/admin/notifications");
+      if (isAppend) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      const res = await apiClient.get(`/api/admin/notifications?page=${targetPage}&limit=${PAGE_LIMIT}`);
       if (res?.data?.success) {
-        setNotifications(res.data.data.notifications || []);
-        setUnreadCount(res.data.data.unreadCount || 0);
+        const fetchedList = res.data.data.notifications || [];
+        const pagination = res.data.data.pagination;
+
+        if (res.data.data.unreadCount !== undefined) {
+          setUnreadCount(res.data.data.unreadCount);
+        }
+
+        if (isAppend) {
+          setNotifications((prev) => {
+            const existingIds = new Set(prev.map((n) => n.id));
+            const uniqueNew = fetchedList.filter((n) => !existingIds.has(n.id));
+            return [...prev, ...uniqueNew];
+          });
+        } else {
+          setNotifications(fetchedList);
+        }
+
+        setPage(targetPage);
+        if (pagination) {
+          setHasMore(pagination.hasMore ?? (targetPage < pagination.totalPages));
+        } else {
+          setHasMore(fetchedList.length >= PAGE_LIMIT);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
     } finally {
-      setLoading(false);
+      if (isAppend) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
+  // Scroll handler for infinite pagination inside dropdown
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 50) {
+      if (!loading && !loadingMore && hasMore) {
+        fetchNotifications(page + 1, true);
+      }
+    }
+  };
+
+  // Refresh first page when dropdown opens
   useEffect(() => {
-    fetchNotifications();
+    if (isOpen) {
+      fetchNotifications(1, false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    fetchNotifications(1, false);
 
     // Setup Socket.IO listener for real-time notifications
     const socket = getSocket();
@@ -245,11 +298,16 @@ export const NotificationBell = () => {
             )}
           </div>
 
-          {/* List Content */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/60">
+          {/* List Content with Infinite Scroll Pagination */}
+          <div 
+            ref={listRef}
+            onScroll={handleScroll}
+            className="max-h-[380px] overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/60"
+          >
             {loading && notifications.length === 0 ? (
-              <div className="py-12 text-center text-xs text-zinc-400">
-                Loading notifications...
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs text-zinc-400">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <span>Loading notifications...</span>
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-12 flex flex-col items-center justify-center text-center px-4">
@@ -264,76 +322,93 @@ export const NotificationBell = () => {
                 </p>
               </div>
             ) : (
-              notifications.map((notif) => {
-                const isOnlineType = notif.type === "online_days";
-                return (
-                  <div
-                    key={notif.id}
-                    onClick={() => handleItemClick(notif)}
-                    className={`group relative flex items-start gap-3 p-3.5 transition-colors cursor-pointer ${
-                      notif.is_read
-                        ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 opacity-75"
-                        : "bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50/70 dark:hover:bg-blue-950/40"
-                    }`}
-                  >
-                    {/* Status Indicator Icon */}
+              <>
+                {notifications.map((notif) => {
+                  const isOnlineType = notif.type === "online_days";
+                  return (
                     <div
-                      className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs ${
-                        isOnlineType
-                          ? notif.is_read
-                            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-                            : "bg-emerald-500 text-white shadow-sm"
-                          : notif.is_read
-                          ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                          : "bg-blue-100 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300"
+                      key={notif.id}
+                      onClick={() => handleItemClick(notif)}
+                      className={`group relative flex items-start gap-3 p-3.5 transition-colors cursor-pointer ${
+                        notif.is_read
+                          ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 opacity-75"
+                          : "bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50/70 dark:hover:bg-blue-950/40"
                       }`}
                     >
-                      {isOnlineType ? <CalendarDays className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                    </div>
-
-                    {/* Text Description & Time */}
-                    <div className="flex-1 min-w-0 pr-6">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase tracking-wider ${
-                            notif.target === "admin"
-                              ? "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
-                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
-                          }`}
-                        >
-                          {notif.target === "admin" ? "Admin" : "Employee"}
-                        </span>
-                      </div>
-                      <p
-                        className={`text-xs leading-relaxed break-words ${
-                          notif.is_read ? "font-normal text-zinc-700 dark:text-zinc-300" : "font-semibold text-zinc-900 dark:text-white"
+                      {/* Status Indicator Icon */}
+                      <div
+                        className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs ${
+                          isOnlineType
+                            ? notif.is_read
+                              ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                              : "bg-emerald-500 text-white shadow-sm"
+                            : notif.is_read
+                            ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                            : "bg-blue-100 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300"
                         }`}
                       >
-                        {notif.description}
-                      </p>
-                      <div className="flex items-center gap-1 mt-1 text-[11px] text-zinc-400">
-                        <Clock className="w-3 h-3" />
-                        <span>{formatTimeAgo(notif.createdAt)}</span>
+                        {isOnlineType ? <CalendarDays className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      </div>
+
+                      {/* Text Description & Time */}
+                      <div className="flex-1 min-w-0 pr-6">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase tracking-wider ${
+                              notif.target === "admin"
+                                ? "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
+                                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            }`}
+                          >
+                            {notif.target === "admin" ? "Admin" : "Employee"}
+                          </span>
+                        </div>
+                        <p
+                          className={`text-xs leading-relaxed break-words ${
+                            notif.is_read ? "font-normal text-zinc-700 dark:text-zinc-300" : "font-semibold text-zinc-900 dark:text-white"
+                          }`}
+                        >
+                          {notif.description}
+                        </p>
+                        <div className="flex items-center gap-1 mt-1 text-[11px] text-zinc-400">
+                          <Clock className="w-3 h-3" />
+                          <span>{formatTimeAgo(notif.createdAt)}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions / Dot */}
+                      <div className="absolute right-3 top-3 flex items-center gap-1">
+                        {!notif.is_read && (
+                          <span className="w-2 h-2 rounded-full bg-blue-600" title="Unread" />
+                        )}
+                        <button
+                          onClick={(e) => handleDelete(notif.id, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-opacity rounded"
+                          title="Delete notification"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
+                  );
+                })}
 
-                  {/* Actions / Dot */}
-                  <div className="absolute right-3 top-3 flex items-center gap-1">
-                    {!notif.is_read && (
-                      <span className="w-2 h-2 rounded-full bg-blue-600" title="Unread" />
-                    )}
-                    <button
-                      onClick={(e) => handleDelete(notif.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-opacity rounded"
-                      title="Delete notification"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                {/* Loading More Spinner on Scroll */}
+                {loadingMore && (
+                  <div className="py-3 flex items-center justify-center gap-2 text-xs text-zinc-400 bg-zinc-50/50 dark:bg-zinc-800/20">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span>Loading more notifications...</span>
                   </div>
-                </div>
-              );
-            })
-          )}
+                )}
+
+                {/* All Caught Up Indicator */}
+                {!hasMore && notifications.length > 10 && (
+                  <div className="py-2.5 text-center text-[11px] text-zinc-400 dark:text-zinc-500 bg-zinc-50/30 dark:bg-zinc-900/20">
+                    All notifications loaded
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
