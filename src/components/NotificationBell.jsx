@@ -37,6 +37,15 @@ export const NotificationBell = () => {
     // Setup Socket.IO listener for real-time notifications
     const socket = getSocket();
 
+    // Ensure user is joined to their socket room
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        socket.emit("join", { userId: u.id, role: u.role });
+      }
+    } catch (e) {}
+
     const handleNewNotification = (data) => {
       // Add new notification to list
       const newNotif = {
