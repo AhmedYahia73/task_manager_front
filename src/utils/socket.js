@@ -6,7 +6,8 @@ let socket = null;
 
 export const getSocket = () => {
   if (!socket) {
-    const rawUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+    const defaultUrl = "https://taskitobcknd.wegostation.com";
+    const rawUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_BASE_URL || defaultUrl;
     // Strip trailing slashes or subpaths if any
     const socketUrl = rawUrl.replace(/\/api\/?$/, "");
 

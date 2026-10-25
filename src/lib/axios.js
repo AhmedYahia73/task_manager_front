@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { getAuthToken } from '@/utils/auth';
 
+const defaultBaseUrl = 'https://taskitobcknd.wegostation.com';
+
 export const apiClient = axios.create({
-  // Vite reads environment variables using import.meta.env
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  // Vite reads environment variables using import.meta.env, fallback to production backend
+  baseURL: import.meta.env.VITE_API_BASE_URL || defaultBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },

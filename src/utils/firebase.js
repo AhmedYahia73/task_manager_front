@@ -26,12 +26,10 @@ export const getFirebaseMessaging = async () => {
   try {
     const supported = await isSupported();
     if (!supported) {
-      console.warn("[Firebase FCM] Messaging is not supported in this browser context.");
       return null;
     }
 
     if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-      console.warn("[Firebase FCM] Missing VITE_FIREBASE_API_KEY in .env. FCM push tokens will be inactive.");
       return null;
     }
 
@@ -50,7 +48,10 @@ export const getFirebaseMessaging = async () => {
 export const requestNotificationPermissionAndGetToken = async () => {
   try {
     if (typeof window === "undefined" || !("Notification" in window)) {
-      console.warn("[Firebase FCM] Notifications not supported in this browser.");
+      return null;
+    }
+
+    if (!firebaseConfig.apiKey) {
       return null;
     }
 
