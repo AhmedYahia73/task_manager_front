@@ -186,19 +186,18 @@ export const setupForegroundFCMListener = async (onNotificationReceived) => {
       const title = payload.notification?.title || data.title || "New Notification";
       const body = payload.notification?.body || data.body || data.description || "";
 
-      // 1. Show in-app toast
-      toast.info(body || title, {
-        description: title,
-        duration: 5000,
-      });
-
-      // 2. 🔔 Trigger native OS/browser notification banner if permission is granted
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      // 🔔 Trigger native OS notification banner ONLY if the window is NOT currently focused
+      // (If user is actively focused on the tab, the in-app notification UI is already displayed)
+      const isWindowFocused = typeof document !== "undefined" && document.hasFocus() && document.visibilityState === "visible";
+      if (!isWindowFocused && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
         try {
+          const notifTag = data.id || data.task_id || `taskito_${data.type || 'notif'}`;
           const browserNotif = new Notification(title, {
             body: body,
             icon: "/logo.png",
             badge: "/favicon.svg",
+            tag: notifTag,
+            renotify: false,
             data: data,
           });
 

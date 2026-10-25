@@ -91,24 +91,78 @@ export const NotificationBell = () => {
     // Initialize Firebase Cloud Messaging & request token
     requestNotificationPermissionAndGetToken();
 
+    // 🔒 Shared deduplication cache (5s TTL) to prevent duplicate alerts between Socket.IO & Firebase
+    const recentNotifKeys = new Set();
+
+    const processIncomingNotification = (rawNotif) => {
+      if (!rawNotif) return;
+
+      const notifId = rawNotif.id || rawNotif.task_id;
+      const description = rawNotif.description || rawNotif.body || "";
+      const type = rawNotif.type || "general";
+      const target = rawNotif.target || "user";
+      const targetUserId = rawNotif.user_id;
+
+      // 1. Deduplication check: ignore if identical notification arrived in last 5 seconds
+      const dedupKey = notifId ? `id_${notifId}` : `desc_${description.trim()}`;
+      if (recentNotifKeys.has(dedupKey)) {
+        return;
+      }
+      recentNotifKeys.add(dedupKey);
+      setTimeout(() => recentNotifKeys.delete(dedupKey), 5000);
+
+      // 2. Authorization check
+      let currentUser = null;
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) currentUser = JSON.parse(storedUser);
+      } catch (e) {}
+
+      if (!currentUser?.id) return;
+      const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
+
+      if (target === "admin" && !isAdmin) return;
+      if (targetUserId && targetUserId !== currentUser.id && !isAdmin && target === "user") return;
+
+      // 3. Show in-app toast alert EXACTLY ONCE
+      const title =
+        type === "online_days"
+          ? "Online Work Days Assigned"
+          : type === "task_status"
+          ? "Task Status Updated"
+          : "New Notification";
+
+      toast.info(description, {
+        description: title,
+        duration: 5000,
+      });
+
+      // 4. Update dropdown list & counter EXACTLY ONCE
+      const newNotif = {
+        id: notifId || `notif_${Date.now()}`,
+        target,
+        type,
+        link: rawNotif.link || null,
+        description,
+        createdAt: rawNotif.created_at || new Date().toISOString(),
+        is_read: false,
+      };
+
+      setNotifications((prev) => {
+        if (newNotif.id && prev.some((n) => n.id === newNotif.id)) return prev;
+        return [newNotif, ...prev];
+      });
+      setUnreadCount((c) => c + 1);
+    };
+
     // Listen for foreground FCM push notifications
     let unsubscribeFCM = () => {};
     setupForegroundFCMListener((payload) => {
       const data = payload.data || {};
-      const newNotif = {
-        id: data.id || `fcm_${Date.now()}`,
-        target: data.target || "user",
-        type: data.type || "general",
-        link: data.link || null,
-        description: payload.notification?.body || data.description || "New Notification",
-        createdAt: new Date().toISOString(),
-        is_read: false,
-      };
-      setNotifications((prev) => {
-        if (data.id && prev.some((n) => n.id === data.id)) return prev;
-        return [newNotif, ...prev];
+      processIncomingNotification({
+        ...data,
+        description: payload.notification?.body || data.body || data.description || "",
       });
-      setUnreadCount((c) => c + 1);
     }).then((unsub) => {
       if (typeof unsub === "function") unsubscribeFCM = unsub;
     });
@@ -126,71 +180,7 @@ export const NotificationBell = () => {
     } catch (e) {}
 
     const handleNewNotification = (data) => {
-      if (!data) return;
-
-      let currentUser = null;
-      try {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) currentUser = JSON.parse(storedUser);
-      } catch (e) {}
-
-      if (!currentUser?.id) return;
-
-      const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
-
-      // 🔒 Rule 1: If notification is targeted to admins only, current user MUST be an admin
-      if (data.target === "admin" && !isAdmin) {
-        return;
-      }
-
-      // 🔒 Rule 2: If notification is targeted to a specific user, ensure user_id matches
-      if (data.user_id && data.user_id !== currentUser.id && !isAdmin && data.target === "user") {
-        return;
-      }
-
-      // 🔒 Rule 3: Deduplication - prevent duplicate notifications in state and duplicate toast
-      setNotifications((prev) => {
-        // If an item with the same ID already exists, do not duplicate
-        if (data.id && prev.some((n) => n.id === data.id)) {
-          return prev;
-        }
-
-        // Check if an identical notification was added in the last 4 seconds
-        const isRecentDuplicate = prev.slice(0, 5).some(
-          (n) => n.description === data.description &&
-                 Math.abs(Date.now() - new Date(n.createdAt).getTime()) < 4000
-        );
-        if (isRecentDuplicate) {
-          return prev;
-        }
-
-        // Show real-time toast alert EXACTLY ONCE
-        const title =
-          data.type === "online_days"
-            ? "Online Work Days Assigned"
-            : data.type === "task_status"
-            ? "Task Status Updated"
-            : "New Notification";
-
-        toast.info(data.description, {
-          description: title,
-          duration: 6000,
-        });
-
-        setUnreadCount((c) => c + 1);
-
-        const newNotif = {
-          id: data.id || `notif_${Date.now()}`,
-          target: data.target || "user",
-          type: data.type || "general",
-          link: data.link || null,
-          description: data.description,
-          createdAt: data.created_at || new Date().toISOString(),
-          is_read: false,
-        };
-
-        return [newNotif, ...prev];
-      });
+      processIncomingNotification(data);
     };
 
     socket.on("new_notification", handleNewNotification);
