@@ -34,9 +34,7 @@ export const Settings = () => {
     rejected_holiday_deduction: 0,
     online_without_permission_deduction: 0,
     holiday_without_permission_deduction: 0,
-    delay_per_hour_deduction: 0,
-    router_ip_status: true,
-    router_ip: ''
+    delay_per_hour_deduction: 0
   });
 
   // Update local state when data is fetched
@@ -56,9 +54,7 @@ export const Settings = () => {
         rejected_holiday_deduction: settingsData.rejected_holiday_deduction || 0,
         online_without_permission_deduction: settingsData.online_without_permission_deduction || 0,
         holiday_without_permission_deduction: settingsData.holiday_without_permission_deduction || 0,
-        delay_per_hour_deduction: settingsData.delay_per_hour_deduction || 0,
-        router_ip_status: settingsData.router_ip_status !== undefined ? settingsData.router_ip_status : true,
-        router_ip: settingsData.router_ip || ''
+        delay_per_hour_deduction: settingsData.delay_per_hour_deduction || 0
       });
     }
   }, [data]);
@@ -431,51 +427,6 @@ export const Settings = () => {
                   className="max-w-md bg-background border-border focus-visible:ring-primary"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Attendance Methods Section */}
-          <div className="pt-6 border-t border-border mt-8">
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-6">
-              <Network className="w-5 h-5 text-primary" />
-              Attendance Methods
-            </h3>
-            
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
-                <div className="space-y-0.5">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Wifi className="w-4 h-4 text-primary" />
-                    Router IP Validation
-                  </label>
-                  <p className="text-xs text-muted-foreground">Restrict attendance to a specific router IP</p>
-                </div>
-                <Switch 
-                  checked={formData.router_ip_status} 
-                  onCheckedChange={(val) => handleToggleAutoSave('router_ip_status', val)} 
-                />
-              </div>
-              
-              {formData.router_ip_status && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }} 
-                  animate={{ opacity: 1, height: 'auto' }} 
-                  className="space-y-2 px-4"
-                >
-                  <label htmlFor="router_ip" className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Network className="w-4 h-4 text-muted-foreground" />
-                    Router IP Address
-                  </label>
-                  <Input
-                    id="router_ip"
-                    name="router_ip"
-                    value={formData.router_ip}
-                    onChange={handleChange}
-                    placeholder="e.g. 192.168.1.1"
-                    className="max-w-md bg-background border-border focus-visible:ring-primary"
-                  />
-                </motion.div>
-              )}
             </div>
           </div>
 

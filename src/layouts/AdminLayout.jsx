@@ -7,12 +7,14 @@ import { CompanyHeader } from '@/components/CompanyHeader';
 import { CompanyFooter } from '@/components/CompanyFooter';
 import { NotificationBell } from '@/components/NotificationBell';
 import UserRequestsModal from '@/components/UserRequestsModal';
+import AttendanceAdminModal from '@/Pages/Admin/HRM/AttendanceAdminModal';
 
 export const AdminLayout = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = userData?.name || 'Admin';
   const userRole = userData?.role || 'Admin';
@@ -52,6 +54,17 @@ export const AdminLayout = () => {
           </div>
 
           <div className="admin-topbar__actions">
+            {/* Quick Attendance Button */}
+            <button
+              onClick={() => setIsAttendanceModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-all active:scale-95 shadow-xs cursor-pointer"
+              title="Attendance (تسجيل حضور وانصراف)"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+              <span className="hidden sm:inline">Attendance</span>
+            </button>
+
             <button
               onClick={() => setIsRequestModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all active:scale-95 shadow-xs"
@@ -103,6 +116,14 @@ export const AdminLayout = () => {
 
         {isRequestModalOpen && (
           <UserRequestsModal onClose={() => setIsRequestModalOpen(false)} />
+        )}
+
+        {isAttendanceModalOpen && (
+          <AttendanceAdminModal
+            isOpen={isAttendanceModalOpen}
+            onClose={() => setIsAttendanceModalOpen(false)}
+            onSuccess={() => setIsAttendanceModalOpen(false)}
+          />
         )}
       </div>
     </RoleNameProvider>

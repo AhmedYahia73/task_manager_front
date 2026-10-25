@@ -3,7 +3,7 @@ import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Edit, Trash2, X } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, X, Network, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
 import { MapSelector } from '@/components/MapSelector';
 
@@ -18,12 +18,14 @@ const Zones = () => {
   const [formData, setFormData] = useState({
     name: '',
     locations: [],
-    status: true
+    status: true,
+    router_mac_status: false,
+    router_mac: ''
   });
 
   const openAddModal = () => {
     setEditingId(null);
-    setFormData({ name: '', locations: [], status: true });
+    setFormData({ name: '', locations: [], status: true, router_mac_status: false, router_mac: '' });
     setIsModalOpen(true);
   };
 
@@ -40,7 +42,9 @@ const Zones = () => {
     setFormData({
       name: zone.name,
       locations: Array.isArray(parsedLocations) ? parsedLocations : [],
-      status: zone.status
+      status: zone.status,
+      router_mac_status: Boolean(zone.router_mac_status),
+      router_mac: zone.router_mac || ''
     });
     setIsModalOpen(true);
   };
@@ -102,6 +106,7 @@ const Zones = () => {
               <tr>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Name</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Has Perimeter</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Router MAC</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Status</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
               </tr>
@@ -109,14 +114,14 @@ const Zones = () => {
             <tbody className="divide-y divide-border/50">
               {loading ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Loading zones...
                   </td>
                 </tr>
               ) : zonesList.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
                     No zones found. Create one to get started.
                   </td>
                 </tr>
@@ -142,6 +147,22 @@ const Zones = () => {
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
                           Not Configured
                         </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {zone.router_mac_status && zone.router_mac ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border border-emerald-500/20">
+                            {zone.router_mac}
+                          </span>
+                        </div>
+                      ) : zone.router_mac ? (
+                        <span className="font-mono text-xs text-muted-foreground opacity-75">
+                          {zone.router_mac} (Disabled)
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Not set</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -200,6 +221,44 @@ const Zones = () => {
                     locations={formData.locations}
                     onChange={(newPoly) => setFormData(prev => ({ ...prev, locations: newPoly }))}
                   />
+                </div>
+
+                {/* Router MAC Address Verification Section */}
+                <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <label htmlFor="router_mac_status" className="text-sm font-semibold flex items-center gap-2 cursor-pointer">
+                        <Network className="w-4 h-4 text-primary" />
+                        Router MAC Verification
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        Require employees in this zone to connect to this specific router MAC address
+                      </p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      id="router_mac_status"
+                      checked={formData.router_mac_status} 
+                      onChange={e => setFormData(prev => ({ ...prev, router_mac_status: e.target.checked }))} 
+                      className="w-4 h-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
+                    />
+                  </div>
+
+                  {formData.router_mac_status && (
+                    <div className="space-y-1.5 pt-1">
+                      <label htmlFor="router_mac" className="text-xs font-semibold text-foreground">
+                        Router MAC Address (عنوان الماك أدرس للراوتر) *
+                      </label>
+                      <Input 
+                        id="router_mac"
+                        required={formData.router_mac_status}
+                        value={formData.router_mac} 
+                        onChange={e => setFormData(prev => ({ ...prev, router_mac: e.target.value }))} 
+                        placeholder="e.g. 00:1A:2B:3C:4D:5E or A4:BB:6D:..."
+                        className="font-mono bg-background"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">

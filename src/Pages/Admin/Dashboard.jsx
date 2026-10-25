@@ -9,6 +9,7 @@ import { getActiveSalesProject } from '@/utils/salesProject';
 import EngineerDashboard from './EngineerDashboard';
 import UserPointsModal from './UserPointsModal';
 import UserAttendanceModal from './UserAttendanceModal';
+import AttendanceAdminModal from './HRM/AttendanceAdminModal';
 
 const formatDuration = (ms) => {
   if (ms < 0) ms = 0;
@@ -19,7 +20,7 @@ const formatDuration = (ms) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-const TopPerformerAttendanceBadge = ({ attendance, currentTime, onClick }) => {
+const TopPerformerAttendanceBadge = ({ attendance, currentTime, onClick, onRecord }) => {
   if (!attendance) return null;
 
   // 1. Employee is checked in (onsite or online)
@@ -152,9 +153,22 @@ const TopPerformerAttendanceBadge = ({ attendance, currentTime, onClick }) => {
             {isUpcoming ? 'Shift Upcoming' : 'Grace Period'}
           </span>
         </div>
-        <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
-          Starts {shiftStartStr}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
+            Starts {shiftStartStr}
+          </span>
+          {onRecord && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRecord(); }}
+              className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-xs transition-transform active:scale-95"
+              title="Record Attendance (تسجيل حضور)"
+            >
+              <span className="material-symbols-outlined text-[12px]">how_to_reg</span>
+              <span>تسجيل</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -178,9 +192,22 @@ const TopPerformerAttendanceBadge = ({ attendance, currentTime, onClick }) => {
           <span className="material-symbols-outlined text-[16px] shrink-0 text-amber-600 dark:text-amber-400">warning</span>
           <span className="truncate font-bold text-[11px] sm:text-xs">Late</span>
         </div>
-        <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-amber-500/30 font-mono text-[11px] sm:text-xs font-bold text-amber-800 dark:text-amber-200 shadow-2xs">
-          <span className="material-symbols-outlined text-[13px] text-amber-600 dark:text-amber-400">timer</span>
-          <span>+{timerText}</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-amber-500/30 font-mono text-[11px] sm:text-xs font-bold text-amber-800 dark:text-amber-200 shadow-2xs">
+            <span className="material-symbols-outlined text-[13px] text-amber-600 dark:text-amber-400">timer</span>
+            <span>+{timerText}</span>
+          </div>
+          {onRecord && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRecord(); }}
+              className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-xs transition-transform active:scale-95"
+              title="Record Attendance (تسجيل حضور)"
+            >
+              <span className="material-symbols-outlined text-[12px]">how_to_reg</span>
+              <span>تسجيل</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -198,9 +225,22 @@ const TopPerformerAttendanceBadge = ({ attendance, currentTime, onClick }) => {
         <span className="material-symbols-outlined text-[16px] shrink-0">cancel</span>
         <span className="truncate font-semibold text-[11px] sm:text-xs">Absent</span>
       </div>
-      <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
-        No Check-in
-      </span>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
+          No Check-in
+        </span>
+        {onRecord && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRecord(); }}
+            className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-xs transition-transform active:scale-95"
+            title="Record Attendance (تسجيل حضور)"
+          >
+            <span className="material-symbols-outlined text-[12px]">how_to_reg</span>
+            <span>تسجيل</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 };
@@ -263,6 +303,8 @@ const Dashboard = () => {
   const [pointsUserName, setPointsUserName] = useState('');
   const [attendanceUserId, setAttendanceUserId] = useState(null);
   const [attendanceUserName, setAttendanceUserName] = useState('');
+  const [recordAttendanceUser, setRecordAttendanceUser] = useState(null);
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -278,7 +320,7 @@ const Dashboard = () => {
 
   const { data, loading } = useGet(`/api/admin/dashboard${fromDate && toDate ? `?from=${fromDate}&to=${toDate}` : ''}`);
 
-  const { data: leaderboardRes, loading: leaderboardLoading } = useGet(`/api/admin/dashboard/leaderboard?from=${fromDate}&to=${toDate}`);
+  const { data: leaderboardRes, loading: leaderboardLoading, refresh: refreshLeaderboard } = useGet(`/api/admin/dashboard/leaderboard?from=${fromDate}&to=${toDate}`);
   const leaderboardList = leaderboardRes?.leaderboard || [];
 
   const navigate = useNavigate();
@@ -680,6 +722,7 @@ const Dashboard = () => {
                           attendance={usr.today_attendance} 
                           currentTime={currentTime} 
                           onClick={() => { setAttendanceUserId(usr.id); setAttendanceUserName(usr.name); }}
+                          onRecord={() => { setRecordAttendanceUser({ id: usr.id, name: usr.name, defaultMode: 'checkin' }); setIsRecordModalOpen(true); }}
                         />
 
                         {/* Tasks Pipeline Breakdown */}
@@ -774,6 +817,24 @@ const Dashboard = () => {
                         </span>
                         <div className="flex items-center gap-1">
                           <button 
+                            onClick={() => {
+                              const isCurrentlyCheckedIn = usr.today_attendance?.is_checked_in && !usr.today_attendance?.is_checked_out;
+                              setRecordAttendanceUser({ 
+                                id: usr.id, 
+                                name: usr.name, 
+                                defaultMode: isCurrentlyCheckedIn ? 'checkout' : 'checkin' 
+                              }); 
+                              setIsRecordModalOpen(true); 
+                            }} 
+                            className="p-2 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-emerald-200/40" 
+                            title={usr.today_attendance?.is_checked_in && !usr.today_attendance?.is_checked_out ? "Record Check-Out (تسجيل انصراف)" : "Record Check-In (تسجيل حضور)"}
+                          >
+                            <span className="material-symbols-outlined text-[19px]">
+                              {usr.today_attendance?.is_checked_in && !usr.today_attendance?.is_checked_out ? 'logout' : 'how_to_reg'}
+                            </span>
+                          </button>
+
+                          <button 
                             onClick={() => { setAttendanceUserId(usr.id); setAttendanceUserName(usr.name); }} 
                             className="p-2 text-muted-foreground hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-teal-200/40" 
                             title="View Attendance Report"
@@ -822,6 +883,24 @@ const Dashboard = () => {
           userId={attendanceUserId} 
           userName={attendanceUserName} 
           onClose={() => setAttendanceUserId(null)} 
+        />
+      )}
+
+      {/* Record Attendance Modal */}
+      {isRecordModalOpen && (
+        <AttendanceAdminModal
+          isOpen={isRecordModalOpen}
+          onClose={() => {
+            setIsRecordModalOpen(false);
+            setRecordAttendanceUser(null);
+          }}
+          onSuccess={() => {
+            setIsRecordModalOpen(false);
+            setRecordAttendanceUser(null);
+            refreshLeaderboard();
+          }}
+          defaultUser={recordAttendanceUser}
+          defaultMode={recordAttendanceUser?.defaultMode}
         />
       )}
 
