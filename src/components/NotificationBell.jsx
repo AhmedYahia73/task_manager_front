@@ -15,7 +15,6 @@ export const NotificationBell = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [testingFCM, setTestingFCM] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const PAGE_LIMIT = 15;
@@ -196,13 +195,9 @@ export const NotificationBell = () => {
 
     socket.on("new_notification", handleNewNotification);
 
-    // Expose test function for quick debugging from console if needed
-    window.testFCMNotification = () => handleTestFCM();
-
     return () => {
       socket.off("new_notification", handleNewNotification);
       if (typeof unsubscribeFCM === "function") unsubscribeFCM();
-      delete window.testFCMNotification;
     };
   }, []);
 
@@ -271,30 +266,6 @@ export const NotificationBell = () => {
     }
   };
 
-  // Test Firebase FCM Push Notification
-  const handleTestFCM = async (e) => {
-    if (e) e.stopPropagation();
-    try {
-      setTestingFCM(true);
-      const token = localStorage.getItem("fcm_token");
-      const res = await apiClient.post("/api/admin/notifications/test-fcm", {
-        token: token || undefined,
-      });
-      if (res?.data?.success) {
-        toast.success("تم إرسال إشعار Firebase التجريبي بنجاح! 🚀", {
-          description: "تحقق من وصول إشعار النظام لجهازك الآن",
-        });
-      } else {
-        toast.error("فشل إرسال الإشعار: " + (res?.data?.message || "خطأ"));
-      }
-    } catch (err) {
-      console.error("Test FCM error:", err);
-      toast.error("خطأ أثناء تجربة الإشعار: " + (err?.response?.data?.message || err.message));
-    } finally {
-      setTestingFCM(false);
-    }
-  };
-
   // Helper for human readable time
   const formatTimeAgo = (dateStr) => {
     if (!dateStr) return "";
@@ -342,29 +313,17 @@ export const NotificationBell = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
               <button
                 type="button"
-                onClick={handleTestFCM}
-                disabled={testingFCM}
-                className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                title="إرسال إشعار تجريبي عبر Firebase الآن"
+                onClick={handleMarkAllAsRead}
+                className="text-xs font-medium text-primary hover:underline flex items-center gap-1 transition-colors"
+                title="Mark all as read"
               >
-                {testingFCM ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>🔔 تجربة Firebase</span>}
+                <CheckCheck className="w-3.5 h-3.5" />
+                Mark all read
               </button>
-
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllAsRead}
-                  className="text-xs font-medium text-primary hover:underline flex items-center gap-1 transition-colors"
-                  title="Mark all as read"
-                >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                  Mark all read
-                </button>
-              )}
-            </div>
+            )}
           </div>
 
           {/* List Content with Infinite Scroll Pagination */}
