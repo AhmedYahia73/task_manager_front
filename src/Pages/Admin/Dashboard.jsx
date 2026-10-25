@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
 import { Loader2, Users } from 'lucide-react';
@@ -9,6 +9,201 @@ import { getActiveSalesProject } from '@/utils/salesProject';
 import EngineerDashboard from './EngineerDashboard';
 import UserPointsModal from './UserPointsModal';
 import UserAttendanceModal from './UserAttendanceModal';
+
+const formatDuration = (ms) => {
+  if (ms < 0) ms = 0;
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
+const TopPerformerAttendanceBadge = ({ attendance, currentTime, onClick }) => {
+  if (!attendance) return null;
+
+  // 1. Employee is checked in (onsite or online)
+  if (attendance.is_checked_in) {
+    const checkInMs = attendance.check_in_raw ? new Date(attendance.check_in_raw).getTime() : 0;
+    const checkOutMs = attendance.check_out_raw ? new Date(attendance.check_out_raw).getTime() : 0;
+    const isCheckedOut = Boolean(attendance.is_checked_out && checkOutMs > 0);
+
+    const elapsedMs = isCheckedOut 
+      ? Math.max(0, checkOutMs - checkInMs) 
+      : Math.max(0, currentTime - checkInMs);
+    const timerText = formatDuration(elapsedMs);
+
+    if (attendance.onsite) {
+      return (
+        <div 
+          onClick={onClick}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 transition-all cursor-pointer hover:bg-emerald-500/15"
+          title={isCheckedOut ? `Checked in: ${attendance.check_in_time} - Left: ${attendance.check_out_time} (Click for details)` : `Working onsite since ${attendance.check_in_time} (Click for details)`}
+        >
+          <div className="flex items-center gap-1.5 min-w-0 truncate">
+            <span className={`w-2 h-2 rounded-full bg-emerald-500 shrink-0 ${!isCheckedOut ? 'animate-pulse ring-2 ring-emerald-500/30' : ''}`}></span>
+            <span className="material-symbols-outlined text-[16px] shrink-0">apartment</span>
+            <span className="truncate font-semibold text-[11px] sm:text-xs">
+              {isCheckedOut ? 'Onsite (Left)' : 'Onsite'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-emerald-500/20 font-mono text-[11px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-200 shadow-2xs">
+            <span className="material-symbols-outlined text-[13px] text-emerald-600 dark:text-emerald-400">timer</span>
+            <span>{timerText}</span>
+          </div>
+        </div>
+      );
+    } else {
+      // Online / Remote
+      return (
+        <div 
+          onClick={onClick}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300 transition-all cursor-pointer hover:bg-blue-500/15"
+          title={isCheckedOut ? `Online: ${attendance.check_in_time} - ${attendance.check_out_time} (Click for details)` : `Working online since ${attendance.check_in_time} (Click for details)`}
+        >
+          <div className="flex items-center gap-1.5 min-w-0 truncate">
+            <span className={`w-2 h-2 rounded-full bg-blue-500 shrink-0 ${!isCheckedOut ? 'animate-pulse ring-2 ring-blue-500/30' : ''}`}></span>
+            <span className="material-symbols-outlined text-[16px] shrink-0">wifi</span>
+            <span className="truncate font-semibold text-[11px] sm:text-xs">
+              {isCheckedOut ? 'Online (Left)' : 'Online'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-blue-500/20 font-mono text-[11px] sm:text-xs font-bold text-blue-800 dark:text-blue-200 shadow-2xs">
+            <span className="material-symbols-outlined text-[13px] text-blue-600 dark:text-blue-400">timer</span>
+            <span>{timerText}</span>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // 2. Approved leave / holiday
+  if (attendance.type === 'holiday') {
+    return (
+      <div 
+        onClick={onClick}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300 transition-all cursor-pointer hover:bg-purple-500/15"
+        title="Approved Leave (Click for details)"
+      >
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
+          <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0"></span>
+          <span className="material-symbols-outlined text-[16px] shrink-0">beach_access</span>
+          <span className="truncate font-semibold text-[11px] sm:text-xs">Approved Leave</span>
+        </div>
+        <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
+          Leave
+        </span>
+      </div>
+    );
+  }
+
+  // 3. Day Off
+  if (attendance.type === 'day_off') {
+    return (
+      <div 
+        onClick={onClick}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 bg-slate-500/10 border-slate-500/30 text-slate-700 dark:text-slate-300 transition-all cursor-pointer hover:bg-slate-500/15"
+        title="Day Off (Click for details)"
+      >
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
+          <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>
+          <span className="material-symbols-outlined text-[16px] shrink-0">weekend</span>
+          <span className="truncate font-semibold text-[11px] sm:text-xs">Day Off</span>
+        </div>
+        <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
+          Off
+        </span>
+      </div>
+    );
+  }
+
+  // 4. Active work day (Not checked in)
+  const shiftStartStr = attendance.shift_start || '09:00';
+  const shiftEndStr = attendance.shift_end || '17:00';
+  const delayMins = Number(attendance.delay_permission_minutes || 0);
+
+  const today = new Date(currentTime);
+  const [sH, sM] = shiftStartStr.split(':').map(Number);
+  const shiftStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sH || 9, sM || 0, 0, 0);
+
+  const [eH, eM] = shiftEndStr.split(':').map(Number);
+  let shiftEndDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eH || 17, eM || 0, 0, 0);
+  if (shiftEndDate.getTime() < shiftStartDate.getTime()) {
+    shiftEndDate.setDate(shiftEndDate.getDate() + 1);
+  }
+
+  const lateThresholdDate = new Date(shiftStartDate.getTime() + delayMins * 60000);
+
+  // Time bracket A: Before grace period expires
+  if (currentTime < lateThresholdDate.getTime()) {
+    const isUpcoming = currentTime < shiftStartDate.getTime();
+    return (
+      <div 
+        onClick={onClick}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300 transition-all cursor-pointer hover:bg-indigo-500/15"
+        title={`Shift at ${shiftStartStr} (Click for details)`}
+      >
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
+          <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
+          <span className="material-symbols-outlined text-[16px] shrink-0">
+            {isUpcoming ? 'pending_actions' : 'schedule'}
+          </span>
+          <span className="truncate font-semibold text-[11px] sm:text-xs">
+            {isUpcoming ? 'Shift Upcoming' : 'Grace Period'}
+          </span>
+        </div>
+        <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
+          Starts {shiftStartStr}
+        </span>
+      </div>
+    );
+  }
+
+  // Time bracket B: Exceeded delay permission, but before checkout time -> LATE with live ticking counter!
+  if (currentTime < shiftEndDate.getTime()) {
+    const lateElapsedMs = Math.max(0, currentTime - shiftStartDate.getTime());
+    const timerText = formatDuration(lateElapsedMs);
+
+    return (
+      <div 
+        onClick={onClick}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 bg-amber-500/15 border-amber-500/40 text-amber-800 dark:text-amber-200 transition-all cursor-pointer hover:bg-amber-500/20"
+        title={`Shift started at ${shiftStartStr}. Delay permission was ${delayMins} min. (Click for details)`}
+      >
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+          </span>
+          <span className="material-symbols-outlined text-[16px] shrink-0 text-amber-600 dark:text-amber-400">warning</span>
+          <span className="truncate font-bold text-[11px] sm:text-xs">Late</span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-amber-500/30 font-mono text-[11px] sm:text-xs font-bold text-amber-800 dark:text-amber-200 shadow-2xs">
+          <span className="material-symbols-outlined text-[13px] text-amber-600 dark:text-amber-400">timer</span>
+          <span>+{timerText}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Time bracket C: Checkout time arrived and employee hasn't checked in -> ABSENT!
+  return (
+    <div 
+      onClick={onClick}
+      className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300 transition-all cursor-pointer hover:bg-rose-500/15"
+      title={`Shift ended at ${shiftEndStr} without check-in. (Click for details)`}
+    >
+      <div className="flex items-center gap-1.5 min-w-0 truncate">
+        <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+        <span className="material-symbols-outlined text-[16px] shrink-0">cancel</span>
+        <span className="truncate font-semibold text-[11px] sm:text-xs">Absent</span>
+      </div>
+      <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10">
+        No Check-in
+      </span>
+    </div>
+  );
+};
 
 const CircularProgress = ({ value, total, colorClass, label }) => {
   const radius = 28;
@@ -54,6 +249,15 @@ const CircularProgress = ({ value, total, colorClass, label }) => {
 const Dashboard = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [pointsUserId, setPointsUserId] = useState(null);
   const [pointsUserName, setPointsUserName] = useState('');
@@ -105,75 +309,7 @@ const Dashboard = () => {
     window.open(`https://wa.me/${cleanNumber}`, '_blank', 'noopener,noreferrer');
   };
 
-  const getAttendanceBadge = (attendance) => {
-    if (!attendance) return null;
-    switch (attendance.type) {
-      case 'present_ontime':
-        return {
-          bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300',
-          dot: 'bg-emerald-500',
-          icon: 'check_circle',
-          label: attendance.label || 'On-Time',
-          subtext: attendance.check_in_time ? `In ${attendance.check_in_time}` : ''
-        };
-      case 'present_late':
-        return {
-          bg: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300',
-          dot: 'bg-amber-500',
-          icon: 'schedule',
-          label: attendance.label || 'Late',
-          subtext: attendance.check_in_time ? `In ${attendance.check_in_time}` : ''
-        };
-      case 'online':
-        return {
-          bg: 'bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300',
-          dot: 'bg-blue-500',
-          icon: 'wifi',
-          label: attendance.label || 'Remote / Online',
-          subtext: attendance.check_in_time ? `In ${attendance.check_in_time}` : ''
-        };
-      case 'absent':
-        return {
-          bg: 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300',
-          dot: 'bg-rose-500',
-          icon: 'cancel',
-          label: attendance.label || 'Absent',
-          subtext: 'No Check-in'
-        };
-      case 'upcoming':
-        return {
-          bg: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300',
-          dot: 'bg-indigo-500',
-          icon: 'pending_actions',
-          label: attendance.label || 'Shift Upcoming',
-          subtext: attendance.shift_start ? `Starts ${attendance.shift_start}` : ''
-        };
-      case 'holiday':
-        return {
-          bg: 'bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300',
-          dot: 'bg-purple-500',
-          icon: 'beach_access',
-          label: attendance.label || 'Approved Leave',
-          subtext: ''
-        };
-      case 'day_off':
-        return {
-          bg: 'bg-slate-500/10 border-slate-500/30 text-slate-700 dark:text-slate-300',
-          dot: 'bg-slate-400',
-          icon: 'weekend',
-          label: attendance.label || 'Day Off',
-          subtext: ''
-        };
-      default:
-        return {
-          bg: 'bg-muted border-border text-muted-foreground',
-          dot: 'bg-muted-foreground',
-          icon: 'info',
-          label: attendance.label || 'Not Specified',
-          subtext: ''
-        };
-    }
-  };
+
 
   if (isSalesRole(user?.role)) {
     const activeProject = getActiveSalesProject();
@@ -446,7 +582,6 @@ const Dashboard = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 lg:gap-6">
                 {leaderboardList.map((usr, index) => {
-                  const attBadge = getAttendanceBadge(usr.today_attendance);
                   const tasksStats = usr.tasks_stats || { pending: 0, inprogress: 0, done: 0, approve: 0, edit: 0, total: 0 };
                   const hasWhatsApp = Boolean(
                     usr.whatsapp && 
@@ -541,20 +676,11 @@ const Dashboard = () => {
                         </div>
 
                         {/* Today Attendance Status Badge */}
-                        {attBadge && (
-                          <div className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-semibold mb-3 ${attBadge.bg}`}>
-                            <div className="flex items-center gap-1.5 min-w-0 truncate">
-                              <span className={`w-2 h-2 rounded-full shrink-0 ${attBadge.dot}`}></span>
-                              <span className="material-symbols-outlined text-[16px] shrink-0">{attBadge.icon}</span>
-                              <span className="truncate font-semibold text-[11px] sm:text-xs">{attBadge.label}</span>
-                            </div>
-                            {attBadge.subtext && (
-                              <span className="text-[10px] sm:text-[11px] font-medium opacity-90 shrink-0 bg-background/60 dark:bg-black/20 px-2 py-0.5 rounded-md border border-current/10 whitespace-nowrap">
-                                {attBadge.subtext}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        <TopPerformerAttendanceBadge 
+                          attendance={usr.today_attendance} 
+                          currentTime={currentTime} 
+                          onClick={() => { setAttendanceUserId(usr.id); setAttendanceUserName(usr.name); }}
+                        />
 
                         {/* Tasks Pipeline Breakdown */}
                         <div className="w-full bg-muted/30 rounded-2xl p-2.5 sm:p-3 border border-border/60 mb-3">

@@ -168,11 +168,10 @@ export const UserOnlineDaysManager = () => {
   };
 
   const roles = [
-    { key: "all", label: "All Roles" },
+    { key: "all", label: "All Eligible Roles" },
     { key: "engineer", label: "Engineers" },
     { key: "leader_sales", label: "Sales Leaders" },
-    { key: "sales", label: "Sales Reps" },
-    { key: "admin", label: "Admins" },
+    { key: "leader", label: "Leaders" },
   ];
 
   return (
@@ -185,7 +184,7 @@ export const UserOnlineDaysManager = () => {
             Assign User Online / Remote Work Days
           </h3>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Select employees and the days they are authorized to work remotely. Users will receive an instant real-time notification.
+            Select employees (Engineers, Leaders, Sales Leaders) and the days they are authorized to work remotely. Users will receive an instant real-time notification.
           </p>
         </div>
 
