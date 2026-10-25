@@ -23,6 +23,7 @@
     "cmdk": "^1.1.1",
     "dayjs": "^1.11.21",
     "face-api.js": "^0.22.2",
+    "firebase": "^13.1.0",
     "flowbite-react": "^0.12.17",
     "framer-motion": "^12.42.2",
     "js-cookie": "^3.0.8",

@@ -6,6 +6,7 @@ import { Bell, CheckCheck, Trash2, Clock, Check, AlertCircle, CalendarDays, Chec
 import { apiClient } from "@/lib/axios";
 import { getSocket } from "@/utils/socket";
 import { toast } from "sonner";
+import { requestNotificationPermissionAndGetToken, setupForegroundFCMListener } from "@/utils/firebase";
 
 export const NotificationBell = () => {
   const navigate = useNavigate();
@@ -86,6 +87,31 @@ export const NotificationBell = () => {
 
   useEffect(() => {
     fetchNotifications(1, false);
+
+    // Initialize Firebase Cloud Messaging & request token
+    requestNotificationPermissionAndGetToken();
+
+    // Listen for foreground FCM push notifications
+    let unsubscribeFCM = () => {};
+    setupForegroundFCMListener((payload) => {
+      const data = payload.data || {};
+      const newNotif = {
+        id: data.id || `fcm_${Date.now()}`,
+        target: data.target || "user",
+        type: data.type || "general",
+        link: data.link || null,
+        description: payload.notification?.body || data.description || "New Notification",
+        createdAt: new Date().toISOString(),
+        is_read: false,
+      };
+      setNotifications((prev) => {
+        if (data.id && prev.some((n) => n.id === data.id)) return prev;
+        return [newNotif, ...prev];
+      });
+      setUnreadCount((c) => c + 1);
+    }).then((unsub) => {
+      if (typeof unsub === "function") unsubscribeFCM = unsub;
+    });
 
     // Setup Socket.IO listener for real-time notifications
     const socket = getSocket();
@@ -171,6 +197,7 @@ export const NotificationBell = () => {
 
     return () => {
       socket.off("new_notification", handleNewNotification);
+      if (typeof unsubscribeFCM === "function") unsubscribeFCM();
     };
   }, []);
 
