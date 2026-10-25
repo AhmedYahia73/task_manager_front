@@ -118,12 +118,23 @@ export const requestNotificationPermissionAndGetToken = async () => {
 
     console.log("[Firebase FCM] 📲 Device Token received:", token.substring(0, 15) + "...");
 
-    // 4. Send token to backend if not already sent or token updated
+    // 4. Send token to backend if not already sent or user changed
     const savedToken = localStorage.getItem("fcm_token");
-    if (savedToken !== token) {
+    const savedUserId = localStorage.getItem("fcm_user_id");
+
+    let currentUserId = null;
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) currentUserId = JSON.parse(storedUser)?.id;
+    } catch (e) {}
+
+    if (savedToken !== token || (currentUserId && savedUserId !== currentUserId)) {
       try {
         await apiClient.post("/api/admin/notifications/fcm-token", { token });
         localStorage.setItem("fcm_token", token);
+        if (currentUserId) {
+          localStorage.setItem("fcm_user_id", currentUserId);
+        }
         console.log("[Firebase FCM] ✅ Token registered with backend successfully.");
       } catch (apiErr) {
         console.error("[Firebase FCM] Failed to save token to backend:", apiErr);
@@ -147,8 +158,33 @@ export const setupForegroundFCMListener = async (onNotificationReceived) => {
 
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("[Firebase FCM] 📩 Foreground message received:", payload);
-      const title = payload.notification?.title || payload.data?.title || "New Notification";
-      const body = payload.notification?.body || payload.data?.body || payload.data?.description || "";
+      const data = payload.data || {};
+
+      // 🔒 Strict Client Authorization Filter (Matches Socket.IO exactly)
+      let currentUser = null;
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) currentUser = JSON.parse(storedUser);
+      } catch (e) {}
+
+      if (!currentUser?.id) return;
+
+      const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
+
+      // 🔒 Rule 1: If notification is targeted to admins only, current user MUST be an admin
+      if (data.target === "admin" && !isAdmin) {
+        console.log("[Firebase FCM] ⛔ Filtered out admin notification for non-admin user");
+        return;
+      }
+
+      // 🔒 Rule 2: If notification is targeted to a specific user, ensure user_id matches
+      if (data.user_id && data.user_id !== currentUser.id && !isAdmin && data.target === "user") {
+        console.log("[Firebase FCM] ⛔ Filtered out notification for different user");
+        return;
+      }
+
+      const title = payload.notification?.title || data.title || "New Notification";
+      const body = payload.notification?.body || data.body || data.description || "";
 
       // 1. Show in-app toast
       toast.info(body || title, {
@@ -163,13 +199,13 @@ export const setupForegroundFCMListener = async (onNotificationReceived) => {
             body: body,
             icon: "/logo.png",
             badge: "/favicon.svg",
-            data: payload.data || {},
+            data: data,
           });
 
           browserNotif.onclick = () => {
             window.focus();
-            if (payload.data?.link) {
-              window.location.href = payload.data.link;
+            if (data.link) {
+              window.location.href = data.link;
             }
           };
         } catch (e) {
