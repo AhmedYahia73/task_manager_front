@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, ChevronLeft, User, Menu } from 'lucide-react';
 import { removeAuthToken } from '@/utils/auth';
 import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export const Navbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ export const Navbar = ({ toggleSidebar }) => {
 
       {/* قسم المستخدم وتسجيل الخروج */}
       <div className="flex items-center gap-4">
+        <NotificationBell />
         <div className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
           <User className="w-4 h-4" />
           <span> Hello , {userName}</span>

@@ -8,6 +8,7 @@ import { MapSelector } from '@/components/MapSelector';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { toast } from 'sonner';
+import { UserOnlineDaysManager } from '@/components/UserOnlineDaysManager';
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -490,6 +491,11 @@ export const Settings = () => {
           </div>
         </form>
       </motion.div>
+
+      {/* User Specific Online Days Management */}
+      <div className="mt-8">
+        <UserOnlineDaysManager />
+      </div>
     </div>
   );
 };

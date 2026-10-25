@@ -30,6 +30,7 @@ import {
   Check,
   TrendingUp,
 } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export const SalesProjectWorkspaceLayout = () => {
   const { projectId } = useParams();
@@ -280,6 +281,7 @@ export const SalesProjectWorkspaceLayout = () => {
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+            <NotificationBell />
             <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-medium border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Active Project

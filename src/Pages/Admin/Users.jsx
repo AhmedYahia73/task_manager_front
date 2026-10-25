@@ -4,11 +4,12 @@ import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, Plus, Edit, Trash2, X } from 'lucide-react';
+import { Loader2, Search, Plus, Edit, Trash2, X, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRoleNames } from '@/context/RoleNameContext';
 import UserPointsModal from './UserPointsModal';
 import UserAttendanceModal from './UserAttendanceModal';
+import { UserOnlineDaysManager } from '@/components/UserOnlineDaysManager';
 import * as faceapi from 'face-api.js';
 
 const Users = () => {
@@ -44,6 +45,7 @@ const Users = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isOnlineDaysModalOpen, setIsOnlineDaysModalOpen] = useState(false);
   const [pointsUserId, setPointsUserId] = useState(null);
   const [pointsUserName, setPointsUserName] = useState('');
   const [attendanceUserId, setAttendanceUserId] = useState(null);
@@ -196,10 +198,20 @@ const Users = () => {
           <h1 className="text-3xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{getRoleNamePlural('engineer')}</h1>
           <p className="text-muted-foreground mt-1">Manage system {getRoleNamePlural('engineer').toLowerCase()}</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add {getRoleName('engineer')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsOnlineDaysModalOpen(true)}
+            className="border-primary/40 text-primary hover:bg-primary/10 flex items-center gap-2 h-9 text-xs sm:text-sm font-semibold"
+          >
+            <CalendarDays className="w-4 h-4 text-primary" />
+            Online Days
+          </Button>
+          <Button onClick={() => openModal()} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2 h-9 text-xs sm:text-sm">
+            <Plus className="w-4 h-4" />
+            Add {getRoleName('engineer')}
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -575,6 +587,32 @@ const Users = () => {
           userName={attendanceUserName} 
           onClose={() => setAttendanceUserId(null)} 
         />
+      )}
+
+      {/* Online Days Allocation Modal */}
+      {isOnlineDaysModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-4xl rounded-2xl shadow-2xl border border-border p-4 sm:p-6 max-h-[90vh] overflow-y-auto space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-border">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-primary" />
+                  Remote / Online Days Management
+                </h3>
+                <p className="text-xs text-muted-foreground">Assign online work days to employees with instant notifications.</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsOnlineDaysModalOpen(false)}
+                className="w-8 h-8 rounded-full text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <UserOnlineDaysManager />
+          </div>
+        </div>
       )}
 
     </div>

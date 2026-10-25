@@ -5,6 +5,7 @@ import { removeAuthToken } from '@/utils/auth';
 import { RoleNameProvider } from '@/context/RoleNameContext';
 import { CompanyHeader } from '@/components/CompanyHeader';
 import { CompanyFooter } from '@/components/CompanyFooter';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export const AdminLayout = () => {
   const navigate = useNavigate();
@@ -49,9 +50,7 @@ export const AdminLayout = () => {
           </div>
 
           <div className="admin-topbar__actions">
-            <button className="admin-topbar__icon-btn" title="Notifications">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
+            <NotificationBell />
             <button className="admin-topbar__icon-btn" title="Mail">
               <span className="material-symbols-outlined">mail</span>
             </button>

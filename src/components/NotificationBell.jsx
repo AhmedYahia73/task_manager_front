@@ -1,0 +1,296 @@
+// src/components/NotificationBell.jsx
+
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Bell, CheckCheck, Trash2, Clock, Check, AlertCircle, CalendarDays, CheckCircle2 } from "lucide-react";
+import { apiClient } from "@/lib/axios";
+import { getSocket } from "@/utils/socket";
+import { toast } from "sonner";
+
+export const NotificationBell = () => {
+  const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get("/api/admin/notifications");
+      if (res?.data?.success) {
+        setNotifications(res.data.data.notifications || []);
+        setUnreadCount(res.data.data.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+
+    // Setup Socket.IO listener for real-time notifications
+    const socket = getSocket();
+
+    const handleNewNotification = (data) => {
+      // Add new notification to list
+      const newNotif = {
+        id: data.id || `notif_${Date.now()}`,
+        target: data.target || "user",
+        type: data.type || "general",
+        link: data.link || null,
+        description: data.description,
+        createdAt: data.created_at || new Date().toISOString(),
+        is_read: false,
+      };
+
+      setNotifications((prev) => [newNotif, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+
+      // Show real-time toast alert
+      const title =
+        data.type === "online_days"
+          ? "Online Work Days Assigned"
+          : data.type === "task_status"
+          ? "Task Status Updated"
+          : "New Notification";
+
+      toast.info(data.description, {
+        description: title,
+        duration: 7000,
+      });
+    };
+
+    socket.on("new_notification", handleNewNotification);
+    socket.on("admin_notification", handleNewNotification);
+
+    return () => {
+      socket.off("new_notification", handleNewNotification);
+      socket.off("admin_notification", handleNewNotification);
+    };
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Mark a single notification as read and navigate if link exists
+  const handleItemClick = async (notif) => {
+    if (!notif.is_read) {
+      handleMarkAsRead(notif.id);
+    }
+    if (notif.link) {
+      setIsOpen(false);
+      navigate(notif.link);
+    }
+  };
+
+  // Mark a single notification as read
+  const handleMarkAsRead = async (id, e) => {
+    if (e) e.stopPropagation();
+    try {
+      await apiClient.put(`/api/admin/notifications/${id}/read`);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
+  };
+
+  // Mark all notifications as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      await apiClient.put("/api/admin/notifications/read-all");
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+      toast.success("All notifications marked as read");
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
+  };
+
+  // Delete notification
+  const handleDelete = async (id, e) => {
+    if (e) e.stopPropagation();
+    try {
+      await apiClient.delete(`/api/admin/notifications/${id}`);
+      setNotifications((prev) => {
+        const item = prev.find((n) => n.id === id);
+        if (item && !item.is_read) {
+          setUnreadCount((c) => Math.max(0, c - 1));
+        }
+        return prev.filter((n) => n.id !== id);
+      });
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
+    }
+  };
+
+  // Helper for human readable time
+  const formatTimeAgo = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now - date) / 1000);
+    if (diffSec < 60) return "Just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      {/* Bell Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="admin-topbar__icon-btn relative flex items-center justify-center transition-transform active:scale-95"
+        title="Notifications"
+        type="button"
+      >
+        <Bell className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-zinc-900 animate-pulse">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {/* Notifications Dropdown Panel */}
+      {isOpen && (
+        <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-800 z-50 overflow-hidden text-zinc-900 dark:text-zinc-100 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">Notifications</span>
+              {unreadCount > 0 && (
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
+
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                className="text-xs font-medium text-primary hover:underline flex items-center gap-1 transition-colors"
+                title="Mark all as read"
+              >
+                <CheckCheck className="w-3.5 h-3.5" />
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          {/* List Content */}
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/60">
+            {loading && notifications.length === 0 ? (
+              <div className="py-12 text-center text-xs text-zinc-400">
+                Loading notifications...
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center px-4">
+                <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 mb-2">
+                  <Bell className="w-6 h-6 opacity-40" />
+                </div>
+                <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  No notifications yet
+                </p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                  Task updates from leaders & engineers will appear here
+                </p>
+              </div>
+            ) : (
+              notifications.map((notif) => {
+                const isOnlineType = notif.type === "online_days";
+                return (
+                  <div
+                    key={notif.id}
+                    onClick={() => handleItemClick(notif)}
+                    className={`group relative flex items-start gap-3 p-3.5 transition-colors cursor-pointer ${
+                      notif.is_read
+                        ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 opacity-75"
+                        : "bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50/70 dark:hover:bg-blue-950/40"
+                    }`}
+                  >
+                    {/* Status Indicator Icon */}
+                    <div
+                      className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs ${
+                        isOnlineType
+                          ? notif.is_read
+                            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                            : "bg-emerald-500 text-white shadow-sm"
+                          : notif.is_read
+                          ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                          : "bg-blue-100 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300"
+                      }`}
+                    >
+                      {isOnlineType ? <CalendarDays className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    </div>
+
+                    {/* Text Description & Time */}
+                    <div className="flex-1 min-w-0 pr-6">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase tracking-wider ${
+                            notif.target === "admin"
+                              ? "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                          }`}
+                        >
+                          {notif.target === "admin" ? "Admin" : "Employee"}
+                        </span>
+                      </div>
+                      <p
+                        className={`text-xs leading-relaxed break-words ${
+                          notif.is_read ? "font-normal text-zinc-700 dark:text-zinc-300" : "font-semibold text-zinc-900 dark:text-white"
+                        }`}
+                      >
+                        {notif.description}
+                      </p>
+                      <div className="flex items-center gap-1 mt-1 text-[11px] text-zinc-400">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatTimeAgo(notif.createdAt)}</span>
+                      </div>
+                    </div>
+
+                  {/* Actions / Dot */}
+                  <div className="absolute right-3 top-3 flex items-center gap-1">
+                    {!notif.is_read && (
+                      <span className="w-2 h-2 rounded-full bg-blue-600" title="Unread" />
+                    )}
+                    <button
+                      onClick={(e) => handleDelete(notif.id, e)}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-opacity rounded"
+                      title="Delete notification"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
