@@ -65,12 +65,24 @@ export const requestNotificationPermissionAndGetToken = async () => {
     const messaging = await getFirebaseMessaging();
     if (!messaging) return null;
 
-    // 2. Register service worker with config params so background notifications work
+    // 2. Register service worker with config params and wait for it to be active
     const swUrl = `/firebase-messaging-sw.js?apiKey=${encodeURIComponent(firebaseConfig.apiKey)}&projectId=${encodeURIComponent(firebaseConfig.projectId)}&messagingSenderId=${encodeURIComponent(firebaseConfig.messagingSenderId)}&appId=${encodeURIComponent(firebaseConfig.appId)}`;
-    const registration = await navigator.serviceWorker.register(swUrl, { scope: "/" });
+    await navigator.serviceWorker.register(swUrl, { scope: "/" });
+    
+    // Wait until service worker is fully active and ready before subscribing
+    const readyRegistration = await navigator.serviceWorker.ready;
+
+    // Additional safeguard: ensure active worker exists
+    if (!readyRegistration.active) {
+      let attempts = 0;
+      while (!readyRegistration.active && attempts < 25) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        attempts++;
+      }
+    }
 
     // 3. Retrieve FCM device token
-    const tokenOptions = { serviceWorkerRegistration: registration };
+    const tokenOptions = { serviceWorkerRegistration: readyRegistration };
     if (vapidKey) {
       tokenOptions.vapidKey = vapidKey;
     }
