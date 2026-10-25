@@ -30,12 +30,14 @@ if (apiKey && projectId) {
 
     messaging.onBackgroundMessage((payload) => {
       console.log('[firebase-messaging-sw.js] Received background message:', payload);
-      const notificationTitle = payload.notification?.title || payload.data?.title || 'New Notification';
+      const notificationTitle = payload.notification?.title || payload.data?.title || 'Taskito Notification';
       const notificationOptions = {
         body: payload.notification?.body || payload.data?.body || payload.data?.description || '',
         icon: '/logo.png',
         badge: '/favicon.svg',
         data: payload.data || {},
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
       };
 
       self.registration.showNotification(notificationTitle, notificationOptions);
@@ -45,6 +47,42 @@ if (apiKey && projectId) {
   }
 }
 
+// Fallback: Native Push event handler in case Firebase SDK background event didn't trigger
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  try {
+    const rawData = event.data.json();
+    const title = rawData.notification?.title || rawData.data?.title || 'Taskito Notification';
+    const body = rawData.notification?.body || rawData.data?.body || rawData.data?.description || '';
+
+    // Safeguard: Check if notification with identical title is already shown
+    event.waitUntil(
+      self.registration.getNotifications().then((existing) => {
+        const hasSimilar = existing.some((n) => n.title === title && n.body === body);
+        if (!hasSimilar) {
+          return self.registration.showNotification(title, {
+            body: body,
+            icon: '/logo.png',
+            badge: '/favicon.svg',
+            data: rawData.data || {},
+            requireInteraction: true,
+            vibrate: [200, 100, 200],
+          });
+        }
+      })
+    );
+  } catch (err) {
+    const text = event.data.text();
+    event.waitUntil(
+      self.registration.showNotification('Taskito Notification', {
+        body: text,
+        icon: '/logo.png',
+      })
+    );
+  }
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const link = event.notification.data?.link || '/admin';
@@ -52,6 +90,9 @@ self.addEventListener('notificationclick', (event) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
+          if (link && !client.url.endsWith(link)) {
+            client.navigate(link);
+          }
           return client.focus();
         }
       }

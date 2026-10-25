@@ -150,11 +150,32 @@ export const setupForegroundFCMListener = async (onNotificationReceived) => {
       const title = payload.notification?.title || payload.data?.title || "New Notification";
       const body = payload.notification?.body || payload.data?.body || payload.data?.description || "";
 
-      // Show toast
+      // 1. Show in-app toast
       toast.info(body || title, {
         description: title,
         duration: 5000,
       });
+
+      // 2. 🔔 Trigger native OS/browser notification banner if permission is granted
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        try {
+          const browserNotif = new Notification(title, {
+            body: body,
+            icon: "/logo.png",
+            badge: "/favicon.svg",
+            data: payload.data || {},
+          });
+
+          browserNotif.onclick = () => {
+            window.focus();
+            if (payload.data?.link) {
+              window.location.href = payload.data.link;
+            }
+          };
+        } catch (e) {
+          console.warn("[Firebase FCM] Native notification display warning:", e);
+        }
+      }
 
       if (onNotificationReceived) {
         onNotificationReceived(payload);
