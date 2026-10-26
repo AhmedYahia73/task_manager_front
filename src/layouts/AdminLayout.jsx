@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/AdminSidebar';
-import { removeAuthToken } from '@/utils/auth';
+import { removeAuthToken, isAdminRole } from '@/utils/auth';
 import { RoleNameProvider } from '@/context/RoleNameContext';
 import { CompanyHeader } from '@/components/CompanyHeader';
 import { CompanyFooter } from '@/components/CompanyFooter';
@@ -40,6 +40,7 @@ export const AdminLayout = () => {
   const userName = userData?.name || 'Admin';
   const userRole = userData?.role || 'Admin';
   const userImage = userData?.image;
+  const isAdmin = isAdminRole(userRole);
 
   return (
     <RoleNameProvider>
@@ -76,16 +77,18 @@ export const AdminLayout = () => {
           </div>
 
           <div className="admin-topbar__actions">
-            {/* Quick Attendance Button */}
-            <button
-              onClick={() => setIsAttendanceModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-all active:scale-95 shadow-xs cursor-pointer"
-              title="Attendance (تسجيل حضور وانصراف)"
-              type="button"
-            >
-              <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
-              <span className="hidden sm:inline">Attendance</span>
-            </button>
+            {/* Quick Attendance Button - Only visible for Admin role */}
+            {isAdmin && (
+              <button
+                onClick={() => setIsAttendanceModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-all active:scale-95 shadow-xs cursor-pointer"
+                title="Attendance (تسجيل حضور وانصراف)"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+                <span className="hidden sm:inline">Attendance</span>
+              </button>
+            )}
 
             <button
               onClick={() => setIsRequestModalOpen(true)}
@@ -149,7 +152,7 @@ export const AdminLayout = () => {
           <UserRequestsModal onClose={() => setIsRequestModalOpen(false)} />
         )}
 
-        {isAttendanceModalOpen && (
+        {isAdmin && isAttendanceModalOpen && (
           <AttendanceAdminModal
             isOpen={isAttendanceModalOpen}
             onClose={() => setIsAttendanceModalOpen(false)}
