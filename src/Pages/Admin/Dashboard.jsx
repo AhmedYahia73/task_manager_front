@@ -519,7 +519,7 @@ const Dashboard = () => {
             </div>
             <div className="flex justify-center items-end pt-3 border-t border-border mt-auto">
               <CircularProgress 
-                value={data?.done_tasks ?? 0} 
+                value={data?.delay_done_tasks ?? 0} 
                 total={data?.delay_tasks ?? 0} 
                 colorClass="stroke-red-500" 
                 label="Done / Delay" 

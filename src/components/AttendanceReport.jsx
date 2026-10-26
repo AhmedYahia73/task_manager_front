@@ -100,6 +100,14 @@ export default function AttendanceReport({ userId }) {
                   <p className="text-2xl font-black">{data.yearlyHolidaysSummary.totalAllowed}</p>
                 </div>
               </div>
+              {data.yearlyHolidaysSummary.allowedUnauthorizedHolidays > 0 && (
+                <div className="relative z-10 mt-3 pt-3 border-t border-white/20 flex items-center justify-between text-xs text-blue-100">
+                  <span>Allowed Unauthorized Absence:</span>
+                  <span className="font-bold text-white">
+                    {data.yearlyHolidaysSummary.unauthorizedHolidaysUsed} / {data.yearlyHolidaysSummary.allowedUnauthorizedHolidays} used ({data.yearlyHolidaysSummary.unauthorizedHolidaysRemaining} left)
+                  </span>
+                </div>
+              )}
               {data.yearlyHolidaysSummary.exceeded > 0 && (
                 <div className="relative z-10 mt-4 bg-red-500/20 text-red-100 text-sm py-2 px-3 rounded-lg border border-red-500/30 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
@@ -233,6 +241,12 @@ export default function AttendanceReport({ userId }) {
               <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-orange-900 truncate">Unexcused</CardTitle></CardHeader>
               <CardContent className="p-2 pt-1"><p className="text-lg font-black text-orange-900">{data?.summary?.unexcusedAbsence || 0}</p></CardContent>
             </Card>
+            {Number(data?.summary?.unauthorizedAbsenceCovered || 0) > 0 && (
+              <Card className="bg-teal-50 border-teal-300 hover:shadow-md transition-shadow">
+                <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-teal-800 truncate">Covered (No Perm)</CardTitle></CardHeader>
+                <CardContent className="p-2 pt-1"><p className="text-lg font-black text-teal-900">{data?.summary?.unauthorizedAbsenceCovered || 0}</p></CardContent>
+              </Card>
+            )}
             <Card className="bg-pink-50 border-pink-200 hover:shadow-md transition-shadow">
               <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-pink-800 truncate">Perm Hrs</CardTitle></CardHeader>
               <CardContent className="p-2 pt-1"><p className="text-lg font-black text-pink-900">{data?.summary?.totalPermissionHours || 0}</p></CardContent>

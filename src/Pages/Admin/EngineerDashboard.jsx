@@ -122,7 +122,7 @@ const EngineerDashboard = () => {
             
             <div className="relative z-10 flex justify-center py-2 border-t border-border/30 mt-auto">
               <CircularProgress 
-                value={data?.done_tasks ?? 0} 
+                value={data?.delay_done_tasks ?? 0} 
                 total={data?.delay_tasks ?? 0} 
                 colorClass="stroke-red-500" 
                 label="Done / Delay" 

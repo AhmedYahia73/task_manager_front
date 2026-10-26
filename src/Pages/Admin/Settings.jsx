@@ -30,6 +30,7 @@ export const Settings = () => {
     online_days: [],
     delay_premission_minutes: 0,
     yearly_holidays: 0,
+    allowed_unauthorized_holidays: 0,
     rejected_online_deduction: 0,
     rejected_holiday_deduction: 0,
     online_without_permission_deduction: 0,
@@ -50,6 +51,7 @@ export const Settings = () => {
         online_days: settingsData.online_days || [],
         delay_premission_minutes: settingsData.delay_premission_minutes || 0,
         yearly_holidays: settingsData.yearly_holidays || 0,
+        allowed_unauthorized_holidays: settingsData.allowed_unauthorized_holidays || 0,
         rejected_online_deduction: settingsData.rejected_online_deduction || 0,
         rejected_holiday_deduction: settingsData.rejected_holiday_deduction || 0,
         online_without_permission_deduction: settingsData.online_without_permission_deduction || 0,
@@ -329,6 +331,26 @@ export const Settings = () => {
                   placeholder="e.g. 21"
                   className="max-w-md bg-background border-border focus-visible:ring-primary"
                 />
+              </div>
+
+              {/* Allowed Unauthorized Holidays / Year */}
+              <div className="space-y-2">
+                <label htmlFor="allowed_unauthorized_holidays" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-emerald-600" />
+                  Allowed Unauthorized Holidays / Year (الاجازات بدون إذن المسموح بها سنوياً)
+                </label>
+                <Input
+                  id="allowed_unauthorized_holidays"
+                  name="allowed_unauthorized_holidays"
+                  type="number"
+                  value={formData.allowed_unauthorized_holidays}
+                  onChange={handleChange}
+                  placeholder="e.g. 5"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Days an employee with yearly holidays enabled can take without permission (or rejected requests) before being penalized as absence.
+                </p>
               </div>
             </div>
           </div>
