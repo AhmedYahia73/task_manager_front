@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { removeAuthToken, isAdminRole, isLeaderSalesRole, isSalesRole, isEngineerRole } from '@/utils/auth';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -9,9 +9,31 @@ import { getActiveSalesProject } from '@/utils/salesProject';
 export const AdminSidebar = ({ isOpen, onClose }) => {
   const { getRoleNamePlural } = useRoleNames();
   const navigate = useNavigate();
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const [userData, setUserData] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const handleProfileUpdate = (e) => {
+      if (e.detail) {
+        setUserData(e.detail);
+      } else {
+        try {
+          setUserData(JSON.parse(localStorage.getItem('user') || '{}'));
+        } catch {}
+      }
+    };
+    window.addEventListener('user-profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('user-profile-updated', handleProfileUpdate);
+  }, []);
+
   const userName = userData?.name || 'Admin User';
   const userRole = userData?.role || 'Admin';
+  const userImage = userData?.image;
   const isAdmin = isAdminRole(userRole);
   const isLeader = isLeaderSalesRole(userRole);
   const isSales = isSalesRole(userRole);
@@ -60,6 +82,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
             icon: 'dashboard',
             notSales: true,
           },
+          { name: 'My Profile', path: '/admin/profile', icon: 'account_circle' },
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy', adminOrEngineerOrLeader: true },
           { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront', adminOrLeaderOrSales: true },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
@@ -254,15 +277,24 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
       {/* Footer User Info */}
       <div className="admin-sidebar__footer">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
-              {userName.charAt(0).toUpperCase()}
+          <NavLink
+            to="/admin/profile"
+            onClick={onClose}
+            className="flex items-center gap-3 overflow-hidden group hover:opacity-90 transition-opacity flex-1 mr-2"
+            title="View Profile"
+          >
+            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 overflow-hidden ring-1 ring-border group-hover:ring-primary transition-all">
+              {userImage ? (
+                <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+              ) : (
+                userName.charAt(0).toUpperCase()
+              )}
             </div>
-            <div className="overflow-hidden">
-              <p className="admin-sidebar__user-name truncate">{userName}</p>
+            <div className="overflow-hidden text-left">
+              <p className="admin-sidebar__user-name truncate group-hover:text-primary transition-colors">{userName}</p>
               <p className="admin-sidebar__user-role capitalize">{userRole}</p>
             </div>
-          </div>
+          </NavLink>
           <ThemeSwitcher />
         </div>
         

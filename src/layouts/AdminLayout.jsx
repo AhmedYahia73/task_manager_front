@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { removeAuthToken } from '@/utils/auth';
@@ -15,9 +15,31 @@ export const AdminLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const [userData, setUserData] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const handleProfileUpdate = (e) => {
+      if (e.detail) {
+        setUserData(e.detail);
+      } else {
+        try {
+          setUserData(JSON.parse(localStorage.getItem('user') || '{}'));
+        } catch {}
+      }
+    };
+    window.addEventListener('user-profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('user-profile-updated', handleProfileUpdate);
+  }, []);
+
   const userName = userData?.name || 'Admin';
   const userRole = userData?.role || 'Admin';
+  const userImage = userData?.image;
 
   return (
     <RoleNameProvider>
@@ -85,15 +107,24 @@ export const AdminLayout = () => {
 
             <div className="admin-topbar__divider"></div>
 
-            <div className="admin-topbar__user">
-              <div className="admin-topbar__user-avatar">
-                {userName.charAt(0).toUpperCase()}
+            <button
+              onClick={() => navigate('/admin/profile')}
+              className="admin-topbar__user text-left cursor-pointer hover:bg-muted/40 transition-colors rounded-xl px-2 py-1 -mr-1"
+              title="My Profile"
+              type="button"
+            >
+              <div className="admin-topbar__user-avatar overflow-hidden ring-1 ring-border">
+                {userImage ? (
+                  <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+                ) : (
+                  userName.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="admin-topbar__user-info">
-                <p className="admin-topbar__user-name">{userName}</p>
+                <p className="admin-topbar__user-name hover:text-primary transition-colors">{userName}</p>
                 <p className="admin-topbar__user-role">{userRole}</p>
               </div>
-            </div>
+            </button>
           </div>
         </header>
 

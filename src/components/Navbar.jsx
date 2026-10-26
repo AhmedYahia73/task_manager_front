@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, ChevronLeft, User, Menu, Timer } from 'lucide-react';
 import { removeAuthToken } from '@/utils/auth';
@@ -10,9 +10,31 @@ export const Navbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
-  // استرجاع بيانات المستخدم من LocalStorage
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  // استرجاع بيانات المستخدم من LocalStorage مع الاستماع للتحديثات
+  const [userData, setUserData] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const handleProfileUpdate = (e) => {
+      if (e.detail) {
+        setUserData(e.detail);
+      } else {
+        try {
+          setUserData(JSON.parse(localStorage.getItem('user') || '{}'));
+        } catch {}
+      }
+    };
+    window.addEventListener('user-profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('user-profile-updated', handleProfileUpdate);
+  }, []);
+
   const userName = userData?.name || 'User';
+  const userImage = userData?.image;
 
   const handleLogout = () => {
     // إزالة التوكن من الكوكيز
@@ -61,10 +83,19 @@ export const Navbar = ({ toggleSidebar }) => {
         </button>
 
         <NotificationBell />
-        <div className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          <User className="w-4 h-4" />
-          <span> Hello , {userName}</span>
-        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/admin/profile')}
+          className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-primary transition-colors cursor-pointer"
+          title="My Profile"
+        >
+          {userImage ? (
+            <img src={userImage} alt={userName} className="w-5 h-5 rounded-full object-cover" />
+          ) : (
+            <User className="w-4 h-4" />
+          )}
+          <span>Hello, {userName}</span>
+        </button>
         
         <Button 
           variant="ghost" 

@@ -54,6 +54,7 @@ import PendingRequests from '@/Pages/Admin/Sales/StatusRequests/Requests';
 import HistoryRequests from '@/Pages/Admin/Sales/StatusRequests/HistoryRequests';
 import VisitStatus from '@/Pages/Admin/Sales/VisitStatus/VisitStatus';
 import VisitStatusAdd from '@/Pages/Admin/Sales/VisitStatus/VisitStatusAdd';
+import Profile from '@/Pages/Admin/Profile';
 
 
 import { SalesProjectWorkspaceLayout } from '@/layouts/SalesProjectWorkspaceLayout';
@@ -206,6 +207,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <SmartRedirect /> },
       { path: 'dashboard', element: <GeneralDashboardRoute /> },
+      { path: 'profile', element: <Profile /> },
       { path: 'projects', element: <Projects /> },
       { path: 'projects/:id', element: <ProjectDetails /> },
       { path: 'projects/:projectId/groups/:groupId/tasks', element: <Tasks /> },
@@ -347,6 +349,10 @@ export const router = createBrowserRouter([
   { path: '/visitstatus/add', element: <RequireActiveSalesProject subpath="visitstatus/add" /> },
   { path: '/visitstatus/:id/edit', element: <RequireActiveSalesProject /> },
 
+  {
+    path: '/profile',
+    element: <Navigate to="/admin/profile" replace />,
+  },
   {
     path: '/',
     element: <SmartRedirect />,
