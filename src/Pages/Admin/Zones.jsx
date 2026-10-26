@@ -19,13 +19,13 @@ const Zones = () => {
     name: '',
     locations: [],
     status: true,
-    router_mac_status: false,
-    router_mac: ''
+    router_ip_status: false,
+    router_ip: ''
   });
 
   const openAddModal = () => {
     setEditingId(null);
-    setFormData({ name: '', locations: [], status: true, router_mac_status: false, router_mac: '' });
+    setFormData({ name: '', locations: [], status: true, router_ip_status: false, router_ip: '' });
     setIsModalOpen(true);
   };
 
@@ -39,12 +39,15 @@ const Zones = () => {
         break;
       }
     }
+    const ipStatus = zone.router_ip_status !== undefined ? Boolean(zone.router_ip_status) : Boolean(zone.router_mac_status);
+    const ipValue = zone.router_ip || zone.router_mac || '';
+
     setFormData({
       name: zone.name,
       locations: Array.isArray(parsedLocations) ? parsedLocations : [],
       status: zone.status,
-      router_mac_status: Boolean(zone.router_mac_status),
-      router_mac: zone.router_mac || ''
+      router_ip_status: ipStatus,
+      router_ip: ipValue
     });
     setIsModalOpen(true);
   };
@@ -56,18 +59,24 @@ const Zones = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('SUBMIT formData:', JSON.stringify(formData));
     if (!formData.name) return toast.error('Name is required');
 
+    const payload = {
+      ...formData,
+      // For backwards compatibility with both IP & MAC endpoints
+      router_mac_status: formData.router_ip_status,
+      router_mac: formData.router_ip
+    };
+
     if (editingId) {
-      const res = await mutate({ url: `/api/admin/zones/${editingId}`, method: 'PUT', data: formData });
+      const res = await mutate({ url: `/api/admin/zones/${editingId}`, method: 'PUT', data: payload });
       if (res?.success) {
         toast.success(res.message || 'Zone updated successfully');
         refresh();
         closeModal();
       }
     } else {
-      const res = await mutate({ url: `/api/admin/zones`, method: 'POST', data: formData });
+      const res = await mutate({ url: `/api/admin/zones`, method: 'POST', data: payload });
       if (res?.success) {
         toast.success(res.message || 'Zone created successfully');
         refresh();
@@ -106,7 +115,7 @@ const Zones = () => {
               <tr>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Name</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Has Perimeter</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Router MAC</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Router IP</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Status</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
               </tr>
@@ -135,6 +144,9 @@ const Zones = () => {
                     }
                     hasLocations = Array.isArray(locs) && locs.length >= 3;
                   } catch (e) {}
+                  const isIpActive = zone.router_ip_status !== undefined ? zone.router_ip_status : zone.router_mac_status;
+                  const ipValue = zone.router_ip || zone.router_mac;
+
                   return (
                   <tr key={zone.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4 font-medium">{zone.name}</td>
@@ -150,16 +162,16 @@ const Zones = () => {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {zone.router_mac_status && zone.router_mac ? (
+                      {isIpActive && ipValue ? (
                         <div className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                           <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border border-emerald-500/20">
-                            {zone.router_mac}
+                            {ipValue}
                           </span>
                         </div>
-                      ) : zone.router_mac ? (
+                      ) : ipValue ? (
                         <span className="font-mono text-xs text-muted-foreground opacity-75">
-                          {zone.router_mac} (Disabled)
+                          {ipValue} (Disabled)
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">Not set</span>
@@ -195,16 +207,19 @@ const Zones = () => {
       {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-card w-full max-w-2xl rounded-2xl shadow-2xl border flex flex-col my-8">
-            <div className="flex items-center justify-between p-6 border-b">
+          <div className="bg-card w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl border flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-muted/20">
               <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans']">{editingId ? 'Edit Zone' : 'Add Zone'}</h2>
               <Button variant="ghost" size="icon" onClick={closeModal} className="rounded-full">
                 <X className="w-5 h-5" />
               </Button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
-              <div className="space-y-4">
+            {/* Modal Form */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              {/* Scrollable Body */}
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Zone Name *</label>
                   <Input 
@@ -223,38 +238,38 @@ const Zones = () => {
                   />
                 </div>
 
-                {/* Router MAC Address Verification Section */}
+                {/* Router IP Verification Section */}
                 <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <label htmlFor="router_mac_status" className="text-sm font-semibold flex items-center gap-2 cursor-pointer">
-                        <Network className="w-4 h-4 text-primary" />
-                        Router MAC Verification
+                      <label htmlFor="router_ip_status" className="text-sm font-semibold flex items-center gap-2 cursor-pointer">
+                        <Wifi className="w-4 h-4 text-primary" />
+                        Router IP Verification (التحقق من آي بي الراوتر)
                       </label>
                       <p className="text-xs text-muted-foreground">
-                        Require employees in this zone to connect to this specific router MAC address
+                        Require employees in this zone to connect from this specific router IP address
                       </p>
                     </div>
                     <input 
                       type="checkbox" 
-                      id="router_mac_status"
-                      checked={formData.router_mac_status} 
-                      onChange={e => setFormData(prev => ({ ...prev, router_mac_status: e.target.checked }))} 
+                      id="router_ip_status"
+                      checked={formData.router_ip_status} 
+                      onChange={e => setFormData(prev => ({ ...prev, router_ip_status: e.target.checked }))} 
                       className="w-4 h-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
                     />
                   </div>
 
-                  {formData.router_mac_status && (
+                  {formData.router_ip_status && (
                     <div className="space-y-1.5 pt-1">
-                      <label htmlFor="router_mac" className="text-xs font-semibold text-foreground">
-                        Router MAC Address (عنوان الماك أدرس للراوتر) *
+                      <label htmlFor="router_ip" className="text-xs font-semibold text-foreground">
+                        Router IP Address (عنوان الـ IP للراوتر) *
                       </label>
                       <Input 
-                        id="router_mac"
-                        required={formData.router_mac_status}
-                        value={formData.router_mac} 
-                        onChange={e => setFormData(prev => ({ ...prev, router_mac: e.target.value }))} 
-                        placeholder="e.g. 00:1A:2B:3C:4D:5E or A4:BB:6D:..."
+                        id="router_ip"
+                        required={formData.router_ip_status}
+                        value={formData.router_ip} 
+                        onChange={e => setFormData(prev => ({ ...prev, router_ip: e.target.value }))} 
+                        placeholder="e.g. 192.168.1.1 or your public IP"
                         className="font-mono bg-background"
                       />
                     </div>
@@ -273,7 +288,8 @@ const Zones = () => {
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end gap-3 border-t">
+              {/* Fixed Footer with Actions */}
+              <div className="px-6 py-4 flex items-center justify-end gap-3 border-t shrink-0 bg-muted/20">
                 <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
                 <Button type="submit" disabled={mutationLoading}>
                   {mutationLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
