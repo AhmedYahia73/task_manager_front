@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
-import { Loader2, Search, Calendar, ChevronLeft, Lock } from 'lucide-react';
+import { Loader2, Search, Calendar, ChevronLeft, Lock, AlarmClock } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
@@ -65,11 +65,11 @@ const FilteredTasks = () => {
 
   const getStatusStyles = (status) => {
     switch(status) {
-      case 'done': return { color: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700', label: 'Done' };
-      case 'inprogress': return { color: 'bg-blue-500', badge: 'bg-blue-100 text-blue-700', label: 'In Progress' };
       case 'pending': return { color: 'bg-amber-500', badge: 'bg-amber-100 text-amber-700', label: 'Pending' };
-      case 'edit': return { color: 'bg-orange-500', badge: 'bg-orange-100 text-orange-700', label: 'Edit' };
-      case 'approve': return { color: 'bg-purple-500', badge: 'bg-purple-100 text-purple-700', label: 'Approve' };
+      case 'inprogress': return { color: 'bg-blue-500', badge: 'bg-blue-100 text-blue-700', label: 'In Progress' };
+      case 'done': return { color: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700', label: 'Completed' };
+      case 'edit': return { color: 'bg-orange-500', badge: 'bg-orange-100 text-orange-700', label: 'Need to Revision' };
+      case 'approve': return { color: 'bg-purple-500', badge: 'bg-purple-100 text-purple-700', label: 'Approved' };
       default: return { color: 'bg-muted0', badge: 'bg-gray-100 text-gray-700', label: status };
     }
   };
@@ -307,9 +307,20 @@ const FilteredTasks = () => {
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="flex items-center text-foreground font-medium">
-                          <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                          {task.delivery_date ? (typeof task.delivery_date === 'string' ? dayjs(task.delivery_date.split('T')[0]).format('MMM DD, YYYY') : dayjs(task.delivery_date).format('MMM DD, YYYY')) : 'Not Set'}
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center text-foreground font-medium text-xs sm:text-sm">
+                            <Calendar className="w-4 h-4 mr-1.5 text-muted-foreground shrink-0" />
+                            {task.delivery_date ? (typeof task.delivery_date === 'string' ? dayjs(task.delivery_date.split('T')[0]).format('MMM DD, YYYY') : dayjs(task.delivery_date).format('MMM DD, YYYY')) : 'Not Set'}
+                          </div>
+                          {task.date_urgent && (
+                            <span 
+                              title={`Urgent from: ${dayjs(task.date_urgent).format('MMM DD, YYYY')}`}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 px-2 py-0.5 rounded-md w-fit"
+                            >
+                              <AlarmClock className="w-3 h-3 text-rose-600" />
+                              Urgent: {dayjs(task.date_urgent).format('MMM DD')}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-5">

@@ -465,6 +465,10 @@ const Tasks = () => {
         console.error('Error fetching task details:', err);
       }
     } else {
+      if (!isLeaderOrAdmin) {
+        toast.error("You don't have permission to add tasks to this project");
+        return;
+      }
       setEditingId(null);
       setFormData({ 
         name: '', 
@@ -827,14 +831,16 @@ const Tasks = () => {
             </button>
           </div>
 
-          {/* Add Task Button */}
-          <Button 
-            onClick={() => openModal()} 
-            className="h-10 flex items-center gap-2 rounded-xl bg-primary px-4 text-xs md:text-sm font-semibold text-white transition-all hover:bg-primary/90 shadow-md"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Task</span>
-          </Button>
+          {/* Add Task Button (Only for Leader or Admin at this project) */}
+          {isLeaderOrAdmin && (
+            <Button 
+              onClick={() => openModal()} 
+              className="h-10 flex items-center gap-2 rounded-xl bg-primary px-4 text-xs md:text-sm font-semibold text-white transition-all hover:bg-primary/90 shadow-md"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Task</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -962,7 +968,7 @@ const Tasks = () => {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  onAddTask={(status) => openModal(null, status)}
+                  onAddTask={isLeaderOrAdmin ? (status) => openModal(null, status) : null}
                   cardProps={{
                     ...cardProps,
                     isSelected: (id) => selectedTaskIds.includes(id),
@@ -990,7 +996,7 @@ const Tasks = () => {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  onAddTask={(status) => openModal(null, status)}
+                  onAddTask={isLeaderOrAdmin ? (status) => openModal(null, status) : null}
                   cardProps={{
                     ...cardProps,
                     isSelected: (id) => selectedTaskIds.includes(id),

@@ -35,7 +35,8 @@ import {
   User,
   Sparkles,
   MessageSquare,
-  Lock
+  Lock,
+  AlarmClock
 } from 'lucide-react';
 
 dayjs.extend(relativeTime);
@@ -802,11 +803,21 @@ export default function TaskDetails() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <span className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold ${deliveryInfo.badge}`}>
               <Clock className="w-3.5 h-3.5" />
               {deliveryInfo.diffText}
             </span>
+
+            {task.date_urgent && (
+              <span 
+                title={`Urgent from: ${dayjs(task.date_urgent).format('MMM DD, YYYY')}`}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+              >
+                <AlarmClock className="w-3.5 h-3.5 text-rose-600" />
+                Urgent Trigger: {dayjs(task.date_urgent).format('MMM DD, YYYY')}
+              </span>
+            )}
 
             <span className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold border capitalize ${getImportanceStyles(task.importanc_status)}`}>
               <Sparkles className="w-3.5 h-3.5" />

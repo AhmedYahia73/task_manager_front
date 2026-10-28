@@ -48,7 +48,7 @@ export const KanbanColumn = ({
           </span>
         </div>
 
-        {/* Quick Add Task to this Column or Locked indicator */}
+        {/* Quick Add Task to this Column (Leader/Admin only) or Locked indicator */}
         {isColumnRestricted ? (
           <span 
             title="Only Leaders and Admins can create tasks in or move tasks to this status"
@@ -57,7 +57,7 @@ export const KanbanColumn = ({
             <Lock className="w-2.5 h-2.5 text-amber-500" />
             <span>Leader Only</span>
           </span>
-        ) : (
+        ) : (isLeaderOrAdmin && onAddTask) ? (
           <button
             type="button"
             onClick={() => onAddTask(column.id)}
@@ -66,7 +66,7 @@ export const KanbanColumn = ({
           >
             <Plus className="w-4 h-4" />
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Drop Zone Banner indicator when dragging over */}
@@ -124,9 +124,11 @@ export const KanbanColumn = ({
             <p className="text-xs font-semibold text-muted-foreground">
               No tasks in {column.label}
             </p>
-            <p className="text-[11px] text-muted-foreground/80 mt-1 max-w-[180px]">
-              Drag a task here or click + to create one
-            </p>
+            {isLeaderOrAdmin && (
+              <p className="text-[11px] text-muted-foreground/80 mt-1 max-w-[180px]">
+                Drag a task here or click + to create one
+              </p>
+            )}
           </div>
         ) : (
           /* Task Cards List */
