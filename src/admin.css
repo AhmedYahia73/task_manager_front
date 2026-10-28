@@ -286,9 +286,18 @@
   min-height: 100vh;
 }
 
+/* --- Local Material Symbols Font --- */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('/fonts/material-symbols-outlined.woff2') format('woff2');
+}
+
 /* --- Material Symbols --- */
 .material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
+  font-family: 'Material Symbols Outlined' !important;
   font-weight: normal;
   font-style: normal;
   line-height: 1;
@@ -305,9 +314,6 @@
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;
   user-select: none;
-  width: 1em;
-  height: 1em;
-  overflow: hidden;
 }
 
 /* --- Custom Scrollbar --- */
