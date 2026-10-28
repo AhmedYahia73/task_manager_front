@@ -1,17 +1,92 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
-import { Loader2, Search, Plus, Edit, Trash2, X, Calendar, Eye, GripVertical } from 'lucide-react';
+import { 
+  Loader2, 
+  Search, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  X, 
+  Calendar, 
+  Eye, 
+  GripVertical,
+  CheckSquare,
+  Square,
+  LayoutGrid,
+  Table as TableIcon,
+  RefreshCw,
+  ArrowRight,
+  Check,
+  ChevronDown
+} from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { isAdminRole } from '@/utils/auth';
 import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
-
+import { KanbanColumn } from '@/components/kanban/KanbanColumn';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/axios';
+
+// Column definitions for the Kanban Board
+const KANBAN_COLUMNS = [
+  {
+    id: 'pending',
+    label: 'Pending',
+    labelAr: 'قيد الانتظار',
+    badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200',
+    headerBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    dotColor: 'bg-amber-500',
+    dropHighlight: 'ring-2 ring-amber-400 bg-amber-50/40 dark:bg-amber-950/20',
+  },
+  {
+    id: 'inprogress',
+    label: 'In Progress',
+    labelAr: 'جاري التنفيذ',
+    badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200',
+    headerBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+    dotColor: 'bg-blue-500',
+    dropHighlight: 'ring-2 ring-blue-400 bg-blue-50/40 dark:bg-blue-950/20',
+  },
+  {
+    id: 'edit',
+    label: 'Needs Revision',
+    labelAr: 'تعديل',
+    badgeClass: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300 border-orange-200',
+    headerBg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+    dotColor: 'bg-orange-500',
+    dropHighlight: 'ring-2 ring-orange-400 bg-orange-50/40 dark:bg-orange-950/20',
+  },
+  {
+    id: 'done',
+    label: 'Completed',
+    labelAr: 'مكتمل',
+    badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200',
+    headerBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    dotColor: 'bg-emerald-500',
+    dropHighlight: 'ring-2 ring-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20',
+  },
+  {
+    id: 'approve',
+    label: 'Approved',
+    labelAr: 'معتمد',
+    badgeClass: 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200',
+    headerBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+    dotColor: 'bg-purple-500',
+    dropHighlight: 'ring-2 ring-purple-400 bg-purple-50/40 dark:bg-purple-950/20',
+  },
+];
+
+const initialColumnsState = {
+  pending: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
+  inprogress: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
+  edit: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
+  done: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
+  approve: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
+};
 
 const Tasks = () => {
   const { getRoleName, getRoleNamePlural } = useRoleNames();
@@ -25,95 +100,296 @@ const Tasks = () => {
   const projectUserRole = projectDetailsData?.Project?.user_role || (isAdmin ? 'admin' : 'engineer');
   const isLeaderOrAdmin = projectUserRole === 'leader' || isAdmin;
   
-  const [page, setPage] = useState(1);
+  // View mode: 'kanban' (default) or 'table'
+  const [viewMode, setViewMode] = useState('kanban');
+
+  // Search state
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const limit = 50;
   
+  // Mobile active tab for column view
+  const [mobileActiveTab, setMobileActiveTab] = useState('pending');
+
+  // Selection mode & multi-select state ("by selection")
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState([]);
+  const [bulkTargetStatus, setBulkTargetStatus] = useState('inprogress');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  // Kanban Columns Data state (each status has independent tasks, page, and pagination)
+  const [columnsData, setColumnsData] = useState(initialColumnsState);
+
+  // Drag and drop state
+  const [draggedTask, setDraggedTask] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1);
-    }, 500);
+    }, 400);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch Tasks Data with group_id filter
-  const { data: tasksData, loading: tasksLoading, refresh } = useGet(`/api/admin/tasks?group_id=${groupId}&page=${page}&limit=${limit}&search=${debouncedSearch}`);
-  const [taskList, setTaskList] = useState([]);
-  const [draggedIndex, setDraggedIndex] = useState(null);
-  const [dragOverIndex, setDragOverIndex] = useState(null);
-  const [isReordering, setIsReordering] = useState(false);
+  // Fetch initial page 1 for a single column
+  const fetchColumnPage = useCallback(async (statusKey, pageNum = 1, append = false) => {
+    if (!groupId) return;
 
-  useEffect(() => {
-    if (tasksData?.tasks) {
-      setTaskList(tasksData.tasks);
+    setColumnsData(prev => ({
+      ...prev,
+      [statusKey]: {
+        ...prev[statusKey],
+        loading: !append,
+        loadingMore: append
+      }
+    }));
+
+    try {
+      const res = await apiClient.get('/api/admin/tasks', {
+        params: {
+          group_id: groupId,
+          status: statusKey,
+          page: pageNum,
+          limit: 12,
+          search: debouncedSearch
+        }
+      });
+
+      const data = res?.data?.data || res?.data || {};
+      const fetchedTasks = data.tasks || [];
+      const pagination = data.pagination || { total: fetchedTasks.length, totalPages: 1, page: pageNum };
+
+      setColumnsData(prev => {
+        const currentTasks = prev[statusKey]?.tasks || [];
+        const combined = append
+          ? [...currentTasks, ...fetchedTasks.filter(item => !currentTasks.some(existing => existing.id === item.id))]
+          : fetchedTasks;
+
+        return {
+          ...prev,
+          [statusKey]: {
+            tasks: combined,
+            page: pageNum,
+            totalPages: pagination.totalPages || 1,
+            total: Number(pagination.total || combined.length),
+            loading: false,
+            loadingMore: false,
+            hasMore: pageNum < (pagination.totalPages || 1)
+          }
+        };
+      });
+    } catch (err) {
+      console.error(`Failed to load tasks for status ${statusKey}:`, err);
+      setColumnsData(prev => ({
+        ...prev,
+        [statusKey]: {
+          ...prev[statusKey],
+          loading: false,
+          loadingMore: false
+        }
+      }));
     }
-  }, [tasksData?.tasks]);
+  }, [groupId, debouncedSearch]);
 
-  const tasks = taskList;
-  const pagination = tasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
+  // Fetch all columns initial data
+  const refreshAllColumns = useCallback(() => {
+    KANBAN_COLUMNS.forEach(col => {
+      fetchColumnPage(col.id, 1, false);
+    });
+  }, [fetchColumnPage]);
+
+  // Trigger loading when groupId or debouncedSearch changes
+  useEffect(() => {
+    refreshAllColumns();
+  }, [refreshAllColumns]);
+
+  // Handle Infinite Scroll within a Column container
+  const handleColumnScroll = useCallback((statusKey, e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    const col = columnsData[statusKey];
+
+    // Check if scrolled near bottom (within 80px)
+    if (scrollHeight - scrollTop - clientHeight < 80) {
+      if (col && !col.loading && !col.loadingMore && col.hasMore) {
+        fetchColumnPage(statusKey, col.page + 1, true);
+      }
+    }
+  }, [columnsData, fetchColumnPage]);
 
   // Drag and Drop handlers
-  const handleDragStart = (e, index) => {
-    if (debouncedSearch) return;
-    setDraggedIndex(index);
+  const handleDragStart = (e, task) => {
+    if (isSelectionMode) return;
+    setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(index));
+    e.dataTransfer.setData('text/plain', task.id);
   };
 
-  const handleDragOver = (e, index) => {
-    if (debouncedSearch) return;
+  const handleDragOver = (e, statusKey) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragOverIndex !== index) {
-      setDragOverIndex(index);
+    if (dragOverCol !== statusKey) {
+      setDragOverCol(statusKey);
+    }
+  };
+
+  const handleDragLeave = (e, statusKey) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    if (dragOverCol === statusKey) {
+      setDragOverCol(null);
     }
   };
 
   const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverIndex(null);
+    setDraggedTask(null);
+    setDragOverCol(null);
   };
 
-  const handleDrop = async (e, targetIndex) => {
-    if (debouncedSearch) return;
-    e.preventDefault();
+  // Move task to a new status (used by Drag & Drop and Card status picker)
+  const handleMoveTaskStatus = async (taskId, newStatus) => {
+    // Find task
+    let targetTask = draggedTask;
+    let sourceStatus = targetTask?.status;
 
-    if (draggedIndex === null || draggedIndex === undefined || draggedIndex === targetIndex) {
-      setDraggedIndex(null);
-      setDragOverIndex(null);
+    if (!targetTask) {
+      for (const col of Object.keys(columnsData)) {
+        const found = columnsData[col].tasks.find(t => t.id === taskId);
+        if (found) {
+          targetTask = found;
+          sourceStatus = col;
+          break;
+        }
+      }
+    }
+
+    if (!targetTask || sourceStatus === newStatus) {
+      setDragOverCol(null);
       return;
     }
 
-    const updated = [...taskList];
-    const [movedItem] = updated.splice(draggedIndex, 1);
-    updated.splice(targetIndex, 0, movedItem);
+    // Permission validations
+    if (!isLeaderOrAdmin && (newStatus === 'approve' || newStatus === 'edit')) {
+      toast.error("You don't have permission to approve tasks or request revision");
+      setDragOverCol(null);
+      return;
+    }
 
-    setTaskList(updated);
-    setDraggedIndex(null);
-    setDragOverIndex(null);
+    if (targetTask.status === 'approve') {
+      if (!isLeaderOrAdmin) {
+        toast.error("You don't have permission to modify approved tasks");
+        setDragOverCol(null);
+        return;
+      }
+      if (newStatus !== 'edit' && newStatus !== 'approve') {
+        toast.error("Approved tasks can only be changed to Needs Revision");
+        setDragOverCol(null);
+        return;
+      }
+    }
 
-    const payload = updated.map((t, idx) => ({
-      id: t.id,
-      sort: (page - 1) * limit + idx + 1
-    }));
+    // Snapshot for rollback
+    const previousColumnsData = { ...columnsData };
 
-    setIsReordering(true);
+    // Optimistic UI update
+    setColumnsData(prev => {
+      const sourceList = prev[sourceStatus]?.tasks || [];
+      const targetList = prev[newStatus]?.tasks || [];
+
+      const updatedSourceList = sourceList.filter(t => t.id !== taskId);
+      const updatedTask = { ...targetTask, status: newStatus };
+      const updatedTargetList = [updatedTask, ...targetList.filter(t => t.id !== taskId)];
+
+      return {
+        ...prev,
+        [sourceStatus]: {
+          ...prev[sourceStatus],
+          tasks: updatedSourceList,
+          total: Math.max(0, (prev[sourceStatus]?.total || 0) - 1)
+        },
+        [newStatus]: {
+          ...prev[newStatus],
+          tasks: updatedTargetList,
+          total: (prev[newStatus]?.total || 0) + 1
+        }
+      };
+    });
+
+    setDragOverCol(null);
+    setDraggedTask(null);
+
+    // Call API
     try {
-      await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
-      toast.success('Task order updated');
+      await apiClient.put(`/api/admin/tasks/${taskId}`, { status: newStatus });
+      const targetColInfo = KANBAN_COLUMNS.find(c => c.id === newStatus);
+      toast.success(`Task moved to ${targetColInfo?.label || newStatus}`);
     } catch (err) {
-      console.error('Error reordering tasks:', err);
-      toast.error('Failed to update task order');
-      refresh();
-    } finally {
-      setIsReordering(false);
+      console.error('Failed to update task status:', err);
+      toast.error(err.response?.data?.message || 'Failed to move task');
+      // Rollback
+      setColumnsData(previousColumnsData);
     }
   };
 
-  // Fetch Users assigned to the Group for the Dropdown
+  const handleDrop = async (e, targetStatus) => {
+    e.preventDefault();
+    if (!draggedTask) return;
+    await handleMoveTaskStatus(draggedTask.id, targetStatus);
+  };
+
+  // Selection Mode handlers ("by selection" for mobile and multi-select)
+  const toggleSelectTask = (taskId) => {
+    setSelectedTaskIds(prev => 
+      prev.includes(taskId)
+        ? prev.filter(id => id !== taskId)
+        : [...prev, taskId]
+    );
+  };
+
+  const handleSelectAllInCurrentTab = () => {
+    const currentTasks = columnsData[mobileActiveTab]?.tasks || [];
+    const currentIds = currentTasks.map(t => t.id);
+    const allSelected = currentIds.every(id => selectedTaskIds.includes(id));
+
+    if (allSelected) {
+      setSelectedTaskIds(prev => prev.filter(id => !currentIds.includes(id)));
+    } else {
+      setSelectedTaskIds(prev => Array.from(new Set([...prev, ...currentIds])));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTaskIds([]);
+  };
+
+  // Bulk Move Tasks by Selection
+  const handleBulkMove = async () => {
+    if (selectedTaskIds.length === 0) return;
+
+    if (!isLeaderOrAdmin && (bulkTargetStatus === 'approve' || bulkTargetStatus === 'edit')) {
+      toast.error("You don't have permission to approve tasks or request revision");
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      const res = await apiClient.put('/api/admin/tasks/bulk-status', {
+        taskIds: selectedTaskIds,
+        status: bulkTargetStatus
+      });
+
+      const count = res?.data?.data?.updatedCount || selectedTaskIds.length;
+      toast.success(`Successfully moved ${count} task${count > 1 ? 's' : ''} to ${bulkTargetStatus}`);
+      setSelectedTaskIds([]);
+      setIsSelectionMode(false);
+      refreshAllColumns();
+    } catch (err) {
+      console.error('Bulk status update failed:', err);
+      toast.error(err.response?.data?.message || 'Failed to move selected tasks');
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  // Fetch Users assigned to Group for Dropdown / Multi-assign
   const { data: groupUsersData } = useGet(groupId ? `/api/admin/projectGroup/${groupId}/users` : null);
   const engineersList = groupUsersData?.users || groupUsersData?.data?.users || [];
 
@@ -126,7 +402,7 @@ const Tasks = () => {
 
   const { mutate, loading: mutationLoading } = useMutation();
 
-  // Modal State
+  // Create / Edit Task Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
@@ -140,18 +416,19 @@ const Tasks = () => {
     users_ids: []
   });
   const [selectedDocFile, setSelectedDocFile] = useState(null);
-  const fileInputRef = React.useRef(null);
+  const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setSelectedDocFile(file || null);
   };
 
-  const openModal = async (task = null) => {
+  const openModal = async (task = null, defaultStatus = 'pending') => {
     if (task) {
       setEditingId(task.id);
 
-      const matchingFromList = tasks
+      const allLoadedTasks = Object.values(columnsData).flatMap(c => c.tasks);
+      const matchingFromList = allLoadedTasks
         .filter(t => t.name?.trim().toLowerCase() === task.name?.trim().toLowerCase())
         .map(t => t.user_id)
         .filter(Boolean);
@@ -190,7 +467,14 @@ const Tasks = () => {
     } else {
       setEditingId(null);
       setFormData({ 
-        name: '', description: '', delivery_date: '', status: 'pending', importanc_status: 'medium', tester_note: '', documentation: '', users_ids: [] 
+        name: '', 
+        description: '', 
+        delivery_date: '', 
+        status: defaultStatus || 'pending', 
+        importanc_status: 'medium', 
+        tester_note: '', 
+        documentation: '', 
+        users_ids: [] 
       });
       setSelectedDocFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -267,12 +551,12 @@ const Tasks = () => {
 
     if (response?.success) {
       closeModal();
-      refresh();
+      refreshAllColumns();
     }
   };
 
   const handleDeleteDoc = async () => {
-    if (!window.confirm("Are you sure you want to delete this documentation? It will be deleted permanently from the server and database.")) return;
+    if (!window.confirm("Are you sure you want to delete this documentation? It will be deleted permanently.")) return;
     if (editingId) {
       const res = await mutate({
         method: 'DELETE',
@@ -282,7 +566,7 @@ const Tasks = () => {
         setFormData(prev => ({ ...prev, documentation: '' }));
         setSelectedDocFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        refresh();
+        refreshAllColumns();
       }
     } else {
       setFormData(prev => ({ ...prev, documentation: '' }));
@@ -300,29 +584,38 @@ const Tasks = () => {
     });
 
     if (response?.success) {
-      refresh();
+      // Remove deleted task locally
+      setColumnsData(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(col => {
+          const beforeLen = next[col].tasks.length;
+          next[col].tasks = next[col].tasks.filter(t => t.id !== id);
+          if (next[col].tasks.length < beforeLen) {
+            next[col].total = Math.max(0, next[col].total - 1);
+          }
+        });
+        return next;
+      });
+      toast.success("Task deleted successfully");
     }
   };
 
-  const getStatusStyles = (status) => {
-    switch(status) {
-      case 'done': return { color: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700', label: 'Done' };
-      case 'inprogress': return { color: 'bg-blue-500', badge: 'bg-blue-100 text-blue-700', label: 'In Progress' };
-      case 'pending': return { color: 'bg-amber-500', badge: 'bg-amber-100 text-amber-700', label: 'Pending' };
-      case 'edit': return { color: 'bg-orange-500', badge: 'bg-orange-100 text-orange-700', label: 'Edit' };
-      case 'approve': return { color: 'bg-purple-500', badge: 'bg-purple-100 text-purple-700', label: 'Approve' };
-      default: return { color: 'bg-muted0', badge: 'bg-gray-100 text-gray-700', label: status };
-    }
-  };
-
-  const handleStatusChange = async (taskId, newStatus) => {
+  const handleImportanceChange = async (taskId, newImportance) => {
     const response = await mutate({
       method: 'PUT',
       url: `/api/admin/tasks/${taskId}`,
-      data: { status: newStatus }
+      data: { importanc_status: newImportance }
     });
     if (response?.success) {
-      refresh();
+      setColumnsData(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(col => {
+          next[col].tasks = next[col].tasks.map(t => 
+            t.id === taskId ? { ...t, importanc_status: newImportance } : t
+          );
+        });
+        return next;
+      });
     }
   };
 
@@ -361,7 +654,6 @@ const Tasks = () => {
         document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       } else {
-        // Try to fetch the URL to force download
         fetch(docString)
           .then(res => res.blob())
           .then(blob => {
@@ -375,7 +667,6 @@ const Tasks = () => {
             setTimeout(() => URL.revokeObjectURL(url), 10000);
           })
           .catch(() => {
-            // Fallback if fetch fails (e.g., CORS)
             window.open(docString, '_blank');
           });
       }
@@ -385,372 +676,428 @@ const Tasks = () => {
     }
   };
 
-  const handleImportanceChange = async (taskId, newImportance) => {
-    const response = await mutate({
-      method: 'PUT',
-      url: `/api/admin/tasks/${taskId}`,
-      data: { importanc_status: newImportance }
-    });
-    if (response?.success) {
-      refresh();
-    }
+  // Card Props passed down
+  const cardProps = {
+    projectId,
+    groupId,
+    isSelectionMode,
+    selectedTaskIds,
+    onToggleSelect: toggleSelectTask,
+    onDragStart: handleDragStart,
+    onDragEnd: handleDragEnd,
+    onOpenModal: (task) => openModal(task),
+    onDelete: handleDelete,
+    onStatusChange: handleMoveTaskStatus,
+    onImportanceChange: handleImportanceChange,
+    onViewDoc: handleViewDoc,
+    isLeaderOrAdmin,
+    isAdmin,
+    getRoleName,
+    availableColumns: KANBAN_COLUMNS
   };
 
-  const getImportanceStyles = (importance) => {
-    switch(importance) {
-      case 'urgent': return 'bg-red-100 text-red-700 border-red-200 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]';
-      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'medium': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'low': return 'bg-slate-100 text-slate-700 border-slate-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
-    }
-  };
-
-  // Compute stats for bottom cards
-  const pendingCount = tasks.filter(t => t.status === 'pending').length;
-  const inProgressCount = tasks.filter(t => t.status === 'inprogress').length;
-  const doneCount = tasks.filter(t => t.status === 'done').length;
-  const editCount = tasks.filter(t => t.status === 'edit').length;
-  const approveCount = tasks.filter(t => t.status === 'approve').length;
+  // Total tasks count across all columns
+  const grandTotal = Object.values(columnsData).reduce((sum, col) => sum + (col.total || 0), 0);
 
   return (
     <div className="admin-tasks-page min-h-screen bg-background p-4 md:p-8 font-inter text-foreground">
       {/* Header Section */}
-      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <nav className="mb-3 text-sm text-muted-foreground flex items-center">
+          <nav className="mb-2 text-sm text-muted-foreground flex items-center">
             <Link to="/admin/projects" className="hover:underline hover:text-primary">Projects</Link>
             <span className="material-symbols-outlined mx-1 text-[16px]">chevron_right</span>
             <Link to={`/admin/projects/${projectId}`} className="hover:underline hover:text-primary">Details</Link>
             <span className="material-symbols-outlined mx-1 text-[16px]">chevron_right</span>
-            <span className="font-semibold text-foreground">Tasks</span>
+            <span className="font-semibold text-foreground">Tasks Kanban Board</span>
           </nav>
-          <h1 className="font-plus-jakarta text-4xl font-bold tracking-tight text-primary">Task Management</h1>
-          <p className="mt-2 text-muted-foreground">Manage tasks for the selected group.</p>
+          <div className="flex items-center gap-3">
+            <h1 className="font-plus-jakarta text-3xl md:text-4xl font-bold tracking-tight text-primary">
+              Task Board
+            </h1>
+            <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary border border-primary/20">
+              {grandTotal} Tasks
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage, drag & drop, and track tasks across status columns with infinite scroll.
+          </p>
           
           {/* Quick Docs Links */}
-          <div className="flex flex-wrap items-center gap-3 mt-4">
+          <div className="flex flex-wrap items-center gap-2.5 mt-3">
             {project?.documentation && (
-              <button onClick={(e) => handleViewDoc(e, project.documentation)} className="inline-flex items-center gap-1.5 text-sm bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer border-none font-medium">
-                <span className="material-symbols-outlined text-[18px]">folder</span>
+              <button 
+                onClick={(e) => handleViewDoc(e, project.documentation)} 
+                className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer border-none font-medium"
+              >
+                <span className="material-symbols-outlined text-[16px]">folder</span>
                 Project Docs
               </button>
             )}
             {group?.documentation && (
-              <button onClick={(e) => handleViewDoc(e, group.documentation)} className="inline-flex items-center gap-1.5 text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer border-none font-medium">
-                <span className="material-symbols-outlined text-[18px]">topic</span>
+              <button 
+                onClick={(e) => handleViewDoc(e, group.documentation)} 
+                className="inline-flex items-center gap-1.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer border-none font-medium"
+              >
+                <span className="material-symbols-outlined text-[16px]">topic</span>
                 Group Docs
               </button>
             )}
           </div>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+
+        {/* Toolbar: Search, Select Mode Toggle, View Toggle, Add Task */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+          {/* Search Box */}
+          <div className="relative flex-1 sm:w-60 min-w-[200px]">
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
             <Input 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tasks..." 
-              className="pl-9 h-11 border-border focus-visible:ring-primary bg-card rounded-xl shadow-sm"
+              className="pl-9 h-10 border-border bg-card rounded-xl shadow-xs text-sm"
             />
           </div>
-          <Button onClick={() => openModal()} className="h-11 flex items-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-white transition-colors hover:bg-opacity-90 shadow-md">
+
+          {/* Refresh Button */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={refreshAllColumns}
+            title="Refresh Board"
+            className="h-10 w-10 rounded-xl bg-card border-border hover:bg-muted"
+          >
+            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+          </Button>
+
+          {/* Selection Mode Button ("by selection") */}
+          <Button
+            variant={isSelectionMode ? "default" : "outline"}
+            onClick={() => {
+              setIsSelectionMode(!isSelectionMode);
+              if (isSelectionMode) setSelectedTaskIds([]);
+            }}
+            className={`h-10 rounded-xl px-3.5 text-xs font-semibold gap-1.5 transition-all shadow-xs ${
+              isSelectionMode 
+                ? 'bg-primary text-white hover:bg-primary/90 ring-2 ring-primary/40' 
+                : 'bg-card border-border hover:bg-muted text-foreground'
+            }`}
+          >
+            {isSelectionMode ? (
+              <CheckSquare className="w-4 h-4" />
+            ) : (
+              <Square className="w-4 h-4 text-muted-foreground" />
+            )}
+            <span>{isSelectionMode ? 'Selection Active' : 'Select Mode'}</span>
+          </Button>
+
+          {/* View Mode Toggle: Kanban vs Table */}
+          <div className="flex items-center rounded-xl border border-border bg-card p-1 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setViewMode('kanban')}
+              title="Kanban Board View"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                viewMode === 'kanban' 
+                  ? 'bg-primary text-white font-semibold shadow-xs' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Kanban</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              title="Table View"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                viewMode === 'table' 
+                  ? 'bg-primary text-white font-semibold shadow-xs' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Table</span>
+            </button>
+          </div>
+
+          {/* Add Task Button */}
+          <Button 
+            onClick={() => openModal()} 
+            className="h-10 flex items-center gap-2 rounded-xl bg-primary px-4 text-xs md:text-sm font-semibold text-white transition-all hover:bg-primary/90 shadow-md"
+          >
             <Plus className="w-4 h-4" />
-            Add Task
+            <span>Add Task</span>
           </Button>
         </div>
       </div>
 
-      {/* Task Table */}
-      <div className="mb-8 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th scope="col" className="w-12 px-3 py-5 rounded-tl-2xl text-center">
-                  <span className="sr-only">Reorder</span>
-                </th>
-                <th scope="col" className="px-6 py-5 font-semibold">Task Details</th>
-                <th scope="col" className="px-6 py-5 font-semibold">Assigned To</th>
-                <th scope="col" className="px-6 py-5 font-semibold">Delivery Date</th>
-                <th scope="col" className="px-6 py-5 font-semibold">Importance</th>
-                <th scope="col" className="px-6 py-5 font-semibold">Status</th>
-                <th scope="col" className="px-6 py-5 font-semibold text-right rounded-tr-2xl">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#edeeef]">
-              {tasksLoading && tasks.length === 0 ? (
-                <tr><td colSpan="7" className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></td></tr>
-              ) : tasks.length === 0 ? (
-                <tr><td colSpan="7" className="py-12 text-center text-muted-foreground"><div className="flex flex-col items-center"><span className="material-symbols-outlined text-4xl mb-2 text-gray-300">task</span>No tasks found.</div></td></tr>
-              ) : (
-                tasks.map((task, index) => {
-                  const style = getStatusStyles(task.status);
-                  const isDragging = draggedIndex === index;
-                  const isOver = dragOverIndex === index && draggedIndex !== index;
-                  return (
+      {/* Mobile Status Tabs (Shown on screens < md) */}
+      {viewMode === 'kanban' && (
+        <div className="block md:hidden mb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+            {KANBAN_COLUMNS.map((col) => {
+              const count = columnsData[col.id]?.total || 0;
+              const isActive = mobileActiveTab === col.id;
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  onClick={() => setMobileActiveTab(col.id)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                    isActive 
+                      ? `${col.badgeClass} ring-2 ring-primary/30 shadow-xs scale-102` 
+                      : 'bg-card border-border text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor}`} />
+                  <span>{col.label}</span>
+                  <span className="ml-0.5 rounded-full bg-muted/60 px-1.5 py-0.2 text-[10px] font-semibold text-foreground">
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Bulk Selection Action Bar ("by selection" mode) */}
+      {isSelectionMode && selectedTaskIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-2xl rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-md p-4 shadow-2xl animate-in slide-in-from-bottom-5">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white text-xs font-bold">
+                  {selectedTaskIds.length}
+                </span>
+                <span className="text-xs font-bold text-foreground">
+                  Task{selectedTaskIds.length > 1 ? 's' : ''} Selected
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAllInCurrentTab}
+                  className="text-xs text-primary hover:underline font-semibold"
+                >
+                  Select Tab
+                </button>
+                <span className="text-muted-foreground">·</span>
+                <button
+                  type="button"
+                  onClick={handleClearSelection}
+                  className="text-xs text-muted-foreground hover:text-destructive font-semibold"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+                Move to:
+              </span>
+              <select
+                value={bulkTargetStatus}
+                onChange={(e) => setBulkTargetStatus(e.target.value)}
+                className="h-9 rounded-xl border border-input bg-background px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="pending">Pending</option>
+                <option value="inprogress">In Progress</option>
+                {isLeaderOrAdmin && <option value="edit">Needs Revision</option>}
+                <option value="done">Completed</option>
+                {isLeaderOrAdmin && <option value="approve">Approved</option>}
+              </select>
+
+              <Button
+                size="sm"
+                onClick={handleBulkMove}
+                disabled={isBulkUpdating}
+                className="h-9 rounded-xl bg-primary text-white px-4 text-xs font-bold shadow-md hover:bg-primary/90"
+              >
+                {isBulkUpdating ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <span>Apply Move</span>
+                    <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main View: Kanban Board */}
+      {viewMode === 'kanban' ? (
+        <div>
+          {/* Desktop Kanban: 5 Columns side by side with responsive scroll */}
+          <div className="hidden md:flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+            {KANBAN_COLUMNS.map((col) => {
+              const colState = columnsData[col.id] || { tasks: [], total: 0, loading: false, loadingMore: false, hasMore: false };
+              return (
+                <KanbanColumn
+                  key={col.id}
+                  column={col}
+                  tasks={colState.tasks}
+                  total={colState.total}
+                  loading={colState.loading}
+                  loadingMore={colState.loadingMore}
+                  hasMore={colState.hasMore}
+                  onScroll={handleColumnScroll}
+                  isDragOver={dragOverCol === col.id}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onAddTask={(status) => openModal(null, status)}
+                  cardProps={{
+                    ...cardProps,
+                    isSelected: (id) => selectedTaskIds.includes(id),
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Mobile Kanban: Single active column selected via top tabs */}
+          <div className="block md:hidden">
+            {(() => {
+              const activeCol = KANBAN_COLUMNS.find(c => c.id === mobileActiveTab) || KANBAN_COLUMNS[0];
+              const colState = columnsData[activeCol.id] || { tasks: [], total: 0, loading: false, loadingMore: false, hasMore: false };
+              return (
+                <KanbanColumn
+                  column={activeCol}
+                  tasks={colState.tasks}
+                  total={colState.total}
+                  loading={colState.loading}
+                  loadingMore={colState.loadingMore}
+                  hasMore={colState.hasMore}
+                  onScroll={handleColumnScroll}
+                  isDragOver={dragOverCol === activeCol.id}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onAddTask={(status) => openModal(null, status)}
+                  cardProps={{
+                    ...cardProps,
+                    isSelected: (id) => selectedTaskIds.includes(id),
+                  }}
+                />
+              );
+            })()}
+          </div>
+        </div>
+      ) : (
+        /* Classic Table View Fallback */
+        <div className="mb-8 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th scope="col" className="px-6 py-5 font-semibold">Task Details</th>
+                  <th scope="col" className="px-6 py-5 font-semibold">Assigned To</th>
+                  <th scope="col" className="px-6 py-5 font-semibold">Delivery Date</th>
+                  <th scope="col" className="px-6 py-5 font-semibold">Importance</th>
+                  <th scope="col" className="px-6 py-5 font-semibold">Status</th>
+                  <th scope="col" className="px-6 py-5 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {Object.values(columnsData).flatMap(c => c.tasks).length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="py-12 text-center text-muted-foreground">
+                      No tasks found.
+                    </td>
+                  </tr>
+                ) : (
+                  Object.values(columnsData).flatMap(c => c.tasks).map((task) => (
                     <tr 
-                      key={task.id} 
-                      draggable={!debouncedSearch}
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnd={handleDragEnd}
-                      onDrop={(e) => handleDrop(e, index)}
+                      key={task.id}
+                      className="hover:bg-muted/60 transition-colors cursor-pointer"
                       onClick={() => navigate(`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`)}
-                      className={`group transition-all duration-150 cursor-pointer ${
-                        task.status === 'done' ? 'opacity-70' : ''
-                      } ${
-                        task.importanc_status === 'urgent' ? 'urgent-row' : 'bg-card hover:bg-muted/80'
-                      } ${
-                        isDragging ? 'opacity-40 scale-[0.99] bg-muted/60' : ''
-                      } ${
-                        isOver ? 'border-t-2 border-primary bg-primary/5' : ''
-                      }`}
                     >
-                      <td 
-                        className="w-12 px-3 py-5 text-center text-muted-foreground/60 group-hover:text-foreground cursor-grab active:cursor-grabbing select-none"
-                        onClick={(e) => e.stopPropagation()}
-                        title={debouncedSearch ? "Drag & drop ordering disabled while searching" : "Drag to reorder"}
-                      >
-                        <GripVertical className="w-4 h-4 mx-auto" />
-                      </td>
-                      <td className="relative px-6 py-5">
-                        <div className={`absolute left-0 top-0 h-full w-1 ${style.color}`}></div>
+                      <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Link 
-                              to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className={`font-plus-jakarta text-base font-bold text-foreground hover:text-primary transition-colors cursor-pointer ${task.status === 'done' ? 'line-through text-gray-400' : ''}`}
-                            >
-                              {task.name}
-                            </Link>
-                            <ProjectRoleBadge role={task.user_role} />
-                          </div>
-                          <span className="mt-1 text-sm text-muted-foreground line-clamp-2 max-w-md">{task.description || <span className="italic">No description</span>}</span>
-                          {task.tester_note && (
-                            <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-700 border border-amber-100">
-                              <span className="material-symbols-outlined text-[14px]">speaker_notes</span>
-                              <span className="font-semibold">{getRoleName('tester')}:</span> {task.tester_note}
-                            </span>
-                          )}
-                          {task.documentation && (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewDoc(e, task.documentation);
-                              }} 
-                              className="mt-3 inline-flex w-fit items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors cursor-pointer border-none"
-                            >
-                              <span className="material-symbols-outlined text-[14px]">link</span>
-                              Documentation
-                            </button>
-                          )}
+                          <span className="font-bold text-foreground hover:text-primary">
+                            {task.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground line-clamp-1">
+                            {task.description || 'No description'}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          {task.user_image ? (
-                            <img 
-                              src={task.user_image} 
-                              alt={task.user_name} 
-                              className="h-10 w-10 rounded-full object-cover border border-border" 
-                            />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
-                              {task.user_name ? task.user_name.charAt(0).toUpperCase() : '?'}
-                            </div>
-                          )}
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-foreground">{task.user_name || 'Unassigned'}</span>
-                            <span className="text-xs text-muted-foreground">{task.user_phone || getRoleName('engineer')}</span>
-                          </div>
-                        </div>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-semibold text-foreground">
+                          {task.user_name || 'Unassigned'}
+                        </span>
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center text-foreground font-medium">
-                          <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                          {task.delivery_date ? (typeof task.delivery_date === 'string' ? dayjs(task.delivery_date.split('T')[0]).format('MMM DD, YYYY') : dayjs(task.delivery_date).format('MMM DD, YYYY')) : 'Not Set'}
-                        </div>
+                      <td className="px-6 py-4 text-xs text-muted-foreground font-medium">
+                        {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
                       </td>
-                      <td className="px-6 py-5">
-                        {(() => {
-                          const isTaskLeader = task.user_role === 'leader' || isAdmin;
-                          return (
-                            <select
-                              value={task.importanc_status || 'medium'}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => handleImportanceChange(task.id, e.target.value)}
-                              disabled={!isTaskLeader}
-                              className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${!isTaskLeader ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
-                              style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                            >
-                              <option value="low" className="bg-card text-foreground">Low</option>
-                              <option value="medium" className="bg-card text-foreground">Medium</option>
-                              <option value="high" className="bg-card text-foreground">High</option>
-                              <option value="urgent" className="bg-card text-foreground">Urgent</option>
-                            </select>
-                          );
-                        })()}
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-bold uppercase">
+                          {task.importanc_status || 'medium'}
+                        </span>
                       </td>
-                      <td className="px-6 py-5">
-                        {(() => {
-                          const isTaskLeader = task.user_role === 'leader' || isAdmin;
-                          return (
-                            <select
-                              value={task.status}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                              disabled={task.status === 'approve' && !isTaskLeader}
-                              className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${task.status === 'approve' && !isTaskLeader ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
-                              style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                            >
-                              {task.status === 'approve' ? (
-                                <>
-                                  <option value="approve" className="bg-card text-foreground">Approve</option>
-                                  {isTaskLeader && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
-                                </>
-                              ) : (
-                                <>
-                                  <option value="pending" className="bg-card text-foreground">Pending</option>
-                                  <option value="inprogress" className="bg-card text-foreground">In Progress</option>
-                                  <option value="done" className="bg-card text-foreground">Done</option>
-                                  {!isTaskLeader && task.status === 'edit' && (
-                                    <option value="edit" disabled hidden className="bg-card text-foreground">Needs Revision</option>
-                                  )}
-                                  {isTaskLeader && (
-                                    <>
-                                      <option value="edit" className="bg-card text-foreground">Needs Revision</option>
-                                      <option value="approve" className="bg-card text-foreground">Approve</option>
-                                    </>
-                                  )}
-                                </>
-                              )}
-                            </select>
-                          );
-                        })()}
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-muted">
+                          {task.status}
+                        </span>
                       </td>
-                      <td className="px-6 py-5 text-right">
-                        <div className="flex justify-end gap-1.5 items-center" onClick={(e) => e.stopPropagation()}>
-                          <Link
-                            to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
-                            title="View Task Details"
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/80 transition-colors"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openModal(task);
-                            }} 
-                            title="Edit Task"
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/80 transition-colors"
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => openModal(task)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(task.id);
-                            }} 
-                            title="Delete Task"
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                          <button
+                            onClick={() => handleDelete(task.id)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
                     </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-        
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-border bg-background px-6 py-4 rounded-b-2xl">
-            <span className="text-sm text-muted-foreground font-medium">Showing page {page} of {pagination.totalPages}</span>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setPage(p => Math.max(1, p - 1))} 
-                disabled={page === 1}
-                className="bg-card"
-              >
-                Previous
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))} 
-                disabled={page === pagination.totalPages}
-                className="bg-card"
-              >
-                Next
-              </Button>
+      )}
+
+      {/* Bottom Summary Stats Cards */}
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {KANBAN_COLUMNS.map((col) => {
+          const totalCount = columnsData[col.id]?.total || 0;
+          return (
+            <div 
+              key={col.id} 
+              onClick={() => {
+                setViewMode('kanban');
+                setMobileActiveTab(col.id);
+              }}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs hover:border-primary/40 transition-colors cursor-pointer"
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${col.headerBg}`}>
+                <span className={`h-3 w-3 rounded-full ${col.dotColor}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-muted-foreground truncate">{col.label}</p>
+                <p className="text-xl font-bold text-foreground">{totalCount}</p>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })}
       </div>
 
-      {/* Bottom Stats - Only showing counts for current page as a quick summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-            <span className="material-symbols-outlined">pending_actions</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Pending</p>
-            <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-            <span className="material-symbols-outlined">clock_loader_40</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">In Progress</p>
-            <p className="text-2xl font-bold text-foreground">{inProgressCount}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-            <span className="material-symbols-outlined">check_circle</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Completed</p>
-            <p className="text-2xl font-bold text-foreground">{doneCount}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
-            <span className="material-symbols-outlined">error</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Needs Revision</p>
-            <p className="text-2xl font-bold text-foreground">{editCount}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-            <span className="material-symbols-outlined">verified</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Approved</p>
-            <p className="text-2xl font-bold text-foreground">{approveCount}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Task Form Modal */}
+      {/* Task Form Modal (Create & Edit) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsModalOpen(false)}>
           <div className="bg-card rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
@@ -876,7 +1223,7 @@ const Tasks = () => {
                     </select>
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div>
                     <label className="block text-sm font-semibold text-foreground mb-1.5">Status</label>
                     <select 
                       name="status" 
@@ -994,7 +1341,7 @@ const Tasks = () => {
                       value={formData.tester_note}
                       onChange={handleInputChange}
                       disabled={!isLeaderOrAdmin}
-                      className={`w-full flex min-h-[80px] rounded-xl border border-input bg-amber-50/50 px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!isLeaderOrAdmin ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`w-full flex min-h-[80px] rounded-xl border border-input bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!isLeaderOrAdmin ? 'opacity-60 cursor-not-allowed' : ''}`}
                       placeholder={isLeaderOrAdmin ? `Add any QA or ${getRoleName('tester').toLowerCase()} feedback here...` : `Only ${getRoleName('tester')} can update this note`}
                       rows={2}
                     />
