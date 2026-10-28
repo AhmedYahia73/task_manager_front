@@ -1,6 +1,6 @@
 import React from 'react';
 import { KanbanCard } from './KanbanCard';
-import { Plus, Loader2, Inbox } from 'lucide-react';
+import { Plus, Loader2, Inbox, Lock } from 'lucide-react';
 
 export const KanbanColumn = ({
   column,
@@ -17,6 +17,9 @@ export const KanbanColumn = ({
   onAddTask,
   cardProps
 }) => {
+  const isLeaderOrAdmin = cardProps?.isLeaderOrAdmin;
+  const isColumnRestricted = !isLeaderOrAdmin && (column.id === 'approve' || column.id === 'edit');
+
   return (
     <div
       onDragOver={(e) => onDragOver(e, column.id)}
@@ -24,8 +27,12 @@ export const KanbanColumn = ({
       onDrop={(e) => onDrop(e, column.id)}
       className={`flex flex-col rounded-2xl border bg-muted/30 backdrop-blur-xs transition-all duration-200 overflow-hidden min-w-[280px] max-w-full flex-1 ${
         isDragOver
-          ? `${column.dropHighlight} border-primary/50 shadow-lg scale-[1.01]`
-          : 'border-border/70 hover:border-border'
+          ? isColumnRestricted
+            ? 'ring-2 ring-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-400/50 shadow-lg'
+            : `${column.dropHighlight} border-primary/50 shadow-lg scale-[1.01]`
+          : isColumnRestricted
+            ? 'border-border/60 bg-muted/15'
+            : 'border-border/70 hover:border-border'
       }`}
       style={{ height: 'calc(100vh - 240px)', minHeight: '520px' }}
     >
@@ -41,22 +48,43 @@ export const KanbanColumn = ({
           </span>
         </div>
 
-        {/* Quick Add Task to this Column */}
-        <button
-          type="button"
-          onClick={() => onAddTask(column.id)}
-          title={`Add task in ${column.label}`}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+        {/* Quick Add Task to this Column or Locked indicator */}
+        {isColumnRestricted ? (
+          <span 
+            title="Only Leaders and Admins can create tasks in or move tasks to this status"
+            className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/80 bg-muted/60 px-2 py-0.5 rounded-md border border-border/50 select-none"
+          >
+            <Lock className="w-2.5 h-2.5 text-amber-500" />
+            <span>Leader Only</span>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onAddTask(column.id)}
+            title={`Add task in ${column.label}`}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Drop Zone Banner indicator when dragging over */}
       {isDragOver && (
-        <div className="px-3 py-2 bg-primary/10 border-b border-primary/20 text-center animate-pulse">
-          <p className="text-xs font-semibold text-primary">
-            Drop here to move to {column.label}
+        <div className={`px-3 py-2 border-b text-center animate-pulse ${
+          isColumnRestricted 
+            ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' 
+            : 'bg-primary/10 border-primary/20 text-primary'
+        }`}>
+          <p className="text-xs font-semibold flex items-center justify-center gap-1">
+            {isColumnRestricted ? (
+              <>
+                <Lock className="w-3.5 h-3.5" />
+                <span>Restricted: Only Leaders & Admins can move tasks here</span>
+              </>
+            ) : (
+              <span>Drop here to move to {column.label}</span>
+            )}
           </p>
         </div>
       )}

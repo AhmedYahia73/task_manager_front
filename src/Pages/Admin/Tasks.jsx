@@ -21,7 +21,8 @@ import {
   RefreshCw,
   ArrowRight,
   Check,
-  ChevronDown
+  ChevronDown,
+  Lock
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
@@ -31,7 +32,7 @@ import { KanbanColumn } from '@/components/kanban/KanbanColumn';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/axios';
 
-// Column definitions for the Kanban Board
+// Column definitions for the Kanban Board (Order: Pending, In Progress, Completed, Need to Revision, Approved)
 const KANBAN_COLUMNS = [
   {
     id: 'pending',
@@ -52,15 +53,6 @@ const KANBAN_COLUMNS = [
     dropHighlight: 'ring-2 ring-blue-400 bg-blue-50/40 dark:bg-blue-950/20',
   },
   {
-    id: 'edit',
-    label: 'Needs Revision',
-    labelAr: 'تعديل',
-    badgeClass: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300 border-orange-200',
-    headerBg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-    dotColor: 'bg-orange-500',
-    dropHighlight: 'ring-2 ring-orange-400 bg-orange-50/40 dark:bg-orange-950/20',
-  },
-  {
     id: 'done',
     label: 'Completed',
     labelAr: 'مكتمل',
@@ -68,6 +60,15 @@ const KANBAN_COLUMNS = [
     headerBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     dotColor: 'bg-emerald-500',
     dropHighlight: 'ring-2 ring-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20',
+  },
+  {
+    id: 'edit',
+    label: 'Need to Revision',
+    labelAr: 'بحاجة لتعديل',
+    badgeClass: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300 border-orange-200',
+    headerBg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+    dotColor: 'bg-orange-500',
+    dropHighlight: 'ring-2 ring-orange-400 bg-orange-50/40 dark:bg-orange-950/20',
   },
   {
     id: 'approve',
@@ -83,8 +84,8 @@ const KANBAN_COLUMNS = [
 const initialColumnsState = {
   pending: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
   inprogress: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
-  edit: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
   done: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
+  edit: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
   approve: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
 };
 
@@ -409,6 +410,7 @@ const Tasks = () => {
     name: '',
     description: '',
     delivery_date: '',
+    date_urgent: '',
     status: 'pending',
     importanc_status: 'medium',
     tester_note: '',
@@ -438,6 +440,7 @@ const Tasks = () => {
         name: task.name,
         description: task.description || '',
         delivery_date: task.delivery_date ? (typeof task.delivery_date === 'string' ? task.delivery_date.split('T')[0] : dayjs(task.delivery_date).format('YYYY-MM-DD')) : '',
+        date_urgent: task.date_urgent ? (typeof task.date_urgent === 'string' ? task.date_urgent.split('T')[0] : dayjs(task.date_urgent).format('YYYY-MM-DD')) : '',
         status: task.status,
         importanc_status: task.importanc_status || 'medium',
         tester_note: task.tester_note || '',
@@ -451,15 +454,12 @@ const Tasks = () => {
       try {
         const res = await apiClient.get(`/api/admin/tasks/${task.id}`);
         const taskDetail = res?.data?.data?.task || res?.data?.task;
-        if (taskDetail?.users_ids && Array.isArray(taskDetail.users_ids)) {
-          setFormData(prev => {
-            const isUnmodified = prev.users_ids.length === initialUsers.length &&
-              prev.users_ids.every(id => initialUsers.includes(id));
-            if (isUnmodified) {
-              return { ...prev, users_ids: taskDetail.users_ids };
-            }
-            return prev;
-          });
+        if (taskDetail) {
+          setFormData(prev => ({
+            ...prev,
+            date_urgent: taskDetail.date_urgent ? (typeof taskDetail.date_urgent === 'string' ? taskDetail.date_urgent.split('T')[0] : dayjs(taskDetail.date_urgent).format('YYYY-MM-DD')) : prev.date_urgent,
+            users_ids: (taskDetail.users_ids && Array.isArray(taskDetail.users_ids)) ? taskDetail.users_ids : prev.users_ids
+          }));
         }
       } catch (err) {
         console.error('Error fetching task details:', err);
@@ -470,6 +470,7 @@ const Tasks = () => {
         name: '', 
         description: '', 
         delivery_date: '', 
+        date_urgent: '',
         status: defaultStatus || 'pending', 
         importanc_status: 'medium', 
         tester_note: '', 
@@ -522,6 +523,11 @@ const Tasks = () => {
     data.append('group_id', groupId);
     if (formData.description) data.append('description', formData.description);
     if (formData.delivery_date) data.append('delivery_date', formData.delivery_date);
+    if (formData.date_urgent) {
+      data.append('date_urgent', formData.date_urgent);
+    } else if (editingId) {
+      data.append('date_urgent', '');
+    }
     if (formData.status) data.append('status', formData.status);
     if (formData.importanc_status) data.append('importanc_status', formData.importanc_status);
     if (formData.tester_note) data.append('tester_note', formData.tester_note);
@@ -906,9 +912,13 @@ const Tasks = () => {
               >
                 <option value="pending">Pending</option>
                 <option value="inprogress">In Progress</option>
-                {isLeaderOrAdmin && <option value="edit">Needs Revision</option>}
                 <option value="done">Completed</option>
-                {isLeaderOrAdmin && <option value="approve">Approved</option>}
+                <option value="edit" disabled={!isLeaderOrAdmin}>
+                  {isLeaderOrAdmin ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
+                </option>
+                <option value="approve" disabled={!isLeaderOrAdmin}>
+                  {isLeaderOrAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
+                </option>
               </select>
 
               <Button
@@ -1043,9 +1053,32 @@ const Tasks = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-muted">
-                          {task.status}
-                        </span>
+                        {task.status === 'approve' && !isLeaderOrAdmin ? (
+                          <span 
+                            title="Approved task: Locked (Only Leader or Admin can request revision)"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 select-none cursor-not-allowed"
+                          >
+                            <Lock className="w-3 h-3 text-purple-600" />
+                            Approved (Locked)
+                          </span>
+                        ) : (
+                          <select
+                            value={task.status}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handleMoveTaskStatus(task.id, e.target.value)}
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border cursor-pointer focus:ring-2 focus:ring-primary/50 bg-card text-foreground"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="inprogress">In Progress</option>
+                            <option value="done">Completed</option>
+                            <option value="edit" disabled={!isLeaderOrAdmin}>
+                              {isLeaderOrAdmin ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
+                            </option>
+                            <option value="approve" disabled={!isLeaderOrAdmin}>
+                              {isLeaderOrAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
+                            </option>
+                          </select>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -1141,6 +1174,35 @@ const Tasks = () => {
                       disabled={!isLeaderOrAdmin && editingId}
                       className="border-border bg-background focus-visible:ring-primary h-11"
                     />
+                  </div>
+
+                  <div className="flex flex-col gap-2 relative z-10">
+                    <label className="text-sm font-semibold text-foreground flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-bold">
+                        <span className="material-symbols-outlined text-[16px]">alarm</span>
+                        Urgent Date (تاريخ التحول لعاجل)
+                      </span>
+                      {formData.date_urgent && isLeaderOrAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, date_urgent: '' }))}
+                          className="text-[11px] text-muted-foreground hover:text-red-500 font-medium"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </label>
+                    <Input 
+                      type="date" 
+                      name="date_urgent" 
+                      value={formData.date_urgent} 
+                      onChange={handleInputChange} 
+                      disabled={!isLeaderOrAdmin && editingId}
+                      className="border-border bg-background focus-visible:ring-red-500 h-11"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      عند حلول هذا الموعد أو تخطيه تتحول المهمة تلقائياً إلى Urgent (ما لم تكن معتمدة).
+                    </p>
                   </div>
 
                   <div className="flex flex-col gap-2 md:col-span-2 relative z-10">

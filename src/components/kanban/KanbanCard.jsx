@@ -12,7 +12,9 @@ import {
   AlertCircle,
   MoreVertical,
   Check,
-  ChevronDown
+  ChevronDown,
+  Lock,
+  AlarmClock
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
@@ -38,14 +40,19 @@ export const KanbanCard = ({
 }) => {
   const navigate = useNavigate();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const isCardSelected = typeof isSelected === 'function' ? isSelected(task.id) : Boolean(isSelected);
+
+  // Permission: if task is approved, only Leader or Admin can modify its status
+  const isApproved = task.status === 'approve';
+  const canModifyThisTask = isLeaderOrAdmin || !isApproved;
 
   // Status helper styles
   const getStatusStyles = (status) => {
     switch (status) {
-      case 'done': return { color: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800', label: 'Done' };
+      case 'done': return { color: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800', label: 'Completed' };
       case 'inprogress': return { color: 'bg-blue-500', badge: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800', label: 'In Progress' };
       case 'pending': return { color: 'bg-amber-500', badge: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800', label: 'Pending' };
-      case 'edit': return { color: 'bg-orange-500', badge: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300 border-orange-200 dark:border-orange-800', label: 'Needs Revision' };
+      case 'edit': return { color: 'bg-orange-500', badge: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300 border-orange-200 dark:border-orange-800', label: 'Need to Revision' };
       case 'approve': return { color: 'bg-purple-500', badge: 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800', label: 'Approved' };
       default: return { color: 'bg-muted', badge: 'bg-muted text-muted-foreground border-border', label: status };
     }
@@ -88,12 +95,12 @@ export const KanbanCard = ({
 
   return (
     <div
-      draggable={!isSelectionMode}
+      draggable={!isSelectionMode && canModifyThisTask}
       onDragStart={(e) => onDragStart(e, task)}
       onDragEnd={onDragEnd}
       onClick={handleCardClick}
       className={`group relative rounded-xl border bg-card p-3.5 shadow-xs transition-all duration-200 select-none ${
-        isSelected 
+        isCardSelected 
           ? 'ring-2 ring-primary border-primary bg-primary/5 shadow-md' 
           : 'border-border/80 hover:border-primary/40 hover:shadow-md'
       } ${
@@ -101,7 +108,11 @@ export const KanbanCard = ({
           ? 'border-l-4 border-l-red-500'
           : `border-l-4 ${statusStyle.color.replace('bg-', 'border-l-')}`
       } ${
-        isSelectionMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+        isSelectionMode 
+          ? 'cursor-pointer' 
+          : canModifyThisTask 
+            ? 'cursor-grab active:cursor-grabbing' 
+            : 'cursor-default opacity-90'
       }`}
     >
       {/* Top Header Row */}
@@ -117,15 +128,19 @@ export const KanbanCard = ({
               }}
               className="text-primary hover:scale-110 transition-transform p-0.5"
             >
-              {isSelected ? (
+              {isCardSelected ? (
                 <CheckSquare className="w-5 h-5 text-primary fill-primary/20" />
               ) : (
                 <Square className="w-5 h-5 text-muted-foreground" />
               )}
             </button>
-          ) : (
-            <div className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors p-0.5">
+          ) : canModifyThisTask ? (
+            <div className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors p-0.5" title="Drag to move status">
               <GripVertical className="w-4 h-4" />
+            </div>
+          ) : (
+            <div className="text-purple-600 dark:text-purple-400 p-0.5" title="Approved Task: Locked (Only Leader or Admin can modify)">
+              <Lock className="w-3.5 h-3.5" />
             </div>
           )}
 
@@ -136,9 +151,17 @@ export const KanbanCard = ({
 
           {/* Role Badge */}
           {task.user_role && <ProjectRoleBadge role={task.user_role} />}
+
+          {/* Locked Badge if not authorized */}
+          {!canModifyThisTask && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+              <Lock className="w-2.5 h-2.5" />
+              Locked
+            </span>
+          )}
         </div>
 
-        {/* Quick Actions Dropdown / Menu */}
+        {/* Quick Actions Menu */}
         <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
@@ -243,85 +266,139 @@ export const KanbanCard = ({
           </span>
         </div>
 
-        {/* Delivery Date */}
-        {task.delivery_date && (
-          <div className={`flex items-center gap-1 shrink-0 font-medium text-[11px] ${
-            isOverdue 
-              ? 'text-red-600 dark:text-red-400 font-semibold' 
-              : isToday 
-                ? 'text-amber-600 dark:text-amber-400 font-semibold' 
-                : 'text-muted-foreground'
-          }`}>
-            <Calendar className="w-3.5 h-3.5" />
-            <span>
-              {typeof task.delivery_date === 'string'
-                ? dayjs(task.delivery_date.split('T')[0]).format('MMM D')
-                : dayjs(task.delivery_date).format('MMM D')}
-            </span>
-          </div>
-        )}
+        {/* Delivery Date & Urgent Trigger Date */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {task.date_urgent && (
+            <div 
+              title={`Urgent Trigger Date: ${typeof task.date_urgent === 'string' ? task.date_urgent.split('T')[0] : dayjs(task.date_urgent).format('YYYY-MM-DD')}`}
+              className="flex items-center gap-1 font-semibold text-[10.5px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800"
+            >
+              <AlarmClock className="w-3 h-3 text-red-500" />
+              <span>
+                {typeof task.date_urgent === 'string'
+                  ? dayjs(task.date_urgent.split('T')[0]).format('MMM D')
+                  : dayjs(task.date_urgent).format('MMM D')}
+              </span>
+            </div>
+          )}
+
+          {task.delivery_date && (
+            <div className={`flex items-center gap-1 shrink-0 font-medium text-[11px] ${
+              isOverdue 
+                ? 'text-red-600 dark:text-red-400 font-semibold' 
+                : isToday 
+                  ? 'text-amber-600 dark:text-amber-400 font-semibold' 
+                  : 'text-muted-foreground'
+            }`}>
+              <Calendar className="w-3.5 h-3.5" />
+              <span>
+                {typeof task.delivery_date === 'string'
+                  ? dayjs(task.delivery_date.split('T')[0]).format('MMM D')
+                  : dayjs(task.delivery_date).format('MMM D')}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Quick Move Status Picker Button ("By Selection" for mobile & desktop) */}
       <div className="mt-2.5 pt-1.5 border-t border-border/40 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
         <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-          Move to:
+          {canModifyThisTask ? 'Move to:' : 'Status:'}
         </span>
 
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowStatusMenu(!showStatusMenu)}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-all hover:scale-105 ${statusStyle.badge}`}
+        {/* If user CANNOT modify this task (e.g. Approved task and user is Engineer) -> Locked Badge */}
+        {!canModifyThisTask ? (
+          <div 
+            title="Approved tasks are locked. Only Leader or Admin can request revision."
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300 dark:border-purple-800 cursor-not-allowed select-none"
           >
-            <span>{statusStyle.label}</span>
-            <ChevronDown className="w-3 h-3 opacity-70" />
-          </button>
+            <Lock className="w-3 h-3 text-purple-600" />
+            <span>Approved (Locked)</span>
+          </div>
+        ) : (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowStatusMenu(!showStatusMenu)}
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all hover:scale-105 cursor-pointer shadow-xs ${statusStyle.badge}`}
+            >
+              <span>{statusStyle.label}</span>
+              <ChevronDown className="w-3 h-3 opacity-70" />
+            </button>
 
-          {/* Status Selection Popover */}
-          {showStatusMenu && (
-            <>
-              <div 
-                className="fixed inset-0 z-40" 
-                onClick={() => setShowStatusMenu(false)} 
-              />
-              <div className="absolute right-0 bottom-full mb-1 z-50 w-44 rounded-xl border border-border bg-popover p-1.5 shadow-xl animate-in fade-in zoom-in-95">
-                <p className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  Select Status
-                </p>
-                {availableColumns.map((col) => {
-                  const allowed = isStatusAllowed(col.id);
-                  const isCurrent = task.status === col.id;
-                  return (
-                    <button
-                      key={col.id}
-                      type="button"
-                      disabled={!allowed || isCurrent}
-                      onClick={() => {
-                        setShowStatusMenu(false);
-                        onStatusChange(task.id, col.id);
-                      }}
-                      className={`flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-xs rounded-lg text-left transition-colors font-medium ${
-                        isCurrent
-                          ? 'bg-muted text-foreground cursor-default'
-                          : allowed
-                            ? 'hover:bg-primary/10 hover:text-primary cursor-pointer text-foreground'
-                            : 'opacity-40 cursor-not-allowed text-muted-foreground'
-                      }`}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
-                        {col.label}
-                      </span>
-                      {isCurrent && <Check className="w-3.5 h-3.5 text-primary" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
+            {/* Status Selection Popover with Permission-Differentiated Styles */}
+            {showStatusMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowStatusMenu(false)} 
+                />
+                <div className="absolute right-0 bottom-full mb-1 z-50 w-52 rounded-xl border border-border bg-popover p-1.5 shadow-xl animate-in fade-in zoom-in-95">
+                  <p className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Select New Status
+                  </p>
+                  {availableColumns.map((col) => {
+                    const allowed = isStatusAllowed(col.id);
+                    const isCurrent = task.status === col.id;
+
+                    if (allowed) {
+                      return (
+                        <button
+                          key={col.id}
+                          type="button"
+                          onClick={() => {
+                            setShowStatusMenu(false);
+                            onStatusChange(task.id, col.id);
+                          }}
+                          className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-xs rounded-lg text-left transition-colors font-medium hover:bg-primary/10 hover:text-primary cursor-pointer text-foreground"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+                            {col.label}
+                          </span>
+                          <span className="text-[10px] text-primary font-semibold">Change</span>
+                        </button>
+                      );
+                    } else if (isCurrent) {
+                      return (
+                        <div
+                          key={col.id}
+                          className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-xs rounded-lg text-left font-medium bg-muted text-foreground cursor-default"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+                            {col.label}
+                          </span>
+                          <Check className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                      );
+                    } else {
+                      // Disallowed: Distinct Restricted Appearance with Lock
+                      return (
+                        <div
+                          key={col.id}
+                          title="Requires Leader or Admin permission"
+                          className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-xs rounded-lg text-left text-muted-foreground/60 bg-muted/30 border border-dashed border-border/40 cursor-not-allowed my-0.5 select-none"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Lock className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                            <span className="line-through">{col.label}</span>
+                          </span>
+                          <span className="text-[9px] font-bold text-amber-600/80 dark:text-amber-400/80 bg-amber-500/10 px-1 rounded">
+                            Leader only
+                          </span>
+                        </div>
+                      );
+                    }
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+

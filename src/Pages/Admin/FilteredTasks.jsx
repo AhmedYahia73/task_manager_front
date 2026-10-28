@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
-import { Loader2, Search, Calendar, ChevronLeft } from 'lucide-react';
+import { Loader2, Search, Calendar, ChevronLeft, Lock } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
@@ -328,36 +328,41 @@ const FilteredTasks = () => {
                         </select>
                       </td>
                       <td className="px-6 py-5">
-                        <select
-                          value={task.status}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                          disabled={task.status === 'approve' && userRole === 'engineer'}
-                          className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${task.status === 'approve' && userRole === 'engineer' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                        >
-                          {task.status === 'approve' ? (
-                            <>
-                              <option value="approve" className="bg-card text-foreground">Approve</option>
-                              {userRole !== 'engineer' && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
-                            </>
-                          ) : (
-                            <>
-                              <option value="pending" className="bg-card text-foreground">Pending</option>
-                              <option value="inprogress" className="bg-card text-foreground">In Progress</option>
-                              <option value="done" className="bg-card text-foreground">Done</option>
-                              {userRole === 'engineer' && task.status === 'edit' && (
-                                <option value="edit" disabled hidden className="bg-card text-foreground">Needs Revision</option>
-                              )}
-                              {userRole !== 'engineer' && (
-                                <>
-                                  <option value="edit" className="bg-card text-foreground">Needs Revision</option>
-                                  <option value="approve" className="bg-card text-foreground">Approve</option>
-                                </>
-                              )}
-                            </>
-                          )}
-                        </select>
+                        {task.status === 'approve' && userRole === 'engineer' ? (
+                          <span 
+                            title="Approved task: Locked (Only Leader or Admin can request revision)"
+                            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 select-none cursor-not-allowed"
+                          >
+                            <Lock className="w-3 h-3 text-purple-600" />
+                            Approved (Locked)
+                          </span>
+                        ) : (
+                          <select
+                            value={task.status}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                            className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 ${style.badge}`}
+                            style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                          >
+                            <option value="pending" className="bg-card text-foreground">Pending</option>
+                            <option value="inprogress" className="bg-card text-foreground">In Progress</option>
+                            <option value="done" className="bg-card text-foreground">Completed</option>
+                            <option 
+                              value="edit" 
+                              disabled={userRole === 'engineer'}
+                              className="bg-card text-foreground"
+                            >
+                              {userRole === 'engineer' ? 'Need to Revision (Leader 🔒)' : 'Need to Revision'}
+                            </option>
+                            <option 
+                              value="approve" 
+                              disabled={userRole === 'engineer'}
+                              className="bg-card text-foreground"
+                            >
+                              {userRole === 'engineer' ? 'Approved (Leader 🔒)' : 'Approved'}
+                            </option>
+                          </select>
+                        )}
                       </td>
                     </tr>
                   )

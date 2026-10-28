@@ -34,7 +34,8 @@ import {
   UploadCloud,
   User,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Lock
 } from 'lucide-react';
 
 dayjs.extend(relativeTime);
@@ -844,35 +845,40 @@ export default function TaskDetails() {
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Status:
             </span>
-            <select
-              value={task.status || 'pending'}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              disabled={task.status === 'approve' && !isLeaderOrAdmin}
-              className={`inline-flex appearance-none items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer ${statusStyle.badge}`}
-              style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-            >
-              {task.status === 'approve' ? (
-                <>
-                  <option value="approve" className="bg-card text-foreground">Approved</option>
-                  {isLeaderOrAdmin && <option value="edit" className="bg-card text-foreground">Needs Revision</option>}
-                </>
-              ) : (
-                <>
-                  <option value="pending" className="bg-card text-foreground">Pending</option>
-                  <option value="inprogress" className="bg-card text-foreground">In Progress</option>
-                  <option value="done" className="bg-card text-foreground">Done</option>
-                  {!isLeaderOrAdmin && task.status === 'edit' && (
-                    <option value="edit" disabled hidden className="bg-card text-foreground">Needs Revision</option>
-                  )}
-                  {isLeaderOrAdmin && (
-                    <>
-                      <option value="edit" className="bg-card text-foreground">Needs Revision</option>
-                      <option value="approve" className="bg-card text-foreground">Approve</option>
-                    </>
-                  )}
-                </>
-              )}
-            </select>
+            {task.status === 'approve' && !isLeaderOrAdmin ? (
+              <div 
+                title="Approved task: Locked (Only Leader or Admin can request revision)"
+                className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 cursor-not-allowed select-none"
+              >
+                <Lock className="w-3.5 h-3.5 text-purple-600" />
+                <span>Approved (Locked)</span>
+              </div>
+            ) : (
+              <select
+                value={task.status || 'pending'}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className={`inline-flex appearance-none items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer ${statusStyle.badge}`}
+                style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+              >
+                <option value="pending" className="bg-card text-foreground">Pending</option>
+                <option value="inprogress" className="bg-card text-foreground">In Progress</option>
+                <option value="done" className="bg-card text-foreground">Completed</option>
+                <option 
+                  value="edit" 
+                  disabled={!isLeaderOrAdmin}
+                  className="bg-card text-foreground"
+                >
+                  {isLeaderOrAdmin ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
+                </option>
+                <option 
+                  value="approve" 
+                  disabled={!isLeaderOrAdmin}
+                  className="bg-card text-foreground"
+                >
+                  {isLeaderOrAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
+                </option>
+              </select>
+            )}
           </div>
 
           {/* Assigned Members (الافراد اللى فيه) */}
