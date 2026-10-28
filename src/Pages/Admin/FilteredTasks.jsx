@@ -823,7 +823,11 @@ const FilteredTasks = () => {
                 ) : (
                   tableTasks.map((task) => {
                     const style = getStatusStyles(task.status);
-                    const isUrgent = task.importanc_status === 'urgent' && task.status !== 'approve';
+                    const isUrgent = (
+    task.importanc_status?.toLowerCase?.() === 'urgent' ||
+    task.importance?.toLowerCase?.() === 'urgent' ||
+    (task.date_urgent && String(task.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
+  ) && task.status !== 'approve';
                     return (
                       <tr 
                         key={task.id} 

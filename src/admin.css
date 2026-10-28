@@ -291,7 +291,7 @@
   font-family: 'Material Symbols Outlined';
   font-style: normal;
   font-weight: 100 700;
-  font-display: swap;
+  font-display: block;
   src: url('/fonts/material-symbols-outlined.woff2') format('woff2');
 }
 
@@ -367,63 +367,81 @@
 /* --- Urgent Task Card Pulse Animation (Soft & Non-annoying) --- */
 @keyframes urgent-card-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.22), 0 2px 8px -1px rgba(239, 68, 68, 0.12);
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25), 0 2px 8px -1px rgba(239, 68, 68, 0.12);
     background-color: var(--card);
   }
   50% {
-    box-shadow: 0 0 0 1.5px rgba(239, 68, 68, 0.45), 0 0 18px 3px rgba(239, 68, 68, 0.22);
-    background-color: rgba(254, 242, 242, 0.7);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.65), 0 0 20px 4px rgba(239, 68, 68, 0.35);
+    background-color: rgba(254, 226, 226, 0.75);
   }
 }
 
 @keyframes urgent-card-pulse-dark {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3), 0 2px 8px -1px rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35), 0 2px 8px -1px rgba(239, 68, 68, 0.15);
     background-color: var(--card);
   }
   50% {
-    box-shadow: 0 0 0 1.5px rgba(248, 113, 113, 0.55), 0 0 20px 4px rgba(239, 68, 68, 0.28);
-    background-color: rgba(69, 10, 10, 0.35);
+    box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.75), 0 0 22px 5px rgba(239, 68, 68, 0.4);
+    background-color: rgba(127, 29, 29, 0.45);
   }
 }
 
 .urgent-card-glow {
-  animation: urgent-card-pulse 2.8s ease-in-out infinite;
+  animation: urgent-card-pulse 2.2s ease-in-out infinite !important;
 }
 
 .dark .urgent-card-glow,
 :is(.dark *) .urgent-card-glow {
-  animation: urgent-card-pulse-dark 2.8s ease-in-out infinite;
+  animation: urgent-card-pulse-dark 2.2s ease-in-out infinite !important;
 }
 
-/* --- Urgent Task Table Row Pulse Animation (Soft & Non-annoying) --- */
-@keyframes urgent-row-pulse {
+/* --- Urgent Task Table Row Pulse Animation (Applied directly to td for table compatibility) --- */
+@keyframes urgent-td-pulse {
   0%, 100% {
-    background-color: rgba(254, 242, 242, 0.3);
-    box-shadow: inset 4px 0 0 rgba(239, 68, 68, 0.6);
+    background-color: rgba(254, 226, 226, 0.35) !important;
   }
   50% {
-    background-color: rgba(254, 226, 226, 0.7);
-    box-shadow: inset 4px 0 0 rgba(239, 68, 68, 1), 0 0 14px rgba(239, 68, 68, 0.2);
+    background-color: rgba(254, 202, 202, 0.8) !important;
   }
 }
 
-@keyframes urgent-row-pulse-dark {
+@keyframes urgent-td-pulse-dark {
   0%, 100% {
-    background-color: rgba(69, 10, 10, 0.2);
-    box-shadow: inset 4px 0 0 rgba(239, 68, 68, 0.6);
+    background-color: rgba(127, 29, 29, 0.22) !important;
   }
   50% {
-    background-color: rgba(127, 29, 29, 0.45);
-    box-shadow: inset 4px 0 0 rgba(248, 113, 113, 1), 0 0 16px rgba(239, 68, 68, 0.25);
+    background-color: rgba(185, 28, 28, 0.45) !important;
   }
 }
 
-.urgent-row-glow {
-  animation: urgent-row-pulse 2.8s ease-in-out infinite;
+.urgent-row-glow td {
+  animation: urgent-td-pulse 2.2s ease-in-out infinite !important;
+  border-top: 1.5px solid rgba(239, 68, 68, 0.5) !important;
+  border-bottom: 1.5px solid rgba(239, 68, 68, 0.5) !important;
 }
 
-.dark .urgent-row-glow,
-:is(.dark *) .urgent-row-glow {
-  animation: urgent-row-pulse-dark 2.8s ease-in-out infinite;
+.urgent-row-glow td:first-child {
+  border-left: 5px solid #ef4444 !important;
+}
+
+.urgent-row-glow td:last-child {
+  border-right: 1.5px solid rgba(239, 68, 68, 0.5) !important;
+}
+
+.dark .urgent-row-glow td,
+:is(.dark *) .urgent-row-glow td {
+  animation: urgent-td-pulse-dark 2.2s ease-in-out infinite !important;
+  border-top: 1.5px solid rgba(239, 68, 68, 0.6) !important;
+  border-bottom: 1.5px solid rgba(239, 68, 68, 0.6) !important;
+}
+
+.dark .urgent-row-glow td:first-child,
+:is(.dark *) .urgent-row-glow td:first-child {
+  border-left: 5px solid #ef4444 !important;
+}
+
+.dark .urgent-row-glow td:last-child,
+:is(.dark *) .urgent-row-glow td:last-child {
+  border-right: 1.5px solid rgba(239, 68, 68, 0.6) !important;
 }

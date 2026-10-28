@@ -43,6 +43,12 @@ export const KanbanCard = ({
   const isCardSelected = typeof isSelected === 'function' ? isSelected(task.id) : Boolean(isSelected);
 
   // Permission: if task is approved, only Leader or Admin can modify its status
+  const taskProjectId = projectId || task.project_id;
+  const taskGroupId = groupId || task.group_id;
+  const detailsUrl = taskProjectId && taskGroupId 
+    ? `/admin/projects/${taskProjectId}/groups/${taskGroupId}/tasks/${task.id}` 
+    : `/admin/tasks/${task.id}/view`;
+
   const isApproved = task.status === 'approve';
   const canModifyThisTask = isLeaderOrAdmin || !isApproved;
 
@@ -93,7 +99,11 @@ export const KanbanCard = ({
     return true;
   };
 
-  const isUrgent = task.importanc_status === 'urgent' && task.status !== 'approve';
+  const isUrgent = (
+    task.importanc_status?.toLowerCase?.() === 'urgent' ||
+    task.importance?.toLowerCase?.() === 'urgent' ||
+    (task.date_urgent && String(task.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
+  ) && task.status !== 'approve';
 
   return (
     <div
@@ -101,7 +111,7 @@ export const KanbanCard = ({
       onDragStart={(e) => onDragStart(e, task)}
       onDragEnd={onDragEnd}
       onClick={handleCardClick}
-      className={`group relative rounded-xl border bg-card p-3.5 shadow-xs transition-all duration-200 select-none ${
+      className={`group relative rounded-xl border bg-card p-3.5 shadow-xs transition-all duration-200 select-none overflow-hidden ${
         isCardSelected 
           ? 'ring-2 ring-primary border-primary bg-primary/5 shadow-md' 
           : isUrgent
@@ -172,12 +182,12 @@ export const KanbanCard = ({
         </div>
 
         {/* Quick Actions Menu */}
-        <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-0.5 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             title="View Details"
-            onClick={() => navigate(`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`)}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+            onClick={() => navigate(detailsUrl)}
+            className="flex h-6.5 w-6.5 items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
@@ -186,26 +196,28 @@ export const KanbanCard = ({
             type="button"
             title="Edit Task"
             onClick={() => onOpenModal(task)}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+            className="flex h-6.5 w-6.5 items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
           >
             <Edit className="w-3.5 h-3.5" />
           </button>
 
-          <button
-            type="button"
-            title="Delete Task"
-            onClick={() => onDelete(task.id)}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {isLeaderOrAdmin && (
+            <button
+              type="button"
+              title="Delete Task"
+              onClick={() => onDelete(task.id)}
+              className="flex h-6.5 w-6.5 items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Task Title */}
       <div className="mb-1.5">
         <Link
-          to={`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`}
+          to={detailsUrl}
           onClick={(e) => {
             if (isSelectionMode) {
               e.preventDefault();
