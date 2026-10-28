@@ -107,11 +107,13 @@ const FilteredTasks = () => {
   const endpoint = type === 'pending' ? '/api/admin/tasks/pendingTasks' 
                  : type === 'delay' ? '/api/admin/tasks/delayTasks' 
                  : type === 'today' ? '/api/admin/tasks/todayTasks'
+                 : type === 'done' ? '/api/admin/tasks/doneTasks'
                  : '/api/admin/tasks';
                  
   const pageTitle = type === 'pending' ? 'Pending Tasks' 
                   : type === 'delay' ? 'Delayed Tasks' 
                   : type === 'today' ? "Today's Tasks"
+                  : type === 'done' ? 'Done Tasks'
                   : 'All Tasks';
 
   // Fetch Lists for Filters (projects, users)
@@ -124,7 +126,7 @@ const FilteredTasks = () => {
   // =========================================================================
   const [columnsData, setColumnsData] = useState(() => {
     const initial = {};
-    KANBAN_COLUMNS.forEach(col => {
+    activeKanbanColumns.forEach(col => {
       initial[col.id] = {
         tasks: [],
         page: 1,
@@ -205,10 +207,10 @@ const FilteredTasks = () => {
 
   // Refresh all Kanban columns
   const refreshAllColumns = useCallback(() => {
-    KANBAN_COLUMNS.forEach(col => {
+    activeKanbanColumns.forEach(col => {
       fetchColumnPage(col.id, 1, false);
     });
-  }, [fetchColumnPage]);
+  }, [fetchColumnPage, activeKanbanColumns]);
 
   // Trigger loading when search or filters change
   useEffect(() => {
@@ -746,7 +748,7 @@ const FilteredTasks = () => {
     isLeaderOrAdmin: isAdmin,
     isAdmin,
     getRoleName,
-    availableColumns: KANBAN_COLUMNS
+    availableColumns: activeKanbanColumns
   };
 
   const totalTasksCount = Object.values(columnsData).reduce((acc, curr) => acc + (curr.total || 0), 0);
@@ -907,7 +909,7 @@ const FilteredTasks = () => {
       {viewMode === 'kanban' && (
         <div className="block md:hidden mb-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
-            {KANBAN_COLUMNS.map((col) => {
+            {activeKanbanColumns.map((col) => {
               const count = columnsData[col.id]?.total || 0;
               const isActive = mobileActiveTab === col.id;
               return (
@@ -985,9 +987,9 @@ const FilteredTasks = () => {
       {/* MAIN VIEW: Kanban or Table */}
       {viewMode === 'kanban' ? (
         <div className="w-full">
-          {/* Desktop Kanban: 5 scrollable columns side-by-side */}
+          {/* Desktop Kanban: scrollable columns side-by-side */}
           <div className="hidden md:flex gap-4 overflow-x-auto pb-4 custom-scrollbar items-start">
-            {KANBAN_COLUMNS.map((col) => {
+            {activeKanbanColumns.map((col) => {
               const colState = columnsData[col.id] || { tasks: [], total: 0, loading: false, loadingMore: false, hasMore: false };
               return (
                 <KanbanColumn
@@ -1022,7 +1024,7 @@ const FilteredTasks = () => {
           {/* Mobile Kanban: Single active column selected via top tabs */}
           <div className="block md:hidden">
             {(() => {
-              const activeCol = KANBAN_COLUMNS.find(c => c.id === mobileActiveTab) || KANBAN_COLUMNS[0];
+              const activeCol = activeKanbanColumns.find(c => c.id === mobileActiveTab) || activeKanbanColumns[0];
               const colState = columnsData[activeCol.id] || { tasks: [], total: 0, loading: false, loadingMore: false, hasMore: false };
               return (
                 <KanbanColumn
@@ -1310,7 +1312,7 @@ const FilteredTasks = () => {
 
       {/* Bottom Summary Stats Cards */}
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {KANBAN_COLUMNS.map((col) => {
+        {activeKanbanColumns.map((col) => {
           const count = columnsData[col.id]?.total || 0;
           return (
             <div 
