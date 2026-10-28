@@ -417,7 +417,7 @@ const Dashboard = () => {
         </div>
       ) : (
         /* Stats Overview */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-5">
           
           {/* Pending Tasks */}
           <div 
@@ -429,7 +429,7 @@ const Dashboard = () => {
                 <span className="material-symbols-outlined text-3xl">assignment_late</span>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Tasks</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">Pending Tasks</h3>
                 <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.pending_tasks ?? 0}</p>
               </div>
             </div>
@@ -439,6 +439,36 @@ const Dashboard = () => {
                 total={data?.pending_tasks ?? 0} 
                 colorClass="stroke-red-500" 
                 label="Done / Pending" 
+              />
+            </div>
+          </div>
+
+          {/* Done Tasks */}
+          <div 
+            onClick={() => navigate('/admin/tasks/done')}
+            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-emerald-600 flex flex-col justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-lg text-emerald-600">
+                <span className="material-symbols-outlined text-3xl">task_alt</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Done Tasks</h3>
+                <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1 text-emerald-600 dark:text-emerald-400">{data?.done_tasks ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex justify-around items-end pt-3 border-t border-border mt-auto">
+              <CircularProgress 
+                value={data?.done_tasks ?? 0} 
+                total={data?.total_tasks ?? 0} 
+                colorClass="stroke-emerald-600" 
+                label="Done / Total" 
+              />
+              <CircularProgress 
+                value={data?.approve_tasks ?? 0} 
+                total={data?.total_tasks ?? 0} 
+                colorClass="stroke-[#006c49]" 
+                label="Approved" 
               />
             </div>
           </div>

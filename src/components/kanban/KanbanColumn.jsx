@@ -15,6 +15,12 @@ export const KanbanColumn = ({
   onDragLeave,
   onDrop,
   onAddTask,
+  dragOverCardId,
+  onDragOverCard,
+  onDragLeaveCard,
+  onDropOnCard,
+  onDragStart,
+  onDragEnd,
   cardProps
 }) => {
   const isLeaderOrAdmin = cardProps?.isLeaderOrAdmin;
@@ -133,10 +139,18 @@ export const KanbanColumn = ({
         ) : (
           /* Task Cards List */
           <>
-            {tasks.map((task) => (
+            {tasks.map((task, index) => (
               <KanbanCard
                 key={task.id}
                 task={task}
+                index={index}
+                columnId={column.id}
+                dragOverCardId={dragOverCardId}
+                onDragStart={onDragStart || cardProps?.onDragStart}
+                onDragEnd={onDragEnd || cardProps?.onDragEnd}
+                onDragOverCard={onDragOverCard}
+                onDragLeaveCard={onDragLeaveCard}
+                onDropOnCard={onDropOnCard}
                 {...cardProps}
               />
             ))}

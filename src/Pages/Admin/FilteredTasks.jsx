@@ -21,7 +21,8 @@ import {
   Trash2,
   FolderKanban,
   User as UserIcon,
-  Filter
+  Filter,
+  GripVertical
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
@@ -124,7 +125,10 @@ const FilteredTasks = () => {
   });
 
   const [draggedTask, setDraggedTask] = useState(null);
+  const [draggedFromCol, setDraggedFromCol] = useState(null);
+  const [draggedFromIndex, setDraggedFromIndex] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
+  const [dragOverCardId, setDragOverCardId] = useState(null);
 
   // Fetch a specific column's page
   const fetchColumnPage = useCallback(async (statusKey, pageNum = 1, append = false) => {
@@ -220,17 +224,31 @@ const FilteredTasks = () => {
   const tableTasks = tableTasksData?.tasks || tableTasksData?.Tasks || [];
   const tablePagination = tableTasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
 
+  const [tableTaskList, setTableTaskList] = useState([]);
+  const [draggedTableIndex, setDraggedTableIndex] = useState(null);
+  const [dragOverTableIndex, setDragOverTableIndex] = useState(null);
+
+  useEffect(() => {
+    if (tableTasksData?.tasks || tableTasksData?.Tasks) {
+      setTableTaskList(tableTasksData?.tasks || tableTasksData?.Tasks);
+    }
+  }, [tableTasksData]);
+
   const { mutate } = useMutation();
 
-  // Drag and Drop handlers
-  const handleDragStart = (e, task) => {
+  // =========================================================================
+  // KANBAN DRAG AND DROP HANDLERS (Card reorder within column & across columns)
+  // =========================================================================
+  const handleDragStart = (e, task, colId, index) => {
     if (isSelectionMode) return;
     setDraggedTask(task);
+    setDraggedFromCol(colId || task.status);
+    setDraggedFromIndex(index ?? null);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', task.id);
   };
 
-  const handleDragOver = (e, statusKey) => {
+  const handleDragOverCol = (e, statusKey) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     if (dragOverCol !== statusKey) {
@@ -238,16 +256,166 @@ const FilteredTasks = () => {
     }
   };
 
-  const handleDragLeave = (e, statusKey) => {
+  const handleDragLeaveCol = (e, statusKey) => {
     if (e.currentTarget.contains(e.relatedTarget)) return;
     if (dragOverCol === statusKey) {
       setDragOverCol(null);
     }
   };
 
+  const handleDragOverCard = (e, targetTask, targetColId, targetIndex) => {
+    if (!draggedTask) return;
+    if (draggedTask.id === targetTask.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCardId !== targetTask.id) {
+      setDragOverCardId(targetTask.id);
+    }
+    if (dragOverCol !== targetColId) {
+      setDragOverCol(targetColId);
+    }
+  };
+
+  const handleDragLeaveCard = (e, targetTask) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    if (dragOverCardId === targetTask.id) {
+      setDragOverCardId(null);
+    }
+  };
+
   const handleDragEnd = () => {
     setDraggedTask(null);
+    setDraggedFromCol(null);
+    setDraggedFromIndex(null);
     setDragOverCol(null);
+    setDragOverCardId(null);
+  };
+
+  // Dropping on another card in Kanban: Reorders within column or places at index
+  const handleDropOnCard = async (e, targetTask, targetColId, targetIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverCardId(null);
+    setDragOverCol(null);
+
+    const taskToMove = draggedTask;
+    if (!taskToMove || taskToMove.id === targetTask.id) {
+      setDraggedTask(null);
+      return;
+    }
+
+    const sourceStatus = draggedFromCol || taskToMove.status;
+    const isSameColumn = sourceStatus === targetColId;
+
+    // Permissions check
+    if (!isSameColumn) {
+      if (!isAdmin && (targetColId === 'approve' || targetColId === 'edit')) {
+        toast.error("You don't have permission to approve tasks or request revision");
+        setDraggedTask(null);
+        return;
+      }
+      if (taskToMove.status === 'approve' && !isAdmin) {
+        toast.error("You don't have permission to modify approved tasks");
+        setDraggedTask(null);
+        return;
+      }
+    }
+
+    const previousColumnsData = { ...columnsData };
+
+    if (isSameColumn) {
+      const colTasks = [...(columnsData[sourceStatus]?.tasks || [])];
+      const fromIdx = colTasks.findIndex(t => t.id === taskToMove.id);
+      if (fromIdx === -1) {
+        setDraggedTask(null);
+        return;
+      }
+
+      const [removed] = colTasks.splice(fromIdx, 1);
+      colTasks.splice(targetIndex, 0, removed);
+
+      setColumnsData(prev => ({
+        ...prev,
+        [sourceStatus]: {
+          ...prev[sourceStatus],
+          tasks: colTasks
+        }
+      }));
+
+      setDraggedTask(null);
+      setDraggedFromCol(null);
+      setDraggedFromIndex(null);
+
+      if (isAdmin) {
+        const payload = colTasks.map((t, idx) => ({
+          id: t.id,
+          sort: idx + 1
+        }));
+        try {
+          await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
+          toast.success('تم تحديث ترتيب المهام بنجاح');
+          if (viewMode === 'table') refreshTableTasks?.();
+        } catch (err) {
+          console.error('Failed to reorder tasks:', err);
+          toast.error('فشل في حفظ ترتيب المهام');
+          setColumnsData(previousColumnsData);
+        }
+      }
+    } else {
+      const sourceTasks = (columnsData[sourceStatus]?.tasks || []).filter(t => t.id !== taskToMove.id);
+      const targetTasks = [...(columnsData[targetColId]?.tasks || []).filter(t => t.id !== taskToMove.id)];
+
+      const updatedTask = { ...taskToMove, status: targetColId };
+      targetTasks.splice(targetIndex, 0, updatedTask);
+
+      setColumnsData(prev => ({
+        ...prev,
+        [sourceStatus]: {
+          ...prev[sourceStatus],
+          tasks: sourceTasks,
+          total: Math.max(0, (prev[sourceStatus]?.total || 0) - 1)
+        },
+        [targetColId]: {
+          ...prev[targetColId],
+          tasks: targetTasks,
+          total: (prev[targetColId]?.total || 0) + 1
+        }
+      }));
+
+      setDraggedTask(null);
+      setDraggedFromCol(null);
+      setDraggedFromIndex(null);
+
+      if (isAdmin) {
+        const payload = targetTasks.map((t, idx) => ({
+          id: t.id,
+          sort: idx + 1,
+          status: targetColId
+        }));
+        try {
+          await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
+          const targetColInfo = KANBAN_COLUMNS.find(c => c.id === targetColId);
+          toast.success(`Task moved to ${targetColInfo?.label || targetColId}`);
+          if (viewMode === 'table') refreshTableTasks?.();
+        } catch (err) {
+          console.error('Failed to move/reorder task:', err);
+          toast.error('فشل في نقل وترتيب المهمة');
+          setColumnsData(previousColumnsData);
+        }
+      } else {
+        try {
+          await apiClient.put(`/api/admin/tasks/${taskToMove.id}`, { status: targetColId });
+          const targetColInfo = KANBAN_COLUMNS.find(c => c.id === targetColId);
+          toast.success(`Task moved to ${targetColInfo?.label || targetColId}`);
+          if (viewMode === 'table') refreshTableTasks?.();
+        } catch (err) {
+          console.error('Failed to move task:', err);
+          toast.error('فشل في نقل المهمة');
+          setColumnsData(previousColumnsData);
+        }
+      }
+    }
   };
 
   // Move task status handler
@@ -265,7 +433,7 @@ const FilteredTasks = () => {
     }
 
     if (!targetTask && viewMode === 'table') {
-      targetTask = tableTasks.find(t => t.id === taskId);
+      targetTask = tableTaskList.find(t => t.id === taskId);
       oldStatus = targetTask?.status;
     }
 
@@ -305,6 +473,10 @@ const FilteredTasks = () => {
       };
     });
 
+    if (viewMode === 'table') {
+      setTableTaskList(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    }
+
     try {
       const res = await mutate({
         method: 'PUT',
@@ -326,10 +498,12 @@ const FilteredTasks = () => {
     } finally {
       setDragOverCol(null);
       setDraggedTask(null);
+      setDraggedFromCol(null);
+      setDraggedFromIndex(null);
     }
   };
 
-  const handleDrop = (e, targetStatus) => {
+  const handleDropOnCol = (e, targetStatus) => {
     e.preventDefault();
     setDragOverCol(null);
 
@@ -337,6 +511,70 @@ const FilteredTasks = () => {
     if (!taskId) return;
 
     handleMoveTaskStatus(taskId, targetStatus);
+  };
+
+  // =========================================================================
+  // TABLE VIEW DRAG AND DROP REORDER (Leader / Admin)
+  // =========================================================================
+  const handleTableDragStart = (e, index) => {
+    if (!isAdmin || debouncedSearch) return;
+    setDraggedTableIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleTableDragOver = (e, index) => {
+    if (!isAdmin || debouncedSearch) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverTableIndex !== index) {
+      setDragOverTableIndex(index);
+    }
+  };
+
+  const handleTableDragLeave = (e) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+  };
+
+  const handleTableDragEnd = () => {
+    setDraggedTableIndex(null);
+    setDragOverTableIndex(null);
+  };
+
+  const handleTableDrop = async (e, targetIndex) => {
+    if (!isAdmin || debouncedSearch) return;
+    e.preventDefault();
+
+    if (draggedTableIndex === null || draggedTableIndex === undefined || draggedTableIndex === targetIndex) {
+      setDraggedTableIndex(null);
+      setDragOverTableIndex(null);
+      return;
+    }
+
+    const previousList = [...tableTaskList];
+    const updated = [...tableTaskList];
+    const [movedItem] = updated.splice(draggedTableIndex, 1);
+    updated.splice(targetIndex, 0, movedItem);
+
+    setTableTaskList(updated);
+    setDraggedTableIndex(null);
+    setDragOverTableIndex(null);
+
+    const payload = updated.map((t, idx) => ({
+      id: t.id,
+      sort: (tablePage - 1) * 10 + idx + 1
+    }));
+
+    try {
+      await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
+      toast.success('تم تحديث ترتيب المهام بنجاح');
+      refreshAllColumns();
+    } catch (err) {
+      console.error('Error reordering tasks:', err);
+      toast.error('فشل في حفظ ترتيب المهام');
+      setTableTaskList(previousList);
+      if (refreshTableTasks) refreshTableTasks();
+    }
   };
 
   // Importance change
@@ -748,9 +986,15 @@ const FilteredTasks = () => {
                   hasMore={colState.hasMore}
                   onScroll={handleColumnScroll}
                   isDragOver={dragOverCol === col.id}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
+                  onDragOver={handleDragOverCol}
+                  onDragLeave={handleDragLeaveCol}
+                  onDrop={handleDropOnCol}
+                  dragOverCardId={dragOverCardId}
+                  onDragOverCard={handleDragOverCard}
+                  onDragLeaveCard={handleDragLeaveCard}
+                  onDropOnCard={handleDropOnCard}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
                   onAddTask={null}
                   cardProps={{
                     ...cardProps,
@@ -776,9 +1020,15 @@ const FilteredTasks = () => {
                   hasMore={colState.hasMore}
                   onScroll={handleColumnScroll}
                   isDragOver={dragOverCol === activeCol.id}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
+                  onDragOver={handleDragOverCol}
+                  onDragLeave={handleDragLeaveCol}
+                  onDrop={handleDropOnCol}
+                  dragOverCardId={dragOverCardId}
+                  onDragOverCard={handleDragOverCard}
+                  onDragLeaveCard={handleDragLeaveCard}
+                  onDropOnCard={handleDropOnCard}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
                   onAddTask={null}
                   cardProps={{
                     ...cardProps,
@@ -790,12 +1040,17 @@ const FilteredTasks = () => {
           </div>
         </div>
       ) : (
-        /* Classic Table View Fallback */
+        /* Classic Table View with Drag & Drop Reordering */
         <div className="mb-8 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm text-muted-foreground">
               <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
+                  {isAdmin && !debouncedSearch && (
+                    <th className="w-10 px-2 py-4 text-center">
+                      <span className="sr-only">Reorder</span>
+                    </th>
+                  )}
                   <th className="px-6 py-4 font-bold text-foreground">Task Details</th>
                   <th className="px-6 py-4 font-bold text-foreground">Project / Group</th>
                   <th className="px-6 py-4 font-bold text-foreground">Assigned User</th>
@@ -806,34 +1061,56 @@ const FilteredTasks = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {tableTasksLoading ? (
+                {tableTasksLoading && tableTaskList.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center">
+                    <td colSpan={isAdmin && !debouncedSearch ? 8 : 7} className="px-6 py-12 text-center">
                       <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                       <p className="mt-2 text-sm text-muted-foreground font-medium">Loading tasks...</p>
                     </td>
                   </tr>
-                ) : tableTasks.length === 0 ? (
+                ) : (tableTaskList.length > 0 ? tableTaskList : tableTasks).length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center">
+                    <td colSpan={isAdmin && !debouncedSearch ? 8 : 7} className="px-6 py-12 text-center">
                       <p className="text-base font-semibold text-foreground">No tasks found</p>
                       <p className="text-sm text-muted-foreground">There are no tasks matching this filter.</p>
                     </td>
                   </tr>
                 ) : (
-                  tableTasks.map((task) => {
+                  (tableTaskList.length > 0 ? tableTaskList : tableTasks).map((task, index) => {
                     const style = getStatusStyles(task.status);
                     const isUrgent = (
-    task.importanc_status?.toLowerCase?.() === 'urgent' ||
-    task.importance?.toLowerCase?.() === 'urgent' ||
-    (task.date_urgent && String(task.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
-  ) && task.status !== 'approve';
+                      task.importanc_status?.toLowerCase?.() === 'urgent' ||
+                      task.importance?.toLowerCase?.() === 'urgent' ||
+                      (task.date_urgent && String(task.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
+                    ) && task.status !== 'approve';
+
+                    const isBeingDraggedOver = dragOverTableIndex === index;
+
                     return (
                       <tr 
                         key={task.id} 
+                        draggable={isAdmin && !debouncedSearch}
+                        onDragStart={(e) => handleTableDragStart(e, index)}
+                        onDragOver={(e) => handleTableDragOver(e, index)}
+                        onDragLeave={handleTableDragLeave}
+                        onDragEnd={handleTableDragEnd}
+                        onDrop={(e) => handleTableDrop(e, index)}
                         onClick={() => navigate(`/admin/tasks/${task.id}/view`)}
-                        className={isUrgent ? 'urgent-row-glow cursor-pointer group' : 'hover:bg-muted/50 transition-colors cursor-pointer group'}
+                        className={`group cursor-pointer transition-all ${
+                          isBeingDraggedOver ? 'border-t-2 border-primary bg-primary/10' : ''
+                        } ${
+                          isUrgent ? 'urgent-row-glow' : 'hover:bg-muted/50'
+                        }`}
                       >
+                        {isAdmin && !debouncedSearch && (
+                          <td 
+                            className="w-10 px-2 py-5 text-center cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground"
+                            onClick={(e) => e.stopPropagation()}
+                            title="اسحب لإعادة الترتيب (Drag to reorder)"
+                          >
+                            <GripVertical className="w-4 h-4 mx-auto" />
+                          </td>
+                        )}
                         <td className="px-6 py-5">
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">

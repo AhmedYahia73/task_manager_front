@@ -21,6 +21,9 @@ import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
 
 export const KanbanCard = ({
   task,
+  index,
+  columnId,
+  dragOverCardId,
   projectId,
   groupId,
   isSelectionMode,
@@ -28,6 +31,9 @@ export const KanbanCard = ({
   onToggleSelect,
   onDragStart,
   onDragEnd,
+  onDragOverCard,
+  onDragLeaveCard,
+  onDropOnCard,
   onOpenModal,
   onDelete,
   onStatusChange,
@@ -105,18 +111,25 @@ export const KanbanCard = ({
     (task.date_urgent && String(task.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
   ) && task.status !== 'approve';
 
+  const isBeingDraggedOver = dragOverCardId === task.id;
+
   return (
     <div
       draggable={!isSelectionMode && canModifyThisTask}
-      onDragStart={(e) => onDragStart(e, task)}
+      onDragStart={(e) => onDragStart && onDragStart(e, task, columnId, index)}
       onDragEnd={onDragEnd}
+      onDragOver={(e) => onDragOverCard && onDragOverCard(e, task, columnId, index)}
+      onDragLeave={(e) => onDragLeaveCard && onDragLeaveCard(e, task, columnId, index)}
+      onDrop={(e) => onDropOnCard && onDropOnCard(e, task, columnId, index)}
       onClick={handleCardClick}
       className={`group relative rounded-xl border bg-card p-3.5 shadow-xs transition-all duration-200 select-none overflow-hidden ${
         isCardSelected 
           ? 'ring-2 ring-primary border-primary bg-primary/5 shadow-md' 
-          : isUrgent
-            ? 'urgent-card-glow border-red-300 dark:border-red-900/60'
-            : 'border-border/80 hover:border-primary/40 hover:shadow-md'
+          : isBeingDraggedOver
+            ? 'ring-2 ring-primary border-primary bg-primary/10 shadow-lg scale-[1.02] z-10'
+            : isUrgent
+              ? 'urgent-card-glow border-red-300 dark:border-red-900/60'
+              : 'border-border/80 hover:border-primary/40 hover:shadow-md'
       } ${
         isUrgent
           ? 'border-l-4 border-l-red-500'
@@ -149,7 +162,10 @@ export const KanbanCard = ({
               )}
             </button>
           ) : canModifyThisTask ? (
-            <div className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors p-0.5" title="Drag to move status">
+            <div 
+              className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors p-0.5" 
+              title={isLeaderOrAdmin ? "اسحب لإعادة الترتيب أو تغيير الحالة" : "اسحب لتغيير الحالة"}
+            >
               <GripVertical className="w-4 h-4" />
             </div>
           ) : (

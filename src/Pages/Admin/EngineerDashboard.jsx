@@ -170,25 +170,26 @@ const EngineerDashboard = () => {
             </div>
           </div>
 
-          {/* My Progress */}
+          {/* My Done Tasks / Progress */}
           <div 
+            onClick={() => navigate('/admin/tasks/done')}
             className="group relative bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col justify-between overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
             <div className="relative z-10 flex items-start gap-4 mb-2">
-              <div className="bg-gradient-to-br from-primary/20 to-primary/30 p-3.5 rounded-xl text-primary shadow-inner">
+              <div className="bg-gradient-to-br from-emerald-100 to-emerald-200 p-3.5 rounded-xl text-emerald-700 shadow-inner">
                 <CheckCircle className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">My Progress</h3>
-                <p className="text-sm text-muted-foreground mt-1">Completed tasks ratio</p>
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Done Tasks</h3>
+                <p className="text-4xl font-black font-['Plus_Jakarta_Sans'] mt-1 text-foreground">{data?.done_tasks ?? 0}</p>
               </div>
             </div>
             <div className="relative z-10 flex justify-around py-2 border-t border-border/30 mt-auto">
               <CircularProgress 
                 value={data?.done_tasks ?? 0} 
                 total={data?.total_tasks ?? 0} 
-                colorClass="stroke-red-500" 
+                colorClass="stroke-emerald-600" 
                 label="Done Tasks" 
               />
               <CircularProgress 
@@ -197,6 +198,9 @@ const EngineerDashboard = () => {
                 colorClass="stroke-[#006c49]" 
                 label="Approved" 
               />
+            </div>
+            <div className="relative z-10 bg-emerald-500/10 text-emerald-700 text-sm py-2 px-4 rounded-lg font-medium flex items-center justify-between mt-4">
+              View Done Tasks <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </div>
           </div>
           

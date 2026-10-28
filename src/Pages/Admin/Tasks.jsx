@@ -120,9 +120,32 @@ const Tasks = () => {
   // Kanban Columns Data state (each status has independent tasks, page, and pagination)
   const [columnsData, setColumnsData] = useState(initialColumnsState);
 
-  // Drag and drop state
+  // Kanban Drag and drop state
   const [draggedTask, setDraggedTask] = useState(null);
+  const [draggedFromCol, setDraggedFromCol] = useState(null);
+  const [draggedFromIndex, setDraggedFromIndex] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
+  const [dragOverCardId, setDragOverCardId] = useState(null);
+
+  // Table View state & drag and drop reordering
+  const [tablePage, setTablePage] = useState(1);
+  const tableLimit = 50;
+  const { data: tableTasksData, loading: tableTasksLoading, refresh: refreshTableTasks } = useGet(
+    viewMode === 'table' && groupId
+      ? `/api/admin/tasks?group_id=${groupId}&page=${tablePage}&limit=${tableLimit}&search=${debouncedSearch}`
+      : null
+  );
+  const [tableTaskList, setTableTaskList] = useState([]);
+  const [draggedTableIndex, setDraggedTableIndex] = useState(null);
+  const [dragOverTableIndex, setDragOverTableIndex] = useState(null);
+
+  useEffect(() => {
+    if (tableTasksData?.tasks) {
+      setTableTaskList(tableTasksData.tasks);
+    }
+  }, [tableTasksData?.tasks]);
+
+  const tablePagination = tableTasksData?.pagination || { totalPages: 1, page: 1, total: 0 };
 
   // Debounce search
   useEffect(() => {
@@ -217,15 +240,19 @@ const Tasks = () => {
     }
   }, [columnsData, fetchColumnPage]);
 
-  // Drag and Drop handlers
-  const handleDragStart = (e, task) => {
+  // =========================================================================
+  // KANBAN DRAG AND DROP HANDLERS (Card reorder within column & across columns)
+  // =========================================================================
+  const handleDragStart = (e, task, colId, index) => {
     if (isSelectionMode) return;
     setDraggedTask(task);
+    setDraggedFromCol(colId || task.status);
+    setDraggedFromIndex(index ?? null);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', task.id);
   };
 
-  const handleDragOver = (e, statusKey) => {
+  const handleDragOverCol = (e, statusKey) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     if (dragOverCol !== statusKey) {
@@ -233,23 +260,175 @@ const Tasks = () => {
     }
   };
 
-  const handleDragLeave = (e, statusKey) => {
+  const handleDragLeaveCol = (e, statusKey) => {
     if (e.currentTarget.contains(e.relatedTarget)) return;
     if (dragOverCol === statusKey) {
       setDragOverCol(null);
     }
   };
 
-  const handleDragEnd = () => {
-    setDraggedTask(null);
-    setDragOverCol(null);
+  const handleDragOverCard = (e, targetTask, targetColId, targetIndex) => {
+    if (!draggedTask) return;
+    if (draggedTask.id === targetTask.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCardId !== targetTask.id) {
+      setDragOverCardId(targetTask.id);
+    }
+    if (dragOverCol !== targetColId) {
+      setDragOverCol(targetColId);
+    }
   };
 
-  // Move task to a new status (used by Drag & Drop and Card status picker)
+  const handleDragLeaveCard = (e, targetTask) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    if (dragOverCardId === targetTask.id) {
+      setDragOverCardId(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTask(null);
+    setDraggedFromCol(null);
+    setDraggedFromIndex(null);
+    setDragOverCol(null);
+    setDragOverCardId(null);
+  };
+
+  // Dropping on another card: Reorders tasks inside the column or places task at specific index
+  const handleDropOnCard = async (e, targetTask, targetColId, targetIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverCardId(null);
+    setDragOverCol(null);
+
+    const taskToMove = draggedTask;
+    if (!taskToMove || taskToMove.id === targetTask.id) {
+      setDraggedTask(null);
+      return;
+    }
+
+    const sourceStatus = draggedFromCol || taskToMove.status;
+    const isSameColumn = sourceStatus === targetColId;
+
+    // Permissions check
+    if (!isSameColumn) {
+      if (!isLeaderOrAdmin && (targetColId === 'approve' || targetColId === 'edit')) {
+        toast.error("You don't have permission to approve tasks or request revision");
+        setDraggedTask(null);
+        return;
+      }
+      if (taskToMove.status === 'approve' && !isLeaderOrAdmin) {
+        toast.error("You don't have permission to modify approved tasks");
+        setDraggedTask(null);
+        return;
+      }
+    }
+
+    const previousColumnsData = { ...columnsData };
+
+    if (isSameColumn) {
+      const colTasks = [...(columnsData[sourceStatus]?.tasks || [])];
+      const fromIdx = colTasks.findIndex(t => t.id === taskToMove.id);
+      if (fromIdx === -1) {
+        setDraggedTask(null);
+        return;
+      }
+
+      const [removed] = colTasks.splice(fromIdx, 1);
+      colTasks.splice(targetIndex, 0, removed);
+
+      // Optimistic update
+      setColumnsData(prev => ({
+        ...prev,
+        [sourceStatus]: {
+          ...prev[sourceStatus],
+          tasks: colTasks
+        }
+      }));
+
+      setDraggedTask(null);
+      setDraggedFromCol(null);
+      setDraggedFromIndex(null);
+
+      // Persist reorder if Leader or Admin
+      if (isLeaderOrAdmin) {
+        const payload = colTasks.map((t, idx) => ({
+          id: t.id,
+          sort: idx + 1
+        }));
+        try {
+          await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
+          toast.success('تم تحديث ترتيب المهام بنجاح');
+          if (refreshTableTasks) refreshTableTasks();
+        } catch (err) {
+          console.error('Failed to reorder tasks:', err);
+          toast.error('فشل في حفظ ترتيب المهام');
+          setColumnsData(previousColumnsData);
+        }
+      }
+    } else {
+      // Move from sourceStatus to targetColId at exact targetIndex
+      const sourceTasks = (columnsData[sourceStatus]?.tasks || []).filter(t => t.id !== taskToMove.id);
+      const targetTasks = [...(columnsData[targetColId]?.tasks || []).filter(t => t.id !== taskToMove.id)];
+
+      const updatedTask = { ...taskToMove, status: targetColId };
+      targetTasks.splice(targetIndex, 0, updatedTask);
+
+      setColumnsData(prev => ({
+        ...prev,
+        [sourceStatus]: {
+          ...prev[sourceStatus],
+          tasks: sourceTasks,
+          total: Math.max(0, (prev[sourceStatus]?.total || 0) - 1)
+        },
+        [targetColId]: {
+          ...prev[targetColId],
+          tasks: targetTasks,
+          total: (prev[targetColId]?.total || 0) + 1
+        }
+      }));
+
+      setDraggedTask(null);
+      setDraggedFromCol(null);
+      setDraggedFromIndex(null);
+
+      if (isLeaderOrAdmin) {
+        const payload = targetTasks.map((t, idx) => ({
+          id: t.id,
+          sort: idx + 1,
+          status: targetColId
+        }));
+        try {
+          await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
+          const targetColInfo = KANBAN_COLUMNS.find(c => c.id === targetColId);
+          toast.success(`Task moved to ${targetColInfo?.label || targetColId}`);
+          if (refreshTableTasks) refreshTableTasks();
+        } catch (err) {
+          console.error('Failed to move and reorder task:', err);
+          toast.error('فشل في نقل وترتيب المهمة');
+          setColumnsData(previousColumnsData);
+        }
+      } else {
+        try {
+          await apiClient.put(`/api/admin/tasks/${taskToMove.id}`, { status: targetColId });
+          const targetColInfo = KANBAN_COLUMNS.find(c => c.id === targetColId);
+          toast.success(`Task moved to ${targetColInfo?.label || targetColId}`);
+          if (refreshTableTasks) refreshTableTasks();
+        } catch (err) {
+          console.error('Failed to move task:', err);
+          toast.error('فشل في نقل المهمة');
+          setColumnsData(previousColumnsData);
+        }
+      }
+    }
+  };
+
+  // Move task to a new status (used by Status picker and Column Dropzone)
   const handleMoveTaskStatus = async (taskId, newStatus) => {
-    // Find task
     let targetTask = draggedTask;
-    let sourceStatus = targetTask?.status;
+    let sourceStatus = draggedFromCol || targetTask?.status;
 
     if (!targetTask) {
       for (const col of Object.keys(columnsData)) {
@@ -262,8 +441,15 @@ const Tasks = () => {
       }
     }
 
+    if (!targetTask && viewMode === 'table') {
+      targetTask = tableTaskList.find(t => t.id === taskId);
+      sourceStatus = targetTask?.status;
+    }
+
     if (!targetTask || sourceStatus === newStatus) {
       setDragOverCol(null);
+      setDragOverCardId(null);
+      setDraggedTask(null);
       return;
     }
 
@@ -271,6 +457,8 @@ const Tasks = () => {
     if (!isLeaderOrAdmin && (newStatus === 'approve' || newStatus === 'edit')) {
       toast.error("You don't have permission to approve tasks or request revision");
       setDragOverCol(null);
+      setDragOverCardId(null);
+      setDraggedTask(null);
       return;
     }
 
@@ -278,19 +466,24 @@ const Tasks = () => {
       if (!isLeaderOrAdmin) {
         toast.error("You don't have permission to modify approved tasks");
         setDragOverCol(null);
+        setDragOverCardId(null);
+        setDraggedTask(null);
         return;
       }
       if (newStatus !== 'edit' && newStatus !== 'approve') {
         toast.error("Approved tasks can only be changed to Needs Revision");
         setDragOverCol(null);
+        setDragOverCardId(null);
+        setDraggedTask(null);
         return;
       }
     }
 
     // Snapshot for rollback
     const previousColumnsData = { ...columnsData };
+    const previousTableList = [...tableTaskList];
 
-    // Optimistic UI update
+    // Optimistic UI update in columns
     setColumnsData(prev => {
       const sourceList = prev[sourceStatus]?.tasks || [];
       const targetList = prev[newStatus]?.tasks || [];
@@ -314,26 +507,101 @@ const Tasks = () => {
       };
     });
 
+    if (viewMode === 'table') {
+      setTableTaskList(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    }
+
     setDragOverCol(null);
+    setDragOverCardId(null);
     setDraggedTask(null);
+    setDraggedFromCol(null);
+    setDraggedFromIndex(null);
 
     // Call API
     try {
       await apiClient.put(`/api/admin/tasks/${taskId}`, { status: newStatus });
       const targetColInfo = KANBAN_COLUMNS.find(c => c.id === newStatus);
       toast.success(`Task moved to ${targetColInfo?.label || newStatus}`);
+      if (refreshTableTasks) refreshTableTasks();
     } catch (err) {
       console.error('Failed to update task status:', err);
       toast.error(err.response?.data?.message || 'Failed to move task');
-      // Rollback
       setColumnsData(previousColumnsData);
+      setTableTaskList(previousTableList);
     }
   };
 
-  const handleDrop = async (e, targetStatus) => {
+  // Dropping on a column area (empty space or bottom)
+  const handleDropOnCol = async (e, targetStatus) => {
     e.preventDefault();
+    setDragOverCol(null);
+    setDragOverCardId(null);
     if (!draggedTask) return;
     await handleMoveTaskStatus(draggedTask.id, targetStatus);
+  };
+
+  // =========================================================================
+  // TABLE VIEW DRAG AND DROP REORDER (Leader / Admin)
+  // =========================================================================
+  const handleTableDragStart = (e, index) => {
+    if (!isLeaderOrAdmin || debouncedSearch) return;
+    setDraggedTableIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleTableDragOver = (e, index) => {
+    if (!isLeaderOrAdmin || debouncedSearch) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverTableIndex !== index) {
+      setDragOverTableIndex(index);
+    }
+  };
+
+  const handleTableDragLeave = (e) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+  };
+
+  const handleTableDragEnd = () => {
+    setDraggedTableIndex(null);
+    setDragOverTableIndex(null);
+  };
+
+  const handleTableDrop = async (e, targetIndex) => {
+    if (!isLeaderOrAdmin || debouncedSearch) return;
+    e.preventDefault();
+
+    if (draggedTableIndex === null || draggedTableIndex === undefined || draggedTableIndex === targetIndex) {
+      setDraggedTableIndex(null);
+      setDragOverTableIndex(null);
+      return;
+    }
+
+    const previousList = [...tableTaskList];
+    const updated = [...tableTaskList];
+    const [movedItem] = updated.splice(draggedTableIndex, 1);
+    updated.splice(targetIndex, 0, movedItem);
+
+    setTableTaskList(updated);
+    setDraggedTableIndex(null);
+    setDragOverTableIndex(null);
+
+    const payload = updated.map((t, idx) => ({
+      id: t.id,
+      sort: (tablePage - 1) * tableLimit + idx + 1
+    }));
+
+    try {
+      await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
+      toast.success('تم تحديث ترتيب المهام بنجاح');
+      refreshAllColumns();
+    } catch (err) {
+      console.error('Error reordering tasks:', err);
+      toast.error('فشل في حفظ ترتيب المهام');
+      setTableTaskList(previousList);
+      if (refreshTableTasks) refreshTableTasks();
+    }
   };
 
   // Selection Mode handlers ("by selection" for mobile and multi-select)
@@ -562,6 +830,7 @@ const Tasks = () => {
     if (response?.success) {
       closeModal();
       refreshAllColumns();
+      if (refreshTableTasks) refreshTableTasks();
     }
   };
 
@@ -577,6 +846,7 @@ const Tasks = () => {
         setSelectedDocFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
         refreshAllColumns();
+        if (refreshTableTasks) refreshTableTasks();
       }
     } else {
       setFormData(prev => ({ ...prev, documentation: '' }));
@@ -606,6 +876,8 @@ const Tasks = () => {
         });
         return next;
       });
+      setTableTaskList(prev => prev.filter(t => t.id !== id));
+      if (refreshTableTasks) refreshTableTasks();
       toast.success("Task deleted successfully");
     }
   };
@@ -626,6 +898,7 @@ const Tasks = () => {
         });
         return next;
       });
+      setTableTaskList(prev => prev.map(t => t.id === taskId ? { ...t, importanc_status: newImportance } : t));
     }
   };
 
@@ -965,9 +1238,15 @@ const Tasks = () => {
                   hasMore={colState.hasMore}
                   onScroll={handleColumnScroll}
                   isDragOver={dragOverCol === col.id}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
+                  onDragOver={handleDragOverCol}
+                  onDragLeave={handleDragLeaveCol}
+                  onDrop={handleDropOnCol}
+                  dragOverCardId={dragOverCardId}
+                  onDragOverCard={handleDragOverCard}
+                  onDragLeaveCard={handleDragLeaveCard}
+                  onDropOnCard={handleDropOnCard}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
                   onAddTask={isLeaderOrAdmin ? (status) => openModal(null, status) : null}
                   cardProps={{
                     ...cardProps,
@@ -993,9 +1272,15 @@ const Tasks = () => {
                   hasMore={colState.hasMore}
                   onScroll={handleColumnScroll}
                   isDragOver={dragOverCol === activeCol.id}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
+                  onDragOver={handleDragOverCol}
+                  onDragLeave={handleDragLeaveCol}
+                  onDrop={handleDropOnCol}
+                  dragOverCardId={dragOverCardId}
+                  onDragOverCard={handleDragOverCard}
+                  onDragLeaveCard={handleDragLeaveCard}
+                  onDropOnCard={handleDropOnCard}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
                   onAddTask={isLeaderOrAdmin ? (status) => openModal(null, status) : null}
                   cardProps={{
                     ...cardProps,
@@ -1007,12 +1292,17 @@ const Tasks = () => {
           </div>
         </div>
       ) : (
-        /* Classic Table View Fallback */
+        /* Classic Table View with Drag & Drop Reordering */
         <div className="mb-8 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
+                  {isLeaderOrAdmin && !debouncedSearch && (
+                    <th scope="col" className="w-10 px-2 py-5 text-center">
+                      <span className="sr-only">Reorder</span>
+                    </th>
+                  )}
                   <th scope="col" className="px-6 py-5 font-semibold">Task Details</th>
                   <th scope="col" className="px-6 py-5 font-semibold">Assigned To</th>
                   <th scope="col" className="px-6 py-5 font-semibold">Delivery Date</th>
@@ -1022,107 +1312,168 @@ const Tasks = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {Object.values(columnsData).flatMap(c => c.tasks).length === 0 ? (
+                {tableTasksLoading && tableTaskList.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="py-12 text-center text-muted-foreground">
+                    <td colSpan={isLeaderOrAdmin && !debouncedSearch ? 7 : 6} className="py-12 text-center text-muted-foreground">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        <span>Loading tasks...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (tableTaskList.length > 0 ? tableTaskList : Object.values(columnsData).flatMap(c => c.tasks)).length === 0 ? (
+                  <tr>
+                    <td colSpan={isLeaderOrAdmin && !debouncedSearch ? 7 : 6} className="py-12 text-center text-muted-foreground">
                       No tasks found.
                     </td>
                   </tr>
                 ) : (
-                  Object.values(columnsData).flatMap(c => c.tasks).map((task) => {
+                  (tableTaskList.length > 0 ? tableTaskList : Object.values(columnsData).flatMap(c => c.tasks)).map((task, index) => {
                     const isUrgent = (
-    task.importanc_status?.toLowerCase?.() === 'urgent' ||
-    task.importance?.toLowerCase?.() === 'urgent' ||
-    (task.date_urgent && String(task.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
-  ) && task.status !== 'approve';
+                      task.importanc_status?.toLowerCase?.() === 'urgent' ||
+                      task.importance?.toLowerCase?.() === 'urgent' ||
+                      (task.date_urgent && String(task.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
+                    ) && task.status !== 'approve';
+
+                    const isBeingDraggedOver = dragOverTableIndex === index;
+
                     return (
-                    <tr 
-                      key={task.id}
-                      className={isUrgent ? 'urgent-row-glow cursor-pointer' : 'hover:bg-muted/60 transition-colors cursor-pointer'}
-                      onClick={() => navigate(`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`)}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-foreground hover:text-primary">
-                            {task.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground line-clamp-1">
-                            {task.description || 'No description'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-semibold text-foreground">
-                          {task.user_name || 'Unassigned'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-muted-foreground font-medium">
-                        {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase ${
-                          isUrgent ? 'text-red-600 dark:text-red-400 font-extrabold' : ''
-                        }`}>
-                          {isUrgent && (
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                            </span>
-                          )}
-                          {task.importanc_status || 'medium'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {task.status === 'approve' && !isLeaderOrAdmin ? (
-                          <span 
-                            title="Approved task: Locked (Only Leader or Admin can request revision)"
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 select-none cursor-not-allowed"
-                          >
-                            <Lock className="w-3 h-3 text-purple-600" />
-                            Approved (Locked)
-                          </span>
-                        ) : (
-                          <select
-                            value={task.status}
+                      <tr 
+                        key={task.id}
+                        draggable={isLeaderOrAdmin && !debouncedSearch}
+                        onDragStart={(e) => handleTableDragStart(e, index)}
+                        onDragOver={(e) => handleTableDragOver(e, index)}
+                        onDragLeave={handleTableDragLeave}
+                        onDragEnd={handleTableDragEnd}
+                        onDrop={(e) => handleTableDrop(e, index)}
+                        className={`transition-all ${
+                          isBeingDraggedOver ? 'border-t-2 border-primary bg-primary/10' : ''
+                        } ${
+                          isUrgent ? 'urgent-row-glow cursor-pointer' : 'hover:bg-muted/60 transition-colors cursor-pointer'
+                        }`}
+                        onClick={() => navigate(`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`)}
+                      >
+                        {isLeaderOrAdmin && !debouncedSearch && (
+                          <td 
+                            className="w-10 px-2 py-4 text-center cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground"
                             onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => handleMoveTaskStatus(task.id, e.target.value)}
-                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border cursor-pointer focus:ring-2 focus:ring-primary/50 bg-card text-foreground"
+                            title="اسحب لإعادة الترتيب (Drag to reorder)"
                           >
-                            <option value="pending">Pending</option>
-                            <option value="inprogress">In Progress</option>
-                            <option value="done">Completed</option>
-                            <option value="edit" disabled={!isLeaderOrAdmin}>
-                              {isLeaderOrAdmin ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
-                            </option>
-                            <option value="approve" disabled={!isLeaderOrAdmin}>
-                              {isLeaderOrAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
-                            </option>
-                          </select>
+                            <GripVertical className="w-4 h-4 mx-auto" />
+                          </td>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => openModal(task)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(task.id)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-foreground hover:text-primary">
+                              {task.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground line-clamp-1">
+                              {task.description || 'No description'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-semibold text-foreground">
+                            {task.user_name || 'Unassigned'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-muted-foreground font-medium">
+                          {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase ${
+                            isUrgent ? 'text-red-600 dark:text-red-400 font-extrabold' : ''
+                          }`}>
+                            {isUrgent && (
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                              </span>
+                            )}
+                            {task.importanc_status || 'medium'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {task.status === 'approve' && !isLeaderOrAdmin ? (
+                            <span 
+                              title="Approved task: Locked (Only Leader or Admin can request revision)"
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 select-none cursor-not-allowed"
+                            >
+                              <Lock className="w-3 h-3 text-purple-600" />
+                              Approved (Locked)
+                            </span>
+                          ) : (
+                            <select
+                              value={task.status}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => handleMoveTaskStatus(task.id, e.target.value)}
+                              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border cursor-pointer focus:ring-2 focus:ring-primary/50 bg-card text-foreground"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="inprogress">In Progress</option>
+                              <option value="done">Completed</option>
+                              <option value="edit" disabled={!isLeaderOrAdmin}>
+                                {isLeaderOrAdmin ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
+                              </option>
+                              <option value="approve" disabled={!isLeaderOrAdmin}>
+                                {isLeaderOrAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
+                              </option>
+                            </select>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => openModal(task)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            {isLeaderOrAdmin && (
+                              <button
+                                onClick={() => handleDelete(task.id)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })
                 )}
               </tbody>
             </table>
           </div>
+          {/* Table Pagination */}
+          {tablePagination.totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-border px-6 py-4 bg-card">
+              <span className="text-xs text-muted-foreground">
+                Page {tablePagination.page} of {tablePagination.totalPages} ({tablePagination.total} tasks)
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={tablePage <= 1}
+                  onClick={() => setTablePage(p => Math.max(1, p - 1))}
+                  className="rounded-lg text-xs"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={tablePage >= tablePagination.totalPages}
+                  onClick={() => setTablePage(p => p + 1)}
+                  className="rounded-lg text-xs"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
