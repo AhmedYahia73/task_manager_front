@@ -399,49 +399,54 @@
 /* --- Urgent Task Table Row Pulse Animation (Applied directly to td for table compatibility) --- */
 @keyframes urgent-td-pulse {
   0%, 100% {
-    background-color: rgba(254, 226, 226, 0.35) !important;
+    background-color: rgba(254, 226, 226, 0.5);
   }
   50% {
-    background-color: rgba(254, 202, 202, 0.8) !important;
+    background-color: rgba(252, 165, 165, 0.9);
   }
 }
 
 @keyframes urgent-td-pulse-dark {
   0%, 100% {
-    background-color: rgba(127, 29, 29, 0.22) !important;
+    background-color: rgba(127, 29, 29, 0.35);
   }
   50% {
-    background-color: rgba(185, 28, 28, 0.45) !important;
+    background-color: rgba(220, 38, 38, 0.65);
   }
+}
+
+.urgent-row-glow,
+.urgent-row-glow td {
+  transition: none !important;
 }
 
 .urgent-row-glow td {
   animation: urgent-td-pulse 2.2s ease-in-out infinite !important;
-  border-top: 1.5px solid rgba(239, 68, 68, 0.5) !important;
-  border-bottom: 1.5px solid rgba(239, 68, 68, 0.5) !important;
+  border-top: 2px solid rgba(239, 68, 68, 0.6) !important;
+  border-bottom: 2px solid rgba(239, 68, 68, 0.6) !important;
 }
 
 .urgent-row-glow td:first-child {
-  border-left: 5px solid #ef4444 !important;
+  border-left: 6px solid #ef4444 !important;
 }
 
 .urgent-row-glow td:last-child {
-  border-right: 1.5px solid rgba(239, 68, 68, 0.5) !important;
+  border-right: 2px solid rgba(239, 68, 68, 0.6) !important;
 }
 
 .dark .urgent-row-glow td,
 :is(.dark *) .urgent-row-glow td {
   animation: urgent-td-pulse-dark 2.2s ease-in-out infinite !important;
-  border-top: 1.5px solid rgba(239, 68, 68, 0.6) !important;
-  border-bottom: 1.5px solid rgba(239, 68, 68, 0.6) !important;
+  border-top: 2px solid rgba(239, 68, 68, 0.7) !important;
+  border-bottom: 2px solid rgba(239, 68, 68, 0.7) !important;
 }
 
 .dark .urgent-row-glow td:first-child,
 :is(.dark *) .urgent-row-glow td:first-child {
-  border-left: 5px solid #ef4444 !important;
+  border-left: 6px solid #ef4444 !important;
 }
 
 .dark .urgent-row-glow td:last-child,
 :is(.dark *) .urgent-row-glow td:last-child {
-  border-right: 1.5px solid rgba(239, 68, 68, 0.6) !important;
+  border-right: 2px solid rgba(239, 68, 68, 0.7) !important;
 }

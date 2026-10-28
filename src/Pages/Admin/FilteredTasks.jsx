@@ -832,11 +832,7 @@ const FilteredTasks = () => {
                       <tr 
                         key={task.id} 
                         onClick={() => navigate(`/admin/tasks/${task.id}/view`)}
-                        className={`transition-colors cursor-pointer group ${
-                          isUrgent 
-                            ? 'urgent-row-glow hover:bg-red-100/60 dark:hover:bg-red-950/40' 
-                            : 'hover:bg-muted/50'
-                        }`}
+                        className={isUrgent ? 'urgent-row-glow cursor-pointer group' : 'hover:bg-muted/50 transition-colors cursor-pointer group'}
                       >
                         <td className="px-6 py-5">
                           <div className="flex flex-col">

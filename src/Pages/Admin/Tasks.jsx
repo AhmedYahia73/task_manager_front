@@ -1038,11 +1038,7 @@ const Tasks = () => {
                     return (
                     <tr 
                       key={task.id}
-                      className={`transition-colors cursor-pointer ${
-                        isUrgent 
-                          ? 'urgent-row-glow hover:bg-red-100/60 dark:hover:bg-red-950/40' 
-                          : 'hover:bg-muted/60'
-                      }`}
+                      className={isUrgent ? 'urgent-row-glow cursor-pointer' : 'hover:bg-muted/60 transition-colors cursor-pointer'}
                       onClick={() => navigate(`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`)}
                     >
                       <td className="px-6 py-4">
