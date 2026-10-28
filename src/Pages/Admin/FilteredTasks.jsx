@@ -40,11 +40,21 @@ const KANBAN_COLUMNS = [
   { id: 'approve', label: 'Approved', dotColor: 'bg-purple-500', dropHighlight: 'ring-2 ring-purple-400 bg-purple-50/40 dark:bg-purple-950/20' }
 ];
 
+const DONE_KANBAN_COLUMNS = [
+  { id: 'done', label: 'Completed', dotColor: 'bg-emerald-500', dropHighlight: 'ring-2 ring-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20' },
+  { id: 'edit', label: 'Need to Revision', dotColor: 'bg-orange-500', dropHighlight: 'ring-2 ring-orange-400 bg-orange-50/40 dark:bg-orange-950/20' },
+  { id: 'approve', label: 'Approved', dotColor: 'bg-purple-500', dropHighlight: 'ring-2 ring-purple-400 bg-purple-50/40 dark:bg-purple-950/20' },
+  { id: 'inprogress', label: 'In Progress', dotColor: 'bg-blue-500', dropHighlight: 'ring-2 ring-blue-400 bg-blue-50/40 dark:bg-blue-950/20' },
+  { id: 'pending', label: 'Pending', dotColor: 'bg-amber-500', dropHighlight: 'ring-2 ring-amber-400 bg-amber-50/40 dark:bg-amber-950/20' }
+];
+
 const FilteredTasks = () => {
   const navigate = useNavigate();
   const { getRoleName } = useRoleNames();
-  const { type } = useParams(); // 'pending', 'delay', 'today', 'all'
+  const { type } = useParams(); // 'pending', 'delay', 'today', 'all', 'done'
   
+  const activeKanbanColumns = type === 'done' ? DONE_KANBAN_COLUMNS : KANBAN_COLUMNS;
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user?.role?.toLowerCase?.() || '';
   const isAdmin = isAdminRole(userRole);
@@ -60,7 +70,11 @@ const FilteredTasks = () => {
   const [userIdFilter, setUserIdFilter] = useState('');
 
   // Mobile active tab for column view
-  const [mobileActiveTab, setMobileActiveTab] = useState('pending');
+  const [mobileActiveTab, setMobileActiveTab] = useState(type === 'done' ? 'done' : 'pending');
+
+  useEffect(() => {
+    setMobileActiveTab(type === 'done' ? 'done' : 'pending');
+  }, [type]);
 
   // Selection mode & multi-select state ("by selection")
   const [isSelectionMode, setIsSelectionMode] = useState(false);
