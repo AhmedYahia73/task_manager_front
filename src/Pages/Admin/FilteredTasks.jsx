@@ -175,9 +175,29 @@ const FilteredTasks = () => {
 
       setColumnsData(prev => {
         const currentTasks = prev[statusKey]?.tasks || [];
-        const combined = append
+        let combined = append
           ? [...currentTasks, ...fetchedTasks.filter(item => !currentTasks.some(existing => existing.id === item.id))]
           : fetchedTasks;
+
+        if (type === 'done') {
+          combined = [...combined].sort((a, b) => {
+            const aUrgent = (
+              a.importanc_status?.toLowerCase?.() === 'urgent' ||
+              a.importance?.toLowerCase?.() === 'urgent' ||
+              (a.date_urgent && String(a.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
+            ) && a.status !== 'approve';
+
+            const bUrgent = (
+              b.importanc_status?.toLowerCase?.() === 'urgent' ||
+              b.importance?.toLowerCase?.() === 'urgent' ||
+              (b.date_urgent && String(b.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
+            ) && b.status !== 'approve';
+
+            if (aUrgent && !bUrgent) return -1;
+            if (!aUrgent && bUrgent) return 1;
+            return 0;
+          });
+        }
 
         return {
           ...prev,
@@ -245,10 +265,32 @@ const FilteredTasks = () => {
   const [dragOverTableIndex, setDragOverTableIndex] = useState(null);
 
   useEffect(() => {
-    if (tableTasksData?.tasks || tableTasksData?.Tasks) {
-      setTableTaskList(tableTasksData?.tasks || tableTasksData?.Tasks);
+    const rawTasks = tableTasksData?.tasks || tableTasksData?.Tasks;
+    if (rawTasks) {
+      if (type === 'done') {
+        const sorted = [...rawTasks].sort((a, b) => {
+          const aUrgent = (
+            a.importanc_status?.toLowerCase?.() === 'urgent' ||
+            a.importance?.toLowerCase?.() === 'urgent' ||
+            (a.date_urgent && String(a.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
+          ) && a.status !== 'approve';
+
+          const bUrgent = (
+            b.importanc_status?.toLowerCase?.() === 'urgent' ||
+            b.importance?.toLowerCase?.() === 'urgent' ||
+            (b.date_urgent && String(b.date_urgent).split('T')[0] <= new Date().toISOString().split('T')[0])
+          ) && b.status !== 'approve';
+
+          if (aUrgent && !bUrgent) return -1;
+          if (!aUrgent && bUrgent) return 1;
+          return 0;
+        });
+        setTableTaskList(sorted);
+      } else {
+        setTableTaskList(rawTasks);
+      }
     }
-  }, [tableTasksData]);
+  }, [tableTasksData, type]);
 
   const { mutate } = useMutation();
 

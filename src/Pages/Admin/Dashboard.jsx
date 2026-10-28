@@ -417,7 +417,7 @@ const Dashboard = () => {
         </div>
       ) : (
         /* Stats Overview */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           
           {/* Pending Tasks */}
           <div 
@@ -590,7 +590,7 @@ const Dashboard = () => {
           {/* Engineers */}
           <div 
             onClick={() => navigate('/admin/users?role=engineer')}
-            className="bg-card p-6 rounded-xl shadow-sm border border-border flex flex-col justify-center gap-4 hover:shadow-md transition-shadow cursor-pointer"
+            className="bg-card p-6 rounded-xl shadow-sm border border-border border-l-4 border-l-primary flex flex-col justify-between gap-4 hover:shadow-md transition-shadow cursor-pointer min-h-[190px]"
           >
             <div className="flex items-start gap-4">
               <div className="bg-muted p-3 rounded-lg text-primary">
@@ -600,6 +600,10 @@ const Dashboard = () => {
                 <h3 className="text-sm font-medium text-muted-foreground capitalize">{getRoleNamePlural('engineer')}</h3>
                 <p className="text-3xl font-bold font-['Plus_Jakarta_Sans'] mt-1">{data?.engineers_count ?? 0}</p>
               </div>
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-border mt-auto text-xs text-muted-foreground font-medium">
+              <span>View all members</span>
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </div>
           </div>
 

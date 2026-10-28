@@ -6,7 +6,51 @@
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskito</title>
   <link rel="preload" href="/fonts/material-symbols-outlined.woff2" as="font" type="font/woff2" crossorigin />
+  <style>
+    @font-face {
+      font-family: 'Material Symbols Outlined';
+      font-style: normal;
+      font-weight: 100 700;
+      font-display: block;
+      src: url('/fonts/material-symbols-outlined.woff2') format('woff2');
+    }
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined' !important;
+      font-weight: normal;
+      font-style: normal;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+    html:not(.fonts-loaded) .material-symbols-outlined {
+      visibility: hidden;
+    }
+  </style>
+  <script>
+    if ('fonts' in document) {
+      document.fonts.load('24px "Material Symbols Outlined"').then(function() {
+        document.documentElement.classList.add('fonts-loaded');
+      }).catch(function() {
+        document.documentElement.classList.add('fonts-loaded');
+      });
+      setTimeout(function() {
+        document.documentElement.classList.add('fonts-loaded');
+      }, 1200);
+    } else {
+      document.documentElement.classList.add('fonts-loaded');
+    }
+  </script>
 </head>
 
 <body>

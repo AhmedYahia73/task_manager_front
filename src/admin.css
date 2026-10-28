@@ -296,6 +296,10 @@
 }
 
 /* --- Material Symbols --- */
+html:not(.fonts-loaded) .material-symbols-outlined {
+  visibility: hidden;
+}
+
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined' !important;
   font-weight: normal;
