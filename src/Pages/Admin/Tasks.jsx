@@ -1029,10 +1029,16 @@ const Tasks = () => {
                     </td>
                   </tr>
                 ) : (
-                  Object.values(columnsData).flatMap(c => c.tasks).map((task) => (
+                  Object.values(columnsData).flatMap(c => c.tasks).map((task) => {
+                    const isUrgent = task.importanc_status === 'urgent' && task.status !== 'approve';
+                    return (
                     <tr 
                       key={task.id}
-                      className="hover:bg-muted/60 transition-colors cursor-pointer"
+                      className={`transition-colors cursor-pointer ${
+                        isUrgent 
+                          ? 'urgent-row-glow hover:bg-red-100/60 dark:hover:bg-red-950/40' 
+                          : 'hover:bg-muted/60'
+                      }`}
                       onClick={() => navigate(`/admin/projects/${projectId}/groups/${groupId}/tasks/${task.id}`)}
                     >
                       <td className="px-6 py-4">
@@ -1054,7 +1060,15 @@ const Tasks = () => {
                         {task.delivery_date ? dayjs(task.delivery_date).format('MMM DD, YYYY') : 'Not Set'}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-xs font-bold uppercase">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase ${
+                          isUrgent ? 'text-red-600 dark:text-red-400 font-extrabold' : ''
+                        }`}>
+                          {isUrgent && (
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            </span>
+                          )}
                           {task.importanc_status || 'medium'}
                         </span>
                       </td>
@@ -1103,7 +1117,8 @@ const Tasks = () => {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

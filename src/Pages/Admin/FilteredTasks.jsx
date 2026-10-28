@@ -823,11 +823,16 @@ const FilteredTasks = () => {
                 ) : (
                   tableTasks.map((task) => {
                     const style = getStatusStyles(task.status);
+                    const isUrgent = task.importanc_status === 'urgent' && task.status !== 'approve';
                     return (
                       <tr 
                         key={task.id} 
                         onClick={() => navigate(`/admin/tasks/${task.id}/view`)}
-                        className="hover:bg-muted/50 transition-colors cursor-pointer group"
+                        className={`transition-colors cursor-pointer group ${
+                          isUrgent 
+                            ? 'urgent-row-glow hover:bg-red-100/60 dark:hover:bg-red-950/40' 
+                            : 'hover:bg-muted/50'
+                        }`}
                       >
                         <td className="px-6 py-5">
                           <div className="flex flex-col">
@@ -896,8 +901,15 @@ const FilteredTasks = () => {
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          <select
-                            value={task.importanc_status || 'medium'}
+                          <div className="flex items-center gap-2">
+                            {isUrgent && (
+                              <span className="relative flex h-2.5 w-2.5 shrink-0" title="Urgent Task">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                              </span>
+                            )}
+                            <select
+                              value={task.importanc_status || 'medium'}
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => handleImportanceChange(task.id, e.target.value)}
                             disabled={!isAdmin}
@@ -909,6 +921,7 @@ const FilteredTasks = () => {
                             <option value="high" className="bg-card text-foreground">High</option>
                             <option value="urgent" className="bg-card text-foreground">Urgent</option>
                           </select>
+                          </div>
                         </td>
                         <td className="px-6 py-5">
                           {task.status === 'approve' && !isAdmin ? (
