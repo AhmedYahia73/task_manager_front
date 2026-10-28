@@ -93,6 +93,8 @@ export const KanbanCard = ({
     return true;
   };
 
+  const isUrgent = task.importanc_status === 'urgent' && task.status !== 'approve';
+
   return (
     <div
       draggable={!isSelectionMode && canModifyThisTask}
@@ -102,9 +104,11 @@ export const KanbanCard = ({
       className={`group relative rounded-xl border bg-card p-3.5 shadow-xs transition-all duration-200 select-none ${
         isCardSelected 
           ? 'ring-2 ring-primary border-primary bg-primary/5 shadow-md' 
-          : 'border-border/80 hover:border-primary/40 hover:shadow-md'
+          : isUrgent
+            ? 'urgent-card-glow border-red-300 dark:border-red-900/60'
+            : 'border-border/80 hover:border-primary/40 hover:shadow-md'
       } ${
-        task.importanc_status === 'urgent' && task.status !== 'approve'
+        isUrgent
           ? 'border-l-4 border-l-red-500'
           : `border-l-4 ${statusStyle.color.replace('bg-', 'border-l-')}`
       } ${
@@ -145,7 +149,13 @@ export const KanbanCard = ({
           )}
 
           {/* Importance Badge */}
-          <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-bold rounded-md uppercase tracking-wider border ${getImportanceStyles(task.importanc_status || 'medium')}`}>
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-md uppercase tracking-wider border ${getImportanceStyles(task.importanc_status || 'medium')}`}>
+            {isUrgent && (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+            )}
             {task.importanc_status || 'medium'}
           </span>
 

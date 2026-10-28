@@ -362,3 +362,36 @@
     padding: 80px 16px 32px;
   }
 }
+
+
+/* --- Urgent Task Card Pulse Animation (Soft & Non-annoying) --- */
+@keyframes urgent-card-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.22), 0 2px 8px -1px rgba(239, 68, 68, 0.12);
+    background-color: var(--card);
+  }
+  50% {
+    box-shadow: 0 0 0 1.5px rgba(239, 68, 68, 0.45), 0 0 18px 3px rgba(239, 68, 68, 0.22);
+    background-color: rgba(254, 242, 242, 0.7);
+  }
+}
+
+@keyframes urgent-card-pulse-dark {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3), 0 2px 8px -1px rgba(239, 68, 68, 0.15);
+    background-color: var(--card);
+  }
+  50% {
+    box-shadow: 0 0 0 1.5px rgba(248, 113, 113, 0.55), 0 0 20px 4px rgba(239, 68, 68, 0.28);
+    background-color: rgba(69, 10, 10, 0.35);
+  }
+}
+
+.urgent-card-glow {
+  animation: urgent-card-pulse 2.8s ease-in-out infinite;
+}
+
+.dark .urgent-card-glow,
+:is(.dark *) .urgent-card-glow {
+  animation: urgent-card-pulse-dark 2.8s ease-in-out infinite;
+}
