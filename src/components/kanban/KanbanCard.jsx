@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
+import { isTaskDelayedCompleted } from '@/lib/utils';
 
 export const KanbanCard = ({
   task,
@@ -83,6 +84,8 @@ export const KanbanCard = ({
   const statusStyle = getStatusStyles(task.status);
   const isOverdue = task.delivery_date && dayjs(task.delivery_date).isBefore(dayjs(), 'day') && task.status !== 'done' && task.status !== 'approve';
   const isToday = task.delivery_date && dayjs(task.delivery_date).isSame(dayjs(), 'day');
+  const isDelayedComplete = isTaskDelayedCompleted(task);
+  const isInDelayCol = columnId === 'delay';
 
   // Handle card click
   const handleCardClick = (e) => {
@@ -131,7 +134,7 @@ export const KanbanCard = ({
               ? 'urgent-card-glow border-red-300 dark:border-red-900/60'
               : 'border-border/80 hover:border-primary/40 hover:shadow-md'
       } ${
-        isUrgent
+        isUrgent || isInDelayCol || isDelayedComplete
           ? 'border-l-4 border-l-red-500'
           : `border-l-4 ${statusStyle.color.replace('bg-', 'border-l-')}`
       } ${
@@ -230,6 +233,36 @@ export const KanbanCard = ({
         </div>
       </div>
 
+      {/* Delayed Completed Alert Note */}
+      {isDelayedComplete && (
+        <div className="mb-2.5 flex items-center justify-between gap-1.5 rounded-lg bg-red-500/10 dark:bg-red-950/40 p-2 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-500/30">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-600 dark:text-red-400" />
+            <span className="truncate">Delay: Completed after deadline</span>
+          </div>
+          {task.done_date && (
+            <span className="text-[10px] font-normal opacity-85 shrink-0">
+              Done: {dayjs(task.done_date).format('MMM D')}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Delayed Active Task in Delay Column */}
+      {isInDelayCol && (
+        <div className="mb-2.5 flex items-center justify-between gap-1.5 rounded-lg bg-rose-500/10 dark:bg-rose-950/40 p-2 text-xs font-bold text-rose-700 dark:text-rose-300 border border-rose-500/30">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <AlarmClock className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+            <span className="truncate">Delayed / متأخر عن الموعد</span>
+          </div>
+          {task.delivery_date && (
+            <span className="text-[10px] font-normal opacity-85 shrink-0">
+              Due: {dayjs(task.delivery_date).format('MMM D')}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Task Title */}
       <div className="mb-1.5">
         <Link
@@ -322,7 +355,7 @@ export const KanbanCard = ({
 
           {task.delivery_date && (
             <div className={`flex items-center gap-1 shrink-0 font-medium text-[11px] ${
-              isOverdue 
+              isDelayedComplete || isOverdue || isInDelayCol
                 ? 'text-red-600 dark:text-red-400 font-semibold' 
                 : isToday 
                   ? 'text-amber-600 dark:text-amber-400 font-semibold' 
@@ -333,6 +366,7 @@ export const KanbanCard = ({
                 {typeof task.delivery_date === 'string'
                   ? dayjs(task.delivery_date.split('T')[0]).format('MMM D')
                   : dayjs(task.delivery_date).format('MMM D')}
+                {isDelayedComplete && ' (Delay)'}
               </span>
             </div>
           )}
@@ -376,7 +410,7 @@ export const KanbanCard = ({
                   <p className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                     Select New Status
                   </p>
-                  {availableColumns.map((col) => {
+                  {availableColumns.filter(c => c.id !== 'delay').map((col) => {
                     const allowed = isStatusAllowed(col.id);
                     const isCurrent = task.status === col.id;
 

@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/axios';
 
-const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
+const NotesBoard = ({ isOpen, onClose, groupId, groupName, isLeader = false, projectRole = null }) => {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
@@ -24,10 +24,12 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
   const userRole = userData?.role || 'engineer';
   const userId = userData?.id;
 
+  const isLeaderInProject = isLeader || projectRole === 'leader' || userRole === 'leader';
   const isAdminOrTester = userRole === 'admin' || userRole === 'tester' || userRole === 'super_admin';
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+  const canAddNote = isAdminOrTester || isLeaderInProject;
 
-  const apiRouteBase = (userRole === 'admin' || userRole === 'super_admin' || userRole === 'tester') 
+  const apiRouteBase = (isAdminOrTester || isLeaderInProject) 
     ? '/api/admin/notesBoard' 
     : '/api/user/notesBoard';
 
@@ -150,7 +152,7 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
   };
 
   const canEditOrDelete = (note) => {
-    return isAdmin || note.user_id === userId;
+    return isAdmin || isLeaderInProject || note.user_id === userId;
   };
 
   return (
@@ -262,8 +264,8 @@ const NotesBoard = ({ isOpen, onClose, groupId, groupName }) => {
           )}
         </div>
 
-        {/* Input Area (Only for Admin & Tester) */}
-        {isAdminOrTester && (
+        {/* Input Area (Admin, Tester & Project Leader) */}
+        {canAddNote && (
           <div className="p-4 border-t border-border bg-card shrink-0">
             <form onSubmit={handleAddNote} className="flex gap-3 items-end">
               <div className="flex-1 relative">

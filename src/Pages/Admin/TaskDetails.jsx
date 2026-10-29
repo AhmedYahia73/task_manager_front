@@ -8,6 +8,7 @@ import { isAdminRole } from '@/utils/auth';
 import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/axios';
+import { isTaskDelayedCompleted } from '@/lib/utils';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -691,7 +692,7 @@ export default function TaskDetails() {
     }
   };
 
-  const getDeliveryDateStatus = (dateStr, status) => {
+  const getDeliveryDateStatus = (dateStr, status, taskObj) => {
     if (!dateStr) return { text: 'No deadline set', color: 'text-muted-foreground', badge: 'bg-muted text-muted-foreground' };
     const dateOnly = typeof dateStr === 'string' ? dateStr.split('T')[0] : dateStr;
     const delivery = dayjs(dateOnly).endOf('day');
@@ -699,10 +700,20 @@ export default function TaskDetails() {
     const isCompleted = status === 'done' || status === 'approve';
 
     if (isCompleted) {
+      const isDelayed = isTaskDelayedCompleted(taskObj || { delivery_date: dateStr, status });
+      if (isDelayed) {
+        return {
+          text: `Delivered • ${dayjs(dateOnly).format('MMM DD, YYYY')}`,
+          badge: 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20',
+          diffText: 'Completed (Delayed)',
+          isDelayed: true
+        };
+      }
       return {
         text: `Delivered • ${dayjs(dateOnly).format('MMM DD, YYYY')}`,
         badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-        diffText: 'Completed'
+        diffText: 'Completed',
+        isDelayed: false
       };
     }
 
@@ -750,7 +761,7 @@ export default function TaskDetails() {
   }
 
   const statusStyle = getStatusStyles(task.status);
-  const deliveryInfo = getDeliveryDateStatus(task.delivery_date, task.status);
+  const deliveryInfo = getDeliveryDateStatus(task.delivery_date, task.status, task);
   const assignedUsers = (Array.isArray(task.assigned_users) ? task.assigned_users : [])
     .filter((u) => u && typeof u === 'object' && u.id);
   const isAssigned = assignedUsers.some((u) => u.id === user?.id) || task?.user_id === user?.id;
@@ -825,6 +836,23 @@ export default function TaskDetails() {
             </span>
           </div>
         </div>
+
+        {/* ⚠️ Delay Alert if completed late */}
+        {deliveryInfo.isDelayed && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-red-500/10 dark:bg-red-950/40 p-3.5 border border-red-500/30 text-red-700 dark:text-red-300">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+              <span className="text-xs font-bold">
+                Delayed Completion: This task was completed after its delivery deadline.
+              </span>
+            </div>
+            {task.done_date && (
+              <span className="text-xs font-medium text-red-600 dark:text-red-400 shrink-0">
+                Delivered on {dayjs(task.done_date).format('MMM DD, YYYY')}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* 2️⃣ Hierarchy: Project Name -> Group Name -> Task Name */}
         <div className="space-y-3">

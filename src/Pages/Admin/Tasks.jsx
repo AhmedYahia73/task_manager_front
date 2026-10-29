@@ -33,6 +33,7 @@ import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
 import { KanbanColumn } from '@/components/kanban/KanbanColumn';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/axios';
+import { isTaskDelayedCompleted } from '@/lib/utils';
 
 // Column definitions for the Kanban Board (Order: Pending, In Progress, Completed, Need to Revision, Approved)
 const KANBAN_COLUMNS = [
@@ -53,6 +54,16 @@ const KANBAN_COLUMNS = [
     headerBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
     dotColor: 'bg-blue-500',
     dropHighlight: 'ring-2 ring-blue-400 bg-blue-50/40 dark:bg-blue-950/20',
+  },
+  {
+    id: 'delay',
+    label: 'Delay',
+    labelAr: 'المتأخرة',
+    badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-300 dark:border-rose-800',
+    headerBg: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+    dotColor: 'bg-rose-500',
+    dropHighlight: 'ring-2 ring-rose-400 bg-rose-50/40 dark:bg-rose-950/20',
+    isDelayColumn: true,
   },
   {
     id: 'done',
@@ -86,6 +97,7 @@ const KANBAN_COLUMNS = [
 const initialColumnsState = {
   pending: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
   inprogress: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
+  delay: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
   done: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
   edit: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
   approve: { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false },
@@ -217,14 +229,19 @@ const Tasks = () => {
     }));
 
     try {
+      const queryParams = {
+        group_id: groupId,
+        status: statusKey,
+        page: pageNum,
+        limit: 12,
+        search: debouncedSearch
+      };
+      if (statusKey !== 'delay' && statusKey !== 'done' && statusKey !== 'approve') {
+        queryParams.exclude_delayed = true;
+      }
+
       const res = await apiClient.get('/api/admin/tasks', {
-        params: {
-          group_id: groupId,
-          status: statusKey,
-          page: pageNum,
-          limit: 12,
-          search: debouncedSearch
-        }
+        params: queryParams
       });
 
       const data = res?.data?.data || res?.data || {};
@@ -359,6 +376,12 @@ const Tasks = () => {
 
     const sourceStatus = draggedFromCol || taskToMove.status;
     const isSameColumn = sourceStatus === targetColId;
+
+    if (targetColId === 'delay') {
+      toast.error('لا يمكن نقل المهام إلى خانة التأخير يدويًا - تظهر المهام هنا تلقائيًا عند تجاوز موعد التسليم');
+      setDraggedTask(null);
+      return;
+    }
 
     // Permissions check
     if (!isSameColumn) {
@@ -501,6 +524,14 @@ const Tasks = () => {
       return;
     }
 
+    if (newStatus === 'delay') {
+      toast.error('لا يمكن نقل المهام إلى خانة التأخير يدويًا - تظهر المهام هنا تلقائيًا عند تجاوز موعد التسليم');
+      setDragOverCol(null);
+      setDragOverCardId(null);
+      setDraggedTask(null);
+      return;
+    }
+
     // Permission validations
     if (!isLeaderOrAdmin && (newStatus === 'approve' || newStatus === 'edit')) {
       toast.error("You don't have permission to approve tasks or request revision");
@@ -585,6 +616,11 @@ const Tasks = () => {
     setDragOverCol(null);
     setDragOverCardId(null);
     if (!draggedTask) return;
+    if (targetStatus === 'delay') {
+      toast.error('لا يمكن نقل المهام إلى خانة التأخير يدويًا - تظهر المهام هنا تلقائيًا عند تجاوز موعد التسليم');
+      setDraggedTask(null);
+      return;
+    }
     await handleMoveTaskStatus(draggedTask.id, targetStatus);
   };
 
@@ -1532,32 +1568,42 @@ const Tasks = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          {task.status === 'approve' && !isLeaderOrAdmin ? (
-                            <span 
-                              title="Approved task: Locked (Only Leader or Admin can request revision)"
-                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 select-none cursor-not-allowed"
-                            >
-                              <Lock className="w-3 h-3 text-purple-600" />
-                              Approved (Locked)
-                            </span>
-                          ) : (
-                            <select
-                              value={task.status}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => handleMoveTaskStatus(task.id, e.target.value)}
-                              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border cursor-pointer focus:ring-2 focus:ring-primary/50 bg-card text-foreground"
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="inprogress">In Progress</option>
-                              <option value="done">Completed</option>
-                              <option value="edit" disabled={!isLeaderOrAdmin}>
-                                {isLeaderOrAdmin ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
-                              </option>
-                              <option value="approve" disabled={!isLeaderOrAdmin}>
-                                {isLeaderOrAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
-                              </option>
-                            </select>
-                          )}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {task.status === 'approve' && !isLeaderOrAdmin ? (
+                              <span 
+                                title="Approved task: Locked (Only Leader or Admin can request revision)"
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 select-none cursor-not-allowed"
+                              >
+                                <Lock className="w-3 h-3 text-purple-600" />
+                                Approved (Locked)
+                              </span>
+                            ) : (
+                              <select
+                                value={task.status}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => handleMoveTaskStatus(task.id, e.target.value)}
+                                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border cursor-pointer focus:ring-2 focus:ring-primary/50 bg-card text-foreground"
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="inprogress">In Progress</option>
+                                <option value="done">Completed</option>
+                                <option value="edit" disabled={!isLeaderOrAdmin}>
+                                  {isLeaderOrAdmin ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
+                                </option>
+                                <option value="approve" disabled={!isLeaderOrAdmin}>
+                                  {isLeaderOrAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
+                                </option>
+                              </select>
+                            )}
+                            {isTaskDelayedCompleted(task) && (
+                              <span 
+                                title="Completed after delivery deadline"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400 border border-red-200 dark:border-red-800"
+                              >
+                                Delay
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>

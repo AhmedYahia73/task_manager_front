@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGet } from '@/hooks/useGet';
 import { useMutation } from '@/hooks/useMutation';
-import { Loader2, Search, Plus, Edit, Trash2, X, Users, PersonStanding, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Search, Plus, Edit, Trash2, X, Users, PersonStanding, Link as LinkIcon, FolderKanban, Layers, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
@@ -23,6 +23,7 @@ const ProjectDetails = () => {
   const [groupSearch, setGroupSearch] = useState('');
   const [groupPage, setGroupPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [mobileTab, setMobileTab] = useState('detail'); // 'detail' | 'groups'
   
   // Debounce search
   useEffect(() => {
@@ -270,60 +271,452 @@ const ProjectDetails = () => {
   }
 
   return (
-    <div className="admin-project-details p-6 bg-background min-h-screen font-inter text-foreground">
+    <div className="admin-project-details p-4 sm:p-6 bg-background min-h-screen font-inter text-foreground">
       {/* Breadcrumb */}
-      <div className="flex items-center text-sm text-muted-foreground mb-6">
+      <div className="flex items-center text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">
         <Link to="/admin/projects" className="hover:underline">Projects</Link>
-        <span className="material-symbols-outlined mx-2 text-[16px]">chevron_right</span>
-        <span className="font-semibold text-foreground">{project.name || 'Loading...'}</span>
+        <span className="material-symbols-outlined mx-1.5 sm:mx-2 text-[14px] sm:text-[16px]">chevron_right</span>
+        <span className="font-semibold text-foreground truncate max-w-[200px] sm:max-w-none">{project.name || 'Loading...'}</span>
       </div>
 
       {/* Project Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <h1 className="text-4xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{project.name}</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8 gap-4">
+        <div className="w-full md:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold font-['Plus_Jakarta_Sans'] text-foreground">{project.name}</h1>
             <ProjectRoleBadge role={projectUserRole} />
           </div>
-          <div className="flex items-center text-sm text-muted-foreground flex-wrap gap-2">
+          <div className="flex items-center text-xs sm:text-sm text-muted-foreground flex-wrap gap-2">
             <span>Created {dayjs(project.createdAt).format('MMM DD, YYYY')}</span>
             {project.documentation && (
               <>
-                <span className="hidden md:inline">•</span>
+                <span className="hidden sm:inline">•</span>
                 <button onClick={(e) => handleViewDoc(e, project.documentation)} className="text-primary hover:underline flex items-center bg-primary/10 px-2 py-0.5 rounded-md border-none cursor-pointer">
                   <LinkIcon className="w-3 h-3 mr-1" />
                   Documentation
                 </button>
               </>
             )}
-            <span className="hidden md:inline">•</span>
-            <span className="hidden md:inline">•</span>
-            <span className="flex items-center gap-1 bg-[#006c49]/10 text-[#006c49] px-2 py-0.5 rounded-md font-medium">
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1 bg-[#006c49]/10 text-[#006c49] px-2 py-0.5 rounded-md font-semibold text-xs">
               Approved: {project.progress}%
             </span>
-            <span className="hidden md:inline">•</span>
-            <span className="flex items-center gap-1 bg-red-100 text-red-600 px-2 py-0.5 rounded-md font-medium">
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1 bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-md font-semibold text-xs">
               Done: {project.done_progress || 0}%
             </span>
           </div>
-          {project.description && <p className="mt-3 text-sm text-muted-foreground max-w-3xl">{project.description}</p>}
+          {project.description && <p className="mt-3 text-xs sm:text-sm text-muted-foreground max-w-3xl leading-relaxed">{project.description}</p>}
         </div>
         {isLeaderOrAdmin && (
-          <div className="flex gap-3 w-full md:w-auto">
-            <Button onClick={() => setIsTeamModalOpen(true)} variant="outline" className="border-border hover:bg-muted text-foreground w-full md:w-auto flex items-center justify-center gap-2">
+          <div className="flex gap-2 sm:gap-3 w-full md:w-auto">
+            <Button onClick={() => setIsTeamModalOpen(true)} variant="outline" className="border-border hover:bg-muted text-foreground flex-1 md:flex-none flex items-center justify-center gap-1.5 text-xs sm:text-sm h-10">
               <Users className="w-4 h-4" />
-              Project Team
+              <span>Project Team</span>
             </Button>
-            <Button onClick={() => openModal()} className="bg-primary hover:bg-primary/90 text-white w-full md:w-auto flex items-center justify-center gap-2">
+            <Button onClick={() => openModal()} className="bg-primary hover:bg-primary/90 text-white flex-1 md:flex-none flex items-center justify-center gap-1.5 text-xs sm:text-sm h-10">
               <Plus className="w-4 h-4" />
-              Create Group
+              <span>Create Group</span>
             </Button>
           </div>
         )}
       </div>
 
-      {/* Main Layout - 12-column grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* ========================================================================= */}
+      {/* 📱 Modern Mobile / Responsive Experience (< lg screens)                   */}
+      {/* ========================================================================= */}
+      <div className="block lg:hidden space-y-4 mb-8">
+        {/* Mobile Navigation Tabs: Group Details vs All Groups */}
+        <div className="flex bg-muted/80 p-1 rounded-2xl border border-border shadow-xs">
+          <button
+            type="button"
+            onClick={() => setMobileTab('detail')}
+            className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              mobileTab === 'detail'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-primary" />
+            <span className="truncate">Group Details {activeGroup ? `(${activeGroup.name})` : ''}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('groups')}
+            className={`flex-1 py-2.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              mobileTab === 'groups'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <FolderKanban className="w-3.5 h-3.5 text-primary" />
+            <span>All Groups ({groupPagination.total})</span>
+          </button>
+        </div>
+
+        {/* Quick Horizontal Switcher Reel (Scrollable Chips) */}
+        {groups.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+            {isLeaderOrAdmin && (
+              <button
+                type="button"
+                onClick={() => openModal()}
+                className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl border border-dashed border-primary/50 text-primary bg-primary/5 text-xs font-semibold hover:bg-primary/10 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New</span>
+              </button>
+            )}
+            {groups.map((group) => {
+              const isSelected = selectedGroupId === group.id;
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedGroupId(group.id);
+                    setMobileTab('detail');
+                  }}
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground border-primary shadow-xs scale-[1.02]'
+                      : 'bg-card text-foreground border-border hover:border-primary/40'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-primary'}`} />
+                  <span className="truncate max-w-[130px]">{group.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {group.progress || 0}%
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* TAB 1: 📋 Mobile Group Details View */}
+        {mobileTab === 'detail' && (
+          !activeGroup ? (
+            <div className="bg-card rounded-2xl border border-border p-8 flex flex-col items-center justify-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground mb-3">
+                <Users className="w-7 h-7" />
+              </div>
+              <h3 className="font-bold text-foreground text-base mb-1">No Group Selected</h3>
+              <p className="text-xs text-muted-foreground mb-4 max-w-xs">
+                Select a group from the list or create a new group to see its tasks and members.
+              </p>
+              <Button onClick={() => setMobileTab('groups')} variant="outline" className="text-xs">
+                Browse Groups ({groupPagination.total})
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Active Group Hero Card */}
+              <div className="bg-card rounded-2xl border border-border shadow-xs overflow-hidden">
+                <div className="h-20 bg-gradient-to-r from-primary to-primary/75 relative">
+                  <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
+                </div>
+
+                <div className="px-4 pb-4 relative">
+                  <div className="flex items-start gap-3 -mt-9 mb-3">
+                    <div className="w-16 h-16 shrink-0 bg-card rounded-2xl flex items-center justify-center text-primary border-4 border-background shadow-md z-10">
+                      <span className="material-symbols-outlined text-3xl">diversity_3</span>
+                    </div>
+                    <div className="pt-9 min-w-0 flex-1">
+                      <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans'] text-foreground truncate">
+                        {activeGroup.name}
+                      </h2>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Part of <span className="font-semibold">{project.name}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress Meters */}
+                  <div className="grid grid-cols-2 gap-2 mb-4 bg-muted/40 p-2.5 rounded-xl border border-border/50">
+                    <div>
+                      <div className="flex justify-between text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
+                        <span>Approved</span>
+                        <span>{activeGroup.progress || 0}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-[#006c49] h-full rounded-full transition-all duration-300" style={{ width: `${activeGroup.progress || 0}%` }}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">
+                        <span>Done</span>
+                        <span>{activeGroup.done_progress || 0}%</span>
+                      </div>
+                      <div className="w-full bg-red-100 dark:bg-red-950/40 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-red-500 h-full rounded-full transition-all duration-300" style={{ width: `${activeGroup.done_progress || 0}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Description */}
+                  {activeGroup.description && (
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-4 bg-background p-3 rounded-xl border border-border">
+                      {activeGroup.description}
+                    </p>
+                  )}
+
+                  {/* Documentation */}
+                  {activeGroup.documentation && (
+                    <div className="mb-4">
+                      <button 
+                        type="button"
+                        onClick={(e) => handleViewDoc(e, activeGroup.documentation)} 
+                        className="w-full flex items-center justify-center gap-1.5 text-xs text-primary bg-primary/10 hover:bg-primary/20 py-2 rounded-xl transition-colors cursor-pointer border-none font-semibold"
+                      >
+                        <LinkIcon className="w-3.5 h-3.5" />
+                        <span>View Documentation</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Action Hub - Thumb Friendly Mobile Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/60">
+                    <Button 
+                      type="button"
+                      onClick={() => navigate(`/admin/projects/${id}/groups/${activeGroup.id}/tasks`)} 
+                      className="bg-primary hover:bg-primary/90 text-white font-bold h-11 rounded-xl shadow-xs flex-1 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-base">task</span>
+                      <span>Manage Tasks</span>
+                    </Button>
+                    <Button 
+                      type="button"
+                      onClick={() => setIsNotesBoardOpen(true)} 
+                      variant="outline"
+                      className="border-border text-foreground hover:bg-muted font-semibold h-11 rounded-xl flex-1 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-base">speaker_notes</span>
+                      <span>Notes Board</span>
+                    </Button>
+                    {isLeaderOrAdmin && (
+                      <Button 
+                        type="button"
+                        onClick={() => openModal(activeGroup)} 
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-foreground h-11 rounded-xl px-3 flex items-center justify-center gap-1 border border-border sm:border-transparent cursor-pointer"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span className="sm:hidden text-xs">Edit Group</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Assigned Members Section (Mobile Cards Layout - No Horizontal Scroll!) */}
+              <div className="bg-card rounded-2xl border border-border p-4 shadow-xs">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-bold font-['Plus_Jakarta_Sans'] text-foreground flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span>Assigned {getRoleNamePlural('engineer')}</span>
+                  </h3>
+                  <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                    {assignedUsers.length} Members
+                  </span>
+                </div>
+
+                {groupUsersLoading ? (
+                  <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>
+                ) : assignedUsers.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-muted-foreground border-2 border-dashed border-border rounded-xl">
+                    No {getRoleNamePlural('engineer').toLowerCase()} assigned to this group.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {assignedUsers.map((user) => (
+                      <div key={user.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-background border border-border/80">
+                        <div className="w-9 h-9 rounded-full bg-muted text-primary flex items-center justify-center font-bold text-xs border border-border shrink-0 overflow-hidden">
+                          {user.image ? (
+                            <img 
+                              src={user.image.startsWith('http') ? user.image : `${import.meta.env.VITE_API_BASE_URL}${user.image.startsWith('/') ? '' : '/'}${user.image}`} 
+                              alt={user.name} 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : (
+                            user.name ? user.name.charAt(0).toUpperCase() : '?'
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-xs text-foreground truncate">{user.name}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">{user.email}</div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-muted text-muted-foreground capitalize">
+                            {getRoleName(user.role)}
+                          </span>
+                          <span className="flex items-center gap-1 text-[10px] text-[#006c49] font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#006c49]" />
+                            Active
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        )}
+
+        {/* TAB 2: 📁 Mobile All Groups View */}
+        {mobileTab === 'groups' && (
+          <div className="space-y-3">
+            {/* Search Box */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input 
+                value={groupSearch}
+                onChange={(e) => setGroupSearch(e.target.value)}
+                placeholder="Search groups..." 
+                className="pl-9 h-11 rounded-xl border-border bg-card focus-visible:ring-primary text-sm"
+              />
+              {groupSearch && (
+                <button
+                  type="button"
+                  onClick={() => setGroupSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Groups Feed */}
+            {groupsLoading && groups.length === 0 ? (
+              <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : groups.length === 0 ? (
+              <div className="text-center p-8 text-muted-foreground text-sm border-2 border-dashed border-border rounded-2xl bg-card">
+                No groups found. Create one to get started.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {groups.map((group) => {
+                  const isActive = selectedGroupId === group.id;
+                  return (
+                    <div
+                      key={group.id}
+                      onClick={() => {
+                        setSelectedGroupId(group.id);
+                        setMobileTab('detail');
+                      }}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer bg-card shadow-xs ${
+                        isActive
+                          ? 'border-primary ring-1 ring-primary'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h4 className="font-bold font-['Plus_Jakarta_Sans'] text-foreground text-sm truncate">
+                            {group.name}
+                          </h4>
+                          {isActive && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary text-primary-foreground shrink-0">
+                              Active
+                            </span>
+                          )}
+                        </div>
+
+                        {isLeaderOrAdmin && (
+                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => openModal(group)}
+                              title="Edit Group"
+                              className="text-muted-foreground hover:text-primary p-1.5 rounded-lg hover:bg-muted cursor-pointer"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteGroup(group.id, e)}
+                                title="Delete Group"
+                                className="text-muted-foreground hover:text-red-500 p-1.5 rounded-lg hover:bg-muted cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {group.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+                          {group.description}
+                        </p>
+                      )}
+
+                      {/* Progress Meters */}
+                      <div className="space-y-1.5 mb-3">
+                        <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
+                          <span>Approved: {group.progress || 0}%</span>
+                          <span className="text-red-600">Done: {group.done_progress || 0}%</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-[#006c49] h-full" style={{ width: `${group.progress || 0}%` }} />
+                          </div>
+                          <div className="flex-1 bg-red-100 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-red-500 h-full" style={{ width: `${group.done_progress || 0}%` }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[11px] text-muted-foreground">
+                        <span>Created {dayjs(group.createdAt).format('MMM D, YYYY')}</span>
+                        <span className="text-primary font-bold flex items-center gap-0.5">
+                          Open Details <ChevronRight className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {groupPagination.totalPages > 1 && (
+              <div className="p-3 border border-border rounded-xl flex justify-between items-center bg-card">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setGroupPage((p) => Math.max(1, p - 1))} 
+                  disabled={groupPage === 1}
+                  className="h-8 px-3 text-xs cursor-pointer"
+                >
+                  Previous
+                </Button>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  Page {groupPage} of {groupPagination.totalPages}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setGroupPage((p) => Math.min(groupPagination.totalPages, p + 1))} 
+                  disabled={groupPage === groupPagination.totalPages}
+                  className="h-8 px-3 text-xs cursor-pointer"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 🖥️ Desktop Layout (12-column grid, lg: and up) - 100% Preserved           */}
+      {/* ========================================================================= */}
+      <div className="hidden lg:grid lg:grid-cols-12 gap-6 items-start">
         
         {/* Left (4 cols) - Groups Sidebar */}
         <div className="lg:col-span-4 flex flex-col gap-4 sticky top-6">
@@ -767,6 +1160,8 @@ const ProjectDetails = () => {
           onClose={() => setIsNotesBoardOpen(false)}
           groupId={activeGroup.id}
           groupName={activeGroup.name}
+          isLeader={isLeaderOrAdmin}
+          projectRole={projectUserRole}
         />
       )}
     </div>

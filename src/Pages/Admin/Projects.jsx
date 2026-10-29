@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search, Plus, Edit, Trash2, X, Link as LinkIcon, Image as ImageIcon, Users, MoreVertical } from 'lucide-react';
@@ -308,7 +309,16 @@ const Projects = () => {
             const canManage = project.user_role === 'leader' || isAdmin;
 
             return (
-              <div key={project.id} className={`bg-card rounded-xl shadow-sm hover:shadow-md transition-shadow border border-border p-5 flex flex-col relative border-l-4 ${colorTheme.border}`}>
+              <motion.div 
+                key={project.id} 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: Math.min(idx * 0.04, 0.4) }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => navigate(`/admin/projects/${project.id}`)}
+                className={`bg-card rounded-xl shadow-xs hover:shadow-lg transition-all border border-border p-5 flex flex-col relative border-l-4 ${colorTheme.border} cursor-pointer group hover:border-primary/40`}
+              >
                 
                 {/* Header: Logo + Title + Role Badge + 3-Dots Menu */}
                 <div className="flex items-center justify-between gap-3 mb-3">
@@ -465,27 +475,31 @@ const Projects = () => {
                   </div>
                 </div>
 
-                <div className="mt-auto pt-3 border-t border-border flex gap-2">
+                <div className="mt-auto pt-3 border-t border-border flex gap-2" onClick={(e) => e.stopPropagation()}>
                   <Button 
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setSelectedProjectForMembers(project);
                       setMembersModalOpen(true);
                     }} 
                     variant="outline" 
-                    className="flex-1 border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-1.5 text-xs h-9"
+                    className="flex-1 border-muted text-muted-foreground hover:bg-muted/50 flex items-center justify-center gap-1.5 text-xs h-9 cursor-pointer"
                   >
                     <Users className="w-3.5 h-3.5" />
                     Members
                   </Button>
                   <Button 
-                    onClick={() => navigate(`/admin/projects/${project.id}`)} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/admin/projects/${project.id}`);
+                    }} 
                     variant="default" 
-                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 font-medium shadow-sm"
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 font-medium shadow-sm cursor-pointer"
                   >
                     View Details
                   </Button>
                 </div>
-              </div>
+              </motion.div>
             );
           })
         )}
