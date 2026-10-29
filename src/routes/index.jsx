@@ -178,9 +178,9 @@ const NotFoundRedirect = () => {
   return <Navigate to="/login" replace />;
 };
 
-// Import FilteredTasks and TaskDetails
 import FilteredTasks from '@/Pages/Admin/FilteredTasks';
 import TaskDetails from '@/Pages/Admin/TaskDetails';
+import VoiceTaskChat from '@/Pages/Admin/VoiceTaskChat';
 
 import Careers from '@/Pages/Public/Careers';
 import Apply from '@/Pages/Public/Apply';
@@ -215,6 +215,7 @@ export const router = createBrowserRouter([
       { path: 'tasks/detail/:taskId', element: <TaskDetails /> },
       { path: 'tasks/:taskId/view', element: <TaskDetails /> },
       { path: 'tasks/:type', element: <FilteredTasks /> },
+      { path: 'voice-task-chat', element: <VoiceTaskChat /> },
       { path: 'admins', element: <Admins /> },
       { path: 'users', element: <Users /> },
       { path: 'employee-live', element: <EmployeeLive /> },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ChevronLeft, User, Menu, Timer } from 'lucide-react';
-import { removeAuthToken } from '@/utils/auth';
+import { LogOut, ChevronLeft, User, Menu, Timer, Mic } from 'lucide-react';
+import { removeAuthToken, isAdminRole } from '@/utils/auth';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/NotificationBell';
 import UserRequestsModal from '@/components/UserRequestsModal';
@@ -35,6 +35,7 @@ export const Navbar = ({ toggleSidebar }) => {
 
   const userName = userData?.name || 'User';
   const userImage = userData?.image;
+  const isAdmin = isAdminRole(userData?.role);
 
   const handleLogout = () => {
     // إزالة التوكن من الكوكيز
@@ -72,6 +73,18 @@ export const Navbar = ({ toggleSidebar }) => {
 
       {/* قسم المستخدم وتسجيل الخروج */}
       <div className="flex items-center gap-3">
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin/voice-task-chat')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/20 transition-all active:scale-95 shadow-xs"
+            title="Voice Task Chat (شات المهام بالصوت)"
+            type="button"
+          >
+            <Mic className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+            <span>Voice Chat (شات التاسكات)</span>
+          </button>
+        )}
+
         <button
           onClick={() => setIsRequestModalOpen(true)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all active:scale-95 shadow-xs"

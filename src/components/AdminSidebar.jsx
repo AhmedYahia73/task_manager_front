@@ -84,6 +84,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
           },
           { name: 'My Profile', path: '/admin/profile', icon: 'account_circle' },
           { name: 'Projects', path: '/admin/projects', icon: 'folder_copy', adminOrEngineerOrLeader: true },
+          { name: 'Voice Task Chat (شات المهام)', path: '/admin/voice-task-chat', icon: 'mic', adminOnly: true },
           { name: 'Sales Projects', path: '/admin/sales-projects', icon: 'storefront', adminOrLeaderOrSales: true },
           { name: 'Admins', path: '/admin/admins', icon: 'admin_panel_settings', adminOnly: true },
           { name: 'My HRM', path: '/admin/my-hrm', icon: 'event_note', notAdmin: true, notSales: true },
