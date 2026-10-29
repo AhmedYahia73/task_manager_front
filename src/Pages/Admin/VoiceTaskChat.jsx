@@ -32,9 +32,10 @@ import dayjs from 'dayjs';
 const BOUNDARY_START = '(?:^|[\\s,.:;،؛_!؟\\-\\(\\)\\[\\]])';
 const BOUNDARY_END = '(?=[\\s,.:;،؛_!؟\\-\\(\\)\\[\\]]|$)';
 
-function makeKwRegex(pattern) {
+function makeKw(pattern) {
   return new RegExp(BOUNDARY_START + '(' + pattern + ')' + BOUNDARY_END, 'giu');
 }
+const makeKwRegex = makeKw;
 
 const KW_DEFS = [
   { 
@@ -967,7 +968,24 @@ const VoiceTaskChat = () => {
     }
   };
 
-  if (!isAdmin) return null;
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-3">
+          <AlertTriangle size={24} />
+        </div>
+        <h2 className="text-base font-bold mb-1">غير مسموح بالدخول</h2>
+        <p className="text-xs text-muted-foreground mb-4">هذه الميزة مخصصة لمسؤولي النظام (Admin) فقط.</p>
+        <button
+          type="button"
+          onClick={() => navigate('/admin/dashboard')}
+          className="text-xs bg-primary text-primary-foreground font-semibold px-4 py-2 rounded-xl cursor-pointer hover:bg-primary/90 transition-colors"
+        >
+          العودة للرئيسية
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-background overflow-hidden">
