@@ -22,7 +22,9 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
-  Lock
+  Lock,
+  Filter,
+  SlidersHorizontal
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
@@ -104,12 +106,33 @@ const Tasks = () => {
   // View mode: 'kanban' (default) or 'table'
   const [viewMode, setViewMode] = useState('kanban');
 
+  // Status Filter state ('all', 'pending', 'inprogress', 'done', 'edit', 'approve')
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Kanban Column Width preference ('compact', 'normal', 'wide')
+  const [columnWidth, setColumnWidth] = useState(() => {
+    return localStorage.getItem('kanban_column_width') || 'normal';
+  });
+
+  const handleWidthChange = (val) => {
+    setColumnWidth(val);
+    localStorage.setItem('kanban_column_width', val);
+  };
+
   // Search state
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   
   // Mobile active tab for column view
   const [mobileActiveTab, setMobileActiveTab] = useState('pending');
+
+  const handleStatusFilterChange = (status) => {
+    setStatusFilter(status);
+    setTablePage(1);
+    if (status !== 'all') {
+      setMobileActiveTab(status);
+    }
+  };
 
   // Selection mode & multi-select state ("by selection")
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -119,6 +142,30 @@ const Tasks = () => {
 
   // Kanban Columns Data state (each status has independent tasks, page, and pagination)
   const [columnsData, setColumnsData] = useState(initialColumnsState);
+
+  // Filtered columns list based on statusFilter
+  const filteredColumns = statusFilter && statusFilter !== 'all'
+    ? KANBAN_COLUMNS.filter(c => c.id === statusFilter)
+    : KANBAN_COLUMNS;
+
+  // Responsive dynamic width class for columns based on preset & number of visible columns
+  const getColumnWidthClass = () => {
+    if (filteredColumns.length === 1) {
+      return 'w-full max-w-3xl flex-1 mx-auto md:mx-0';
+    }
+    if (filteredColumns.length === 2) {
+      return 'min-w-[360px] md:min-w-[420px] flex-1';
+    }
+    switch (columnWidth) {
+      case 'compact':
+        return 'min-w-[290px] sm:min-w-[310px] flex-1';
+      case 'wide':
+        return 'min-w-[400px] sm:min-w-[440px] lg:min-w-[480px] flex-1';
+      case 'normal':
+      default:
+        return 'min-w-[340px] sm:min-w-[360px] lg:min-w-[380px] flex-1';
+    }
+  };
 
   // Kanban Drag and drop state
   const [draggedTask, setDraggedTask] = useState(null);
@@ -130,9 +177,10 @@ const Tasks = () => {
   // Table View state & drag and drop reordering
   const [tablePage, setTablePage] = useState(1);
   const tableLimit = 50;
+  const statusParam = statusFilter && statusFilter !== 'all' ? `&status=${statusFilter}` : '';
   const { data: tableTasksData, loading: tableTasksLoading, refresh: refreshTableTasks } = useGet(
     viewMode === 'table' && groupId
-      ? `/api/admin/tasks?group_id=${groupId}&page=${tablePage}&limit=${tableLimit}&search=${debouncedSearch}`
+      ? `/api/admin/tasks?group_id=${groupId}&page=${tablePage}&limit=${tableLimit}&search=${debouncedSearch}${statusParam}`
       : null
   );
   const [tableTaskList, setTableTaskList] = useState([]);
@@ -1029,10 +1077,10 @@ const Tasks = () => {
           </div>
         </div>
 
-        {/* Toolbar: Search, Select Mode Toggle, View Toggle, Add Task */}
+        {/* Toolbar: Search, Status Filter, Width Toggle, Refresh, Select Mode, View Toggle, Add Task */}
         <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
           {/* Search Box */}
-          <div className="relative flex-1 sm:w-60 min-w-[200px]">
+          <div className="relative flex-1 sm:w-56 min-w-[180px]">
             <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
             <Input 
               value={search}
@@ -1041,6 +1089,67 @@ const Tasks = () => {
               className="pl-9 h-10 border-border bg-card rounded-xl shadow-xs text-sm"
             />
           </div>
+
+          {/* Status Filter Dropdown */}
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
+              className="h-10 rounded-xl border border-border bg-card pl-8 pr-8 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-xs cursor-pointer appearance-none"
+              title="Filter tasks by status"
+            >
+              <option value="all">All Statuses ({grandTotal})</option>
+              {KANBAN_COLUMNS.map((col) => (
+                <option key={col.id} value={col.id}>
+                  {col.label} ({columnsData[col.id]?.total || 0})
+                </option>
+              ))}
+            </select>
+            <Filter className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-3 h-3 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* Column Width Selector (Kanban only) */}
+          {viewMode === 'kanban' && (
+            <div className="hidden xl:flex items-center rounded-xl border border-border bg-card p-1 shadow-xs" title="Kanban Column Width">
+              <button
+                type="button"
+                onClick={() => handleWidthChange('compact')}
+                title="Compact Width (~310px)"
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  columnWidth === 'compact'
+                    ? 'bg-primary text-white font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Compact
+              </button>
+              <button
+                type="button"
+                onClick={() => handleWidthChange('normal')}
+                title="Normal Width (~360px)"
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  columnWidth === 'normal'
+                    ? 'bg-primary text-white font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Normal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleWidthChange('wide')}
+                title="Wide Width (~440px)"
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  columnWidth === 'wide'
+                    ? 'bg-primary text-white font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Wide
+              </button>
+            </div>
+          )}
 
           {/* Refresh Button */}
           <Button
@@ -1117,35 +1226,60 @@ const Tasks = () => {
         </div>
       </div>
 
-      {/* Mobile Status Tabs (Shown on screens < md) */}
-      {viewMode === 'kanban' && (
-        <div className="block md:hidden mb-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
-            {KANBAN_COLUMNS.map((col) => {
-              const count = columnsData[col.id]?.total || 0;
-              const isActive = mobileActiveTab === col.id;
-              return (
-                <button
-                  key={col.id}
-                  type="button"
-                  onClick={() => setMobileActiveTab(col.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
-                    isActive 
-                      ? `${col.badgeClass} ring-2 ring-primary/30 shadow-xs scale-102` 
-                      : 'bg-card border-border text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor}`} />
-                  <span>{col.label}</span>
-                  <span className="ml-0.5 rounded-full bg-muted/60 px-1.5 py-0.2 text-[10px] font-semibold text-foreground">
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Quick Status Filter Pills (Desktop & Mobile) */}
+      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
+        <button
+          type="button"
+          onClick={() => handleStatusFilterChange('all')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+            statusFilter === 'all'
+              ? 'bg-primary text-white border-primary shadow-xs'
+              : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted/50'
+          }`}
+        >
+          <span>All Statuses</span>
+          <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
+            statusFilter === 'all' ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
+          }`}>
+            {grandTotal}
+          </span>
+        </button>
+
+        {KANBAN_COLUMNS.map((col) => {
+          const count = columnsData[col.id]?.total || 0;
+          const isActive = statusFilter === col.id;
+          return (
+            <button
+              key={col.id}
+              type="button"
+              onClick={() => handleStatusFilterChange(isActive ? 'all' : col.id)}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                isActive
+                  ? `${col.badgeClass} ring-2 ring-primary/40 shadow-xs scale-102 font-extrabold`
+                  : 'bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+              <span>{col.label}</span>
+              <span className="rounded-full bg-muted/60 px-1.5 py-0.2 text-[10px] font-semibold text-foreground">
+                {count}
+              </span>
+            </button>
+          );
+        })}
+
+        {statusFilter !== 'all' && (
+          <button
+            type="button"
+            onClick={() => handleStatusFilterChange('all')}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-1 cursor-pointer"
+            title="Reset status filter"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Reset</span>
+          </button>
+        )}
+      </div>
 
       {/* Floating Bulk Selection Action Bar ("by selection" mode) */}
       {isSelectionMode && selectedTaskIds.length > 0 && (
@@ -1223,14 +1357,15 @@ const Tasks = () => {
       {/* Main View: Kanban Board */}
       {viewMode === 'kanban' ? (
         <div>
-          {/* Desktop Kanban: 5 Columns side by side with responsive scroll */}
-          <div className="hidden md:flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-            {KANBAN_COLUMNS.map((col) => {
+          {/* Desktop Kanban: Responsive columns side by side with customizable & spacious width */}
+          <div className="hidden md:flex gap-4 overflow-x-auto pb-4 custom-scrollbar items-start">
+            {filteredColumns.map((col) => {
               const colState = columnsData[col.id] || { tasks: [], total: 0, loading: false, loadingMore: false, hasMore: false };
               return (
                 <KanbanColumn
                   key={col.id}
                   column={col}
+                  widthClass={getColumnWidthClass()}
                   tasks={colState.tasks}
                   total={colState.total}
                   loading={colState.loading}
@@ -1257,14 +1392,17 @@ const Tasks = () => {
             })}
           </div>
 
-          {/* Mobile Kanban: Single active column selected via top tabs */}
+          {/* Mobile Kanban: Single active column selected via filter pills or tabs */}
           <div className="block md:hidden">
             {(() => {
-              const activeCol = KANBAN_COLUMNS.find(c => c.id === mobileActiveTab) || KANBAN_COLUMNS[0];
+              const activeCol = (statusFilter !== 'all' ? KANBAN_COLUMNS.find(c => c.id === statusFilter) : null)
+                || KANBAN_COLUMNS.find(c => c.id === mobileActiveTab) 
+                || KANBAN_COLUMNS[0];
               const colState = columnsData[activeCol.id] || { tasks: [], total: 0, loading: false, loadingMore: false, hasMore: false };
               return (
                 <KanbanColumn
                   column={activeCol}
+                  widthClass="w-full"
                   tasks={colState.tasks}
                   total={colState.total}
                   loading={colState.loading}
@@ -1481,14 +1619,19 @@ const Tasks = () => {
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {KANBAN_COLUMNS.map((col) => {
           const totalCount = columnsData[col.id]?.total || 0;
+          const isActive = statusFilter === col.id;
           return (
             <div 
               key={col.id} 
               onClick={() => {
-                setViewMode('kanban');
-                setMobileActiveTab(col.id);
+                handleStatusFilterChange(isActive ? 'all' : col.id);
               }}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs hover:border-primary/40 transition-colors cursor-pointer"
+              className={`flex items-center gap-3 rounded-2xl border bg-card p-4 shadow-xs transition-all cursor-pointer ${
+                isActive 
+                  ? 'ring-2 ring-primary border-primary shadow-md bg-primary/5' 
+                  : 'border-border hover:border-primary/40'
+              }`}
+              title={`Click to filter by ${col.label}`}
             >
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${col.headerBg}`}>
                 <span className={`h-3 w-3 rounded-full ${col.dotColor}`} />

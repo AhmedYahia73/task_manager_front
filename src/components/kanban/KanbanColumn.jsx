@@ -21,7 +21,9 @@ export const KanbanColumn = ({
   onDropOnCard,
   onDragStart,
   onDragEnd,
-  cardProps
+  cardProps,
+  widthClass = '',
+  className = ''
 }) => {
   const isLeaderOrAdmin = cardProps?.isLeaderOrAdmin;
   const isColumnRestricted = !isLeaderOrAdmin && (column.id === 'approve' || column.id === 'edit');
@@ -31,7 +33,9 @@ export const KanbanColumn = ({
       onDragOver={(e) => onDragOver(e, column.id)}
       onDragLeave={(e) => onDragLeave(e, column.id)}
       onDrop={(e) => onDrop(e, column.id)}
-      className={`flex flex-col rounded-2xl border bg-muted/30 backdrop-blur-xs transition-all duration-200 overflow-hidden min-w-[280px] max-w-full flex-1 ${
+      className={`flex flex-col rounded-2xl border bg-muted/30 backdrop-blur-xs transition-all duration-200 overflow-hidden ${
+        widthClass || 'min-w-[340px] sm:min-w-[360px] lg:min-w-[380px] flex-1 max-w-full'
+      } ${
         isDragOver
           ? isColumnRestricted
             ? 'ring-2 ring-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-400/50 shadow-lg'
@@ -39,7 +43,7 @@ export const KanbanColumn = ({
           : isColumnRestricted
             ? 'border-border/60 bg-muted/15'
             : 'border-border/70 hover:border-border'
-      }`}
+      } ${className}`}
       style={{ height: 'calc(100vh - 240px)', minHeight: '520px' }}
     >
       {/* Column Header */}
