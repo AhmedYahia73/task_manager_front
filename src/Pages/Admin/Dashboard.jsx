@@ -48,9 +48,22 @@ const TopPerformerAttendanceBadge = ({ attendance, currentTime, onClick, onRecor
               {isCheckedOut ? 'Onsite (Left)' : 'Onsite'}
             </span>
           </div>
-          <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-emerald-500/20 font-mono text-[11px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-200 shadow-2xs">
-            <span className="material-symbols-outlined text-[13px] text-emerald-600 dark:text-emerald-400">timer</span>
-            <span>{timerText}</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-emerald-500/20 font-mono text-[11px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-200 shadow-2xs">
+              <span className="material-symbols-outlined text-[13px] text-emerald-600 dark:text-emerald-400">timer</span>
+              <span>{timerText}</span>
+            </div>
+            {!isCheckedOut && onRecord && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onRecord(); }}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold shadow-xs transition-transform active:scale-95 cursor-pointer"
+                title="Record Check-Out (تسجيل انصراف)"
+              >
+                <span className="material-symbols-outlined text-[12px]">logout</span>
+                <span>انصراف</span>
+              </button>
+            )}
           </div>
         </div>
       );
@@ -69,9 +82,22 @@ const TopPerformerAttendanceBadge = ({ attendance, currentTime, onClick, onRecor
               {isCheckedOut ? 'Online (Left)' : 'Online'}
             </span>
           </div>
-          <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-blue-500/20 font-mono text-[11px] sm:text-xs font-bold text-blue-800 dark:text-blue-200 shadow-2xs">
-            <span className="material-symbols-outlined text-[13px] text-blue-600 dark:text-blue-400">timer</span>
-            <span>{timerText}</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0 bg-background/80 dark:bg-black/30 px-2 py-0.5 rounded-md border border-blue-500/20 font-mono text-[11px] sm:text-xs font-bold text-blue-800 dark:text-blue-200 shadow-2xs">
+              <span className="material-symbols-outlined text-[13px] text-blue-600 dark:text-blue-400">timer</span>
+              <span>{timerText}</span>
+            </div>
+            {!isCheckedOut && onRecord && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onRecord(); }}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold shadow-xs transition-transform active:scale-95 cursor-pointer"
+                title="Record Check-Out (تسجيل انصراف)"
+              >
+                <span className="material-symbols-outlined text-[12px]">logout</span>
+                <span>انصراف</span>
+              </button>
+            )}
           </div>
         </div>
       );
@@ -756,7 +782,15 @@ const Dashboard = () => {
                           attendance={usr.today_attendance} 
                           currentTime={currentTime} 
                           onClick={() => { setAttendanceUserId(usr.id); setAttendanceUserName(usr.name); }}
-                          onRecord={() => { setRecordAttendanceUser({ id: usr.id, name: usr.name, defaultMode: 'checkin' }); setIsRecordModalOpen(true); }}
+                          onRecord={() => { 
+                            const isCurrentlyCheckedIn = usr.today_attendance?.is_checked_in && !usr.today_attendance?.is_checked_out;
+                            setRecordAttendanceUser({ 
+                              id: usr.id, 
+                              name: usr.name, 
+                              defaultMode: isCurrentlyCheckedIn ? 'checkout' : 'checkin' 
+                            }); 
+                            setIsRecordModalOpen(true); 
+                          }}
                         />
 
                         {/* Tasks Pipeline Breakdown */}
