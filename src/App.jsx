@@ -10,7 +10,7 @@ function App() {
     <ThemeProvider defaultTheme="theme-sunny">
       <RoleNameProvider>
         <RouterProvider router={router} />
-        <Toaster richColors position="top-right" />
+        <Toaster richColors position="top-right" closeButton />
       </RoleNameProvider>
     </ThemeProvider>
   );

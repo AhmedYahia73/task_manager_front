@@ -145,7 +145,20 @@ export const NotificationBell = () => {
 
       toast.info(description, {
         description: title,
-        duration: 5000,
+        duration: 8000,
+        closeButton: true,
+        cancel: {
+          label: "خروج",
+          onClick: () => {},
+        },
+        action: rawNotif.link
+          ? {
+              label: "عرض",
+              onClick: () => {
+                navigate(rawNotif.link);
+              },
+            }
+          : undefined,
       });
 
       // 4. Update dropdown list & counter EXACTLY ONCE
