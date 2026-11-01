@@ -122,15 +122,26 @@ export const NotificationBell = () => {
       const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
 
       if (target === "admin" && !isAdmin) return;
-      if (targetUserId && targetUserId !== currentUser.id && !isAdmin && target === "user") return;
+      if (target === "user" && targetUserId && targetUserId !== currentUser.id) return;
 
       // 3. Show in-app toast alert EXACTLY ONCE
       const title =
-        type === "online_days"
+        rawNotif.title ||
+        (type === "online_days"
           ? "Online Work Days Assigned"
+          : type === "new_task"
+          ? "New Task Assigned"
           : type === "task_status"
           ? "Task Status Updated"
-          : "New Notification";
+          : type === "holiday_request_status"
+          ? "Holiday Request Status"
+          : type === "online_request_status"
+          ? "Online Request Status"
+          : type === "extra_time_status"
+          ? "Extra Time Status"
+          : type === "permission_status"
+          ? "Permission Request Status"
+          : "New Notification");
 
       toast.info(description, {
         description: title,
@@ -343,6 +354,7 @@ export const NotificationBell = () => {
               <>
                 {notifications.map((notif) => {
                   const isOnlineType = notif.type === "online_days";
+                  const isNewTask = notif.type === "new_task";
                   return (
                     <div
                       key={notif.id}
@@ -360,12 +372,22 @@ export const NotificationBell = () => {
                             ? notif.is_read
                               ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                               : "bg-emerald-500 text-white shadow-sm"
+                            : isNewTask
+                            ? notif.is_read
+                              ? "bg-purple-100 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400"
+                              : "bg-purple-600 text-white shadow-sm"
                             : notif.is_read
                             ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
                             : "bg-blue-100 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300"
                         }`}
                       >
-                        {isOnlineType ? <CalendarDays className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                        {isOnlineType ? (
+                          <CalendarDays className="w-4 h-4" />
+                        ) : isNewTask ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4" />
+                        )}
                       </div>
 
                       {/* Text Description & Time */}
