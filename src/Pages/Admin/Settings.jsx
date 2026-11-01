@@ -29,6 +29,8 @@ export const Settings = () => {
     task_delay_points: 0,
     online_days: [],
     delay_premission_minutes: 0,
+    early_max: '',
+    late_max: '',
     yearly_holidays: 0,
     allowed_unauthorized_holidays: 0,
     rejected_online_deduction: 0,
@@ -50,6 +52,8 @@ export const Settings = () => {
         task_delay_points: settingsData.task_delay_points || 0,
         online_days: settingsData.online_days || [],
         delay_premission_minutes: settingsData.delay_premission_minutes || 0,
+        early_max: settingsData.early_max || '',
+        late_max: settingsData.late_max || '',
         yearly_holidays: settingsData.yearly_holidays || 0,
         allowed_unauthorized_holidays: settingsData.allowed_unauthorized_holidays || 0,
         rejected_online_deduction: settingsData.rejected_online_deduction || 0,
@@ -314,6 +318,46 @@ export const Settings = () => {
                   placeholder="e.g. 15"
                   className="max-w-md bg-background border-border focus-visible:ring-primary"
                 />
+              </div>
+
+              {/* Early Check-In Limit (early_max) */}
+              <div className="space-y-2">
+                <label htmlFor="early_max" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-indigo-600" />
+                  Early Check-In Limit (أبكر موعد لتسجيل الحضور)
+                </label>
+                <Input
+                  id="early_max"
+                  name="early_max"
+                  type="text"
+                  value={formData.early_max || ''}
+                  onChange={handleChange}
+                  placeholder="e.g. 08:30:00"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cannot check in before this time without an approved early attendance request. Leave empty to disable.
+                </p>
+              </div>
+
+              {/* Late Check-Out Limit (late_max) */}
+              <div className="space-y-2">
+                <label htmlFor="late_max" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-600" />
+                  Late Check-Out Limit (أقصى موعد لتسجيل الانصراف)
+                </label>
+                <Input
+                  id="late_max"
+                  name="late_max"
+                  type="text"
+                  value={formData.late_max || ''}
+                  onChange={handleChange}
+                  placeholder="e.g. 18:00:00"
+                  className="max-w-md bg-background border-border focus-visible:ring-primary"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cannot check out after this time without an approved late leave request. Leave empty to disable.
+                </p>
               </div>
 
               {/* Yearly Holidays */}
