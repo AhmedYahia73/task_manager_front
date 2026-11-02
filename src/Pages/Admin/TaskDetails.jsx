@@ -13,6 +13,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   Calendar,
+  CalendarPlus,
   Clock,
   ArrowLeft,
   Play,
@@ -769,6 +770,32 @@ export default function TaskDetails() {
   const displayVoices = (Array.isArray(voices) ? voices : [])
     .filter((v) => v && typeof v === 'object' && v.id);
 
+  // 🕒 Helpers for Task Created & Done Timestamps
+  const formatDateTime = (val) => {
+    if (!val) return null;
+    const d = dayjs(val);
+    if (!d.isValid()) return null;
+    const hasTime = typeof val === 'object' || (typeof val === 'string' && (val.includes('T') || val.includes(':')));
+    const isToday = d.isSame(dayjs(), 'day');
+    const isYesterday = d.isSame(dayjs().subtract(1, 'day'), 'day');
+    const relativeLabel = isToday ? 'Today' : isYesterday ? 'Yesterday' : d.fromNow();
+    return {
+      date: d.format('MMM DD, YYYY'),
+      time: hasTime ? d.format('hh:mm A') : null,
+      full: hasTime ? d.format('MMM DD, YYYY • hh:mm A') : d.format('MMM DD, YYYY'),
+      fromNow: relativeLabel,
+    };
+  };
+
+  const isCompletedStatus = task.status === 'done' || task.status === 'approve';
+  const hasDoneDate = Boolean(task.done_date);
+  const isDone = isCompletedStatus || (hasDoneDate && task.status !== 'pending' && task.status !== 'inprogress');
+  const doneDate = isDone ? (task.done_date || task.updatedAt || task.updated_at) : null;
+  const createdDate = task.createdAt || task.created_at;
+
+  const createdInfo = formatDateTime(createdDate);
+  const doneInfo = formatDateTime(doneDate);
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-16">
       {/* 🧭 Back / Breadcrumb Navigation */}
@@ -798,42 +825,113 @@ export default function TaskDetails() {
         {/* Left Color Accent Strip */}
         <div className={`absolute left-0 top-0 h-full w-2 ${statusStyle.color}`} />
 
-        {/* 1️⃣ Prominent Delivery Date & Importance (معاد التسليم فوق فى مكان واضح) */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Delivery Deadline
-              </span>
-              <span className="text-base sm:text-lg font-bold text-foreground">
-                {deliveryInfo.text}
+        {/* 1️⃣ Prominent Task Milestones & Timeline (Created, Delivery Deadline & Done At) */}
+        <div className="mb-6 space-y-4 border-b border-border pb-5">
+          {/* Top meta row: Section label & priority/urgent tags */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-primary" />
+              Task Timeline & Schedule
+            </span>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {task.date_urgent && (
+                <span 
+                  title={`Urgent from: ${dayjs(task.date_urgent).format('MMM DD, YYYY')}`}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                >
+                  <AlarmClock className="w-3.5 h-3.5 text-rose-600" />
+                  Urgent Trigger: {dayjs(task.date_urgent).format('MMM DD, YYYY')}
+                </span>
+              )}
+
+              <span className={`inline-flex items-center gap-1 rounded-xl px-3 py-1 text-xs font-bold border capitalize ${getImportanceStyles(task.importanc_status)}`}>
+                <Sparkles className="w-3.5 h-3.5" />
+                {task.importanc_status || 'medium'} Priority
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <span className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold ${deliveryInfo.badge}`}>
-              <Clock className="w-3.5 h-3.5" />
-              {deliveryInfo.diffText}
-            </span>
+          {/* Cards Grid: Created At | Delivery Deadline | Completed At (if done) */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${doneInfo ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-3`}>
+            {/* 📅 Created At */}
+            <div className="flex items-center gap-3 rounded-2xl bg-muted/40 border border-border p-3.5 transition-all hover:border-primary/30">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                <CalendarPlus className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Created At
+                </span>
+                <span className="text-sm sm:text-base font-bold text-foreground truncate">
+                  {createdInfo?.date || 'Unknown'}
+                </span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {createdInfo?.time ? `${createdInfo.time} • ${createdInfo.fromNow}` : (createdInfo?.fromNow || 'Date not recorded')}
+                </span>
+              </div>
+            </div>
 
-            {task.date_urgent && (
-              <span 
-                title={`Urgent from: ${dayjs(task.date_urgent).format('MMM DD, YYYY')}`}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-              >
-                <AlarmClock className="w-3.5 h-3.5 text-rose-600" />
-                Urgent Trigger: {dayjs(task.date_urgent).format('MMM DD, YYYY')}
-              </span>
+            {/* 🎯 Delivery Deadline */}
+            <div className="flex items-center gap-3 rounded-2xl bg-muted/40 border border-border p-3.5 transition-all hover:border-primary/30">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Delivery Deadline
+                  </span>
+                  <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold ${deliveryInfo.badge}`}>
+                    <Clock className="w-3 h-3" />
+                    {deliveryInfo.diffText}
+                  </span>
+                </div>
+                <span className="text-sm sm:text-base font-bold text-foreground truncate">
+                  {deliveryInfo.text}
+                </span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {task.delivery_date ? dayjs(task.delivery_date).fromNow() : 'No deadline'}
+                </span>
+              </div>
+            </div>
+
+            {/* ✅ Completed At (only if task is done or has done_date) */}
+            {doneInfo && (
+              <div className={`flex items-center gap-3 rounded-2xl p-3.5 border transition-all ${
+                deliveryInfo.isDelayed 
+                  ? 'bg-rose-500/5 border-rose-500/25 hover:border-rose-500/40' 
+                  : 'bg-emerald-500/5 border-emerald-500/25 hover:border-emerald-500/40'
+              }`}>
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${
+                  deliveryInfo.isDelayed 
+                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' 
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                }`}>
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Completed At
+                    </span>
+                    <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold ${
+                      deliveryInfo.isDelayed 
+                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20' 
+                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                    }`}>
+                      {deliveryInfo.isDelayed ? 'Delayed' : 'Completed'}
+                    </span>
+                  </div>
+                  <span className="text-sm sm:text-base font-bold text-foreground truncate">
+                    {doneInfo.date}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {doneInfo.time ? `${doneInfo.time} • ${doneInfo.fromNow}` : doneInfo.fromNow}
+                  </span>
+                </div>
+              </div>
             )}
-
-            <span className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold border capitalize ${getImportanceStyles(task.importanc_status)}`}>
-              <Sparkles className="w-3.5 h-3.5" />
-              {task.importanc_status || 'medium'} Priority
-            </span>
           </div>
         </div>
 
@@ -917,6 +1015,16 @@ export default function TaskDetails() {
                   {isLeaderOrAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
                 </option>
               </select>
+            )}
+
+            {doneInfo && (
+              <span 
+                title={doneInfo.full}
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Done on {doneInfo.date}</span>
+              </span>
             )}
           </div>
 
