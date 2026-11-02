@@ -1,10 +1,25 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useGet } from '@/hooks/useGet';
+import { isAuthenticated } from '@/utils/auth';
 
 const RoleNameContext = createContext();
 
 export const RoleNameProvider = ({ children }) => {
-  const { data, loading } = useGet('/api/admin/dashboard/usersName');
+  const [isAuth, setIsAuth] = useState(() => isAuthenticated());
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setIsAuth(isAuthenticated());
+    };
+    window.addEventListener('storage', handleAuthChange);
+    window.addEventListener('user-profile-updated', handleAuthChange);
+    return () => {
+      window.removeEventListener('storage', handleAuthChange);
+      window.removeEventListener('user-profile-updated', handleAuthChange);
+    };
+  }, []);
+
+  const { data, loading } = useGet(isAuth ? '/api/admin/dashboard/usersName' : null);
 
   // fallback defaults in case API fails or returns empty
   const roleNames = {

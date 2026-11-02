@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/axios'; // 1. استيراد الـ apiClient المخصص بتاعنا
 import { toast } from 'sonner';
+import { getAuthToken } from '@/utils/auth';
 
 export const useGet = (url, autoFetch = true) => {
     const [data, setData] = useState(null);
@@ -16,9 +17,17 @@ export const useGet = (url, autoFetch = true) => {
             setData(response.data?.data || response.data);
             setError(null);
         } catch (err) {
+            const status = err.response?.status;
             const errMsg = err.response?.data?.error?.message || err.response?.data?.message || 'Something went wrong';
             setError(errMsg);
-            toast.error("Error", { description: errMsg });
+
+            // Suppress toast notifications for unauthenticated users / login page / "No token provided"
+            const isNoTokenError = status === 401 && (errMsg === 'No token provided' || !getAuthToken());
+            const isLoginPage = typeof window !== 'undefined' && window.location.pathname.includes('/login');
+
+            if (!isNoTokenError && !isLoginPage) {
+                toast.error("Error", { description: errMsg });
+            }
         } finally {
             setLoading(false);
         }
