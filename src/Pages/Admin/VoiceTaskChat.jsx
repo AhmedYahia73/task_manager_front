@@ -471,27 +471,28 @@ function parseTaskSegment(seg, projectsList, groupsList, usersList) {
   const finalDate = dateVal || parseDate(rawFields.date) || parseDate(seg);
   const finalUrgentDate = urgentDateVal || parseDate(rawFields.urgent_date) || (seg.includes('عاجل') ? parseDate(seg) : '');
 
-  // Leader / User fuzzy detection from voice/text if present
-  let leaderId = '';
-  let leaderName = '';
+  // Assignees fuzzy detection from voice/text if present (@username, يوزر فلان, مهندس فلان, ليدر فلان)
   let assigneesIds = [];
   let assigneesNames = [];
 
-  if (rawFields.leader && usersList?.length) {
-    const matchedLeader = fuzzyMatchUser(rawFields.leader, usersList);
-    if (matchedLeader) {
-      leaderId = matchedLeader.id;
-      leaderName = matchedLeader.name;
-      assigneesIds.push(matchedLeader.id);
-      assigneesNames.push(matchedLeader.name);
-    }
-  }
-
-  if (rawFields.user && usersList?.length) {
-    const matchedUser = fuzzyMatchUser(rawFields.user, usersList);
+  const userQuery = rawFields.user || rawFields.leader;
+  if (userQuery && usersList?.length) {
+    const matchedUser = fuzzyMatchUser(userQuery, usersList);
     if (matchedUser && !assigneesIds.includes(matchedUser.id)) {
       assigneesIds.push(matchedUser.id);
       assigneesNames.push(matchedUser.name);
+    }
+  }
+
+  const mentionMatches = seg.match(/@([\w\u0600-\u06FF]+)/gu);
+  if (mentionMatches && usersList?.length) {
+    for (const mention of mentionMatches) {
+      const cleanMention = mention.replace('@', '');
+      const matchedUser = fuzzyMatchUser(cleanMention, usersList);
+      if (matchedUser && !assigneesIds.includes(matchedUser.id)) {
+        assigneesIds.push(matchedUser.id);
+        assigneesNames.push(matchedUser.name);
+      }
     }
   }
 
@@ -507,9 +508,8 @@ function parseTaskSegment(seg, projectsList, groupsList, usersList) {
     date_urgent: finalUrgentDate,
     importanc_status: 'medium',
     status: 'pending',
-    user_id: leaderId,
+    user_id: assigneesIds[0] || null,
     users_ids: assigneesIds,
-    _leaderName: leaderName,
     _assigneeNames: assigneesNames,
   };
 }
@@ -578,12 +578,15 @@ function ChatBubble({ message, isUser }) {
 // Task Card Inside Chat Panel (with date_urgent)
 // ─────────────────────────────────────────────
 function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, onRemove }) {
-  const [showLeaderPicker, setShowLeaderPicker] = useState(false);
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
   const [showProjectSuggestions, setShowProjectSuggestions] = useState(false);
   const [showGroupSuggestions, setShowGroupSuggestions] = useState(false);
-  const [leaderSearch, setLeaderSearch] = useState('');
   const [assigneeSearch, setAssigneeSearch] = useState('');
+
+  // Fetch group users if group_id is selected (matching /admin/projects/:id/groups/:id/tasks behavior)
+  const { data: groupUsersData } = useGet(task.group_id ? `/api/admin/projectGroup/${task.group_id}/users` : null);
+  const groupUsers = groupUsersData?.users || groupUsersData?.data?.users || null;
+  const activeUsersPool = (groupUsers && groupUsers.length > 0) ? groupUsers : usersList;
 
   const projectSuggestions = task.project
     ? projectsList
@@ -605,10 +608,7 @@ function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, 
         .slice(0, 8)
     : scopedGroups.slice(0, 8);
 
-  const filteredUsersForLeader = usersList.filter(u =>
-    u.name?.toLowerCase().includes(leaderSearch.toLowerCase())
-  );
-  const filteredUsersForAssignee = usersList.filter(u =>
+  const filteredUsersForAssignee = activeUsersPool.filter(u =>
     u.name?.toLowerCase().includes(assigneeSearch.toLowerCase())
   );
 
@@ -822,67 +822,36 @@ function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, 
           />
         </div>
 
-        {/* Leader (user_id) */}
+        {/* Assign To (users_ids) */}
         <div className="relative">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">
-            👑 Leader (user_id)
-          </label>
-          <button
-            type="button"
-            onClick={() => { setShowLeaderPicker(!showLeaderPicker); setLeaderSearch(''); }}
-            className="w-full text-xs sm:text-sm bg-muted/40 border border-border rounded-xl px-3 py-2 text-left flex items-center justify-between hover:border-primary/40 transition-colors cursor-pointer"
-          >
-            <span className={task._leaderName ? 'text-foreground font-medium' : 'text-muted-foreground/60'}>
-              {task._leaderName ? `@ ${task._leaderName}` : '@ Select leader...'}
-            </span>
-            <ChevronDown size={14} className="text-muted-foreground" />
-          </button>
-
-          {showLeaderPicker && (
-            <div className="absolute z-50 top-full mt-1 w-full bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-              <div className="p-2 border-b border-border">
-                <input
-                  autoFocus
-                  className="w-full text-xs bg-muted/40 rounded-lg px-3 py-1.5 focus:outline-none"
-                  placeholder="Search users..."
-                  value={leaderSearch}
-                  onChange={e => setLeaderSearch(e.target.value)}
-                />
-              </div>
-              <div className="max-h-48 overflow-y-auto">
-                {filteredUsersForLeader.map(u => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => {
-                      onUpdate(task._id, '_leaderSelect', { id: u.id, name: u.name });
-                      setShowLeaderPicker(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs hover:bg-muted/80 flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                      {u.name?.charAt(0)?.toUpperCase()}
-                    </div>
-                    <span className="truncate">{u.name}</span>
-                    {task.user_id === u.id && <CheckCircle2 size={14} className="ml-auto text-emerald-500" />}
-                  </button>
-                ))}
-                {filteredUsersForLeader.length === 0 && (
-                  <div className="text-center py-3 text-xs text-muted-foreground">No users found</div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Assignees (users_ids) */}
-        <div className="relative">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1 flex items-center justify-between">
-            <span>👥 Assignees (users_ids) *</span>
-            {task.users_ids?.length === 0 && (
-              <span className="text-[10px] text-amber-500 font-semibold">Required</span>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <Users size={13} className="text-primary" />
+              <span>Assign To (المكلفين بالمهمة) *</span>
+              {task.users_ids?.length === 0 ? (
+                <span className="text-[10px] text-amber-500 font-semibold">(مطلوب)</span>
+              ) : (
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  ({task.users_ids.length} محدد)
+                </span>
+              )}
+            </label>
+            {activeUsersPool?.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (task.users_ids?.length === activeUsersPool.length) {
+                    onUpdate(task._id, '_assigneeClear');
+                  } else {
+                    onUpdate(task._id, '_assigneeSelectAll', activeUsersPool);
+                  }
+                }}
+                className="text-[10px] font-semibold text-primary hover:underline transition-colors cursor-pointer"
+              >
+                {task.users_ids?.length === activeUsersPool.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+              </button>
             )}
-          </label>
+          </div>
 
           {/* Selected assignees chips */}
           {task._assigneeNames?.length > 0 && (
@@ -908,29 +877,41 @@ function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, 
           <button
             type="button"
             onClick={() => { setShowAssigneePicker(!showAssigneePicker); setAssigneeSearch(''); }}
-            className={`w-full text-xs sm:text-sm bg-muted/40 border rounded-xl px-3 py-2 text-left flex items-center gap-2 hover:border-primary/40 transition-colors cursor-pointer
+            className={`w-full text-xs sm:text-sm bg-muted/40 border rounded-xl px-3 py-2 text-left flex items-center justify-between hover:border-primary/40 transition-colors cursor-pointer
               ${task.users_ids?.length ? 'border-border' : 'border-amber-400/80 bg-amber-50/20'}`}
           >
-            <Plus size={14} className="text-muted-foreground" />
-            <span className="text-muted-foreground/60">
-              {task.users_ids?.length ? 'Add another assignee...' : '@ Choose at least one assignee...'}
-            </span>
+            <div className="flex items-center gap-2 truncate">
+              <Plus size={14} className="text-muted-foreground shrink-0" />
+              <span className={task.users_ids?.length ? 'text-foreground font-medium truncate' : 'text-muted-foreground/60 truncate'}>
+                {task.users_ids?.length
+                  ? `تم تحديد ${task.users_ids.length} موظف (انقر للتعديل)`
+                  : 'اختر الموظفين المكلفين بهذه المهمة...'}
+              </span>
+            </div>
+            <ChevronDown size={14} className="text-muted-foreground shrink-0" />
           </button>
+
+          {task.users_ids?.length > 1 && (
+            <p className="text-[11px] text-primary/90 mt-1.5 font-medium bg-primary/5 p-2 rounded-xl border border-primary/20 flex items-center gap-1.5">
+              <span>ℹ️</span>
+              <span>سيتم إنشاء مهمة منفصلة لكل موظف من الـ {task.users_ids.length} المحددين.</span>
+            </p>
+          )}
 
           {showAssigneePicker && (
             <div className="absolute z-50 top-full mt-1 w-full bg-card border border-border rounded-xl shadow-xl overflow-hidden">
               <div className="p-2 border-b border-border">
                 <input
                   autoFocus
-                  className="w-full text-xs bg-muted/40 rounded-lg px-3 py-1.5 focus:outline-none"
-                  placeholder="Search users..."
+                  className="w-full text-xs bg-muted/40 rounded-lg px-3 py-1.5 focus:outline-none placeholder:text-muted-foreground/50"
+                  placeholder="ابحث عن اسم الموظف..."
                   value={assigneeSearch}
                   onChange={e => setAssigneeSearch(e.target.value)}
                 />
               </div>
-              <div className="max-h-48 overflow-y-auto">
+              <div className="max-h-52 overflow-y-auto">
                 {filteredUsersForAssignee.map(u => {
-                  const isSelected = task.users_ids.includes(u.id);
+                  const isSelected = task.users_ids?.includes(u.id);
                   return (
                     <button
                       key={u.id}
@@ -941,25 +922,28 @@ function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, 
                       className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/80 flex items-center gap-2 transition-colors cursor-pointer
                         ${isSelected ? 'bg-primary/10 font-medium' : ''}`}
                     >
-                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0
+                        ${isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-input bg-background'}`}>
+                        {isSelected && <CheckCircle2 size={12} />}
+                      </div>
+                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
                         {u.name?.charAt(0)?.toUpperCase()}
                       </div>
-                      <span className="truncate">{u.name}</span>
-                      {isSelected && <CheckCircle2 size={14} className="ml-auto text-emerald-500" />}
+                      <span className="truncate flex-1">{u.name}</span>
                     </button>
                   );
                 })}
                 {filteredUsersForAssignee.length === 0 && (
-                  <div className="text-center py-3 text-xs text-muted-foreground">No users found</div>
+                  <div className="text-center py-3 text-xs text-muted-foreground">لا يوجد موظفين بهذا الاسم</div>
                 )}
               </div>
-              <div className="p-2 border-t border-border">
+              <div className="p-2 border-t border-border flex justify-end">
                 <button
                   type="button"
                   onClick={() => setShowAssigneePicker(false)}
-                  className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1 text-center font-medium cursor-pointer"
+                  className="text-xs text-primary font-bold px-3 py-1 rounded-lg hover:bg-primary/10 transition-colors cursor-pointer"
                 >
-                  Done
+                  تم
                 </button>
               </div>
             </div>
@@ -1061,7 +1045,7 @@ const VoiceTaskChat = () => {
 
     addMessage(
       'bot', 
-      `✅ تم التعرف على ${tasks.length} تاسك بنجاح!\n\n${details}\n\n👉 برجاء التأكد من البيانات والليدر أو الموظف في الكارد، ثم اضغط زر "إرسال التاسكات" 🚀`
+      `✅ تم التعرف على ${tasks.length} تاسك بنجاح!\n\n${details}\n\n👉 برجاء تحديد الموظفين المكلفين (Assign To) في الكارد، ثم اضغط زر "إرسال التاسكات" 🚀`
     );
   }, [inputText, projectsList, groupsList, usersList, addMessage]);
 
@@ -1076,42 +1060,56 @@ const VoiceTaskChat = () => {
     setParsedTasks(prev => prev.map(t => {
       if (t._id !== taskId) return t;
 
-      if (field === '_leaderSelect') {
-        const newUsersIds = t.users_ids.includes(value.id) ? t.users_ids : [...t.users_ids, value.id];
-        const newAssigneeNames = t._assigneeNames.includes(value.name) ? t._assigneeNames : [...t._assigneeNames, value.name];
-        return { 
-          ...t, 
-          user_id: value.id, 
-          _leaderName: value.name,
-          users_ids: newUsersIds,
-          _assigneeNames: newAssigneeNames,
+      if (field === '_assigneeToggle') {
+        const already = t.users_ids?.includes(value.id);
+        const newIds = already
+          ? t.users_ids.filter(id => id !== value.id)
+          : [...(t.users_ids || []), value.id];
+        const newNames = already
+          ? t._assigneeNames.filter(n => n !== value.name)
+          : [...(t._assigneeNames || []), value.name];
+        return {
+          ...t,
+          user_id: newIds[0] || null,
+          users_ids: newIds,
+          _assigneeNames: newNames,
         };
       }
 
-      if (field === '_assigneeToggle') {
-        const already = t.users_ids.includes(value.id);
-        if (already) {
-          return {
-            ...t,
-            users_ids: t.users_ids.filter(id => id !== value.id),
-            _assigneeNames: t._assigneeNames.filter(n => n !== value.name),
-          };
-        } else {
-          return {
-            ...t,
-            users_ids: [...t.users_ids, value.id],
-            _assigneeNames: [...t._assigneeNames, value.name],
-          };
-        }
+      if (field === '_assigneeSelectAll') {
+        const allIds = (value || []).map(u => u.id);
+        const allNames = (value || []).map(u => u.name);
+        return {
+          ...t,
+          user_id: allIds[0] || null,
+          users_ids: allIds,
+          _assigneeNames: allNames,
+        };
+      }
+
+      if (field === '_assigneeClear') {
+        return {
+          ...t,
+          user_id: null,
+          users_ids: [],
+          _assigneeNames: [],
+        };
       }
 
       if (field === '_assigneeRemove') {
         const idx = t.users_ids.indexOf(value);
         const newIds = [...t.users_ids];
         const newNames = [...t._assigneeNames];
-        newIds.splice(idx, 1);
-        newNames.splice(idx, 1);
-        return { ...t, users_ids: newIds, _assigneeNames: newNames };
+        if (idx !== -1) {
+          newIds.splice(idx, 1);
+          newNames.splice(idx, 1);
+        }
+        return { 
+          ...t, 
+          user_id: newIds[0] || null,
+          users_ids: newIds, 
+          _assigneeNames: newNames 
+        };
       }
 
       if (field === '_projectSelect') {
@@ -1211,7 +1209,7 @@ const VoiceTaskChat = () => {
       if (!t.name) errors.push(`Task #${i + 1}: اسم التاسك مطلوب`);
       if (!t.project_id) errors.push(`Task #${i + 1}: لم يتم التعرف على المشروع (اختر من القائمة في الكارد)`);
       if (!t.group_id) errors.push(`Task #${i + 1}: لم يتم التعرف على الجروب (اختر من القائمة في الكارد)`);
-      if (!t.users_ids?.length) errors.push(`Task #${i + 1}: يجب اختيار موظف واحد على الأقل (Assignee)`);
+      if (!t.users_ids?.length) errors.push(`Task #${i + 1}: يجب اختيار موظف واحد على الأقل (Assign To)`);
     });
 
     if (errors.length > 0) {
@@ -1231,8 +1229,8 @@ const VoiceTaskChat = () => {
       description: t.description || null,
       importanc_status: t.importanc_status || 'medium',
       status: t.status || 'pending',
-      user_id: t.user_id || null,
-      users_ids: t.users_ids,
+      user_id: t.users_ids?.[0] || null,
+      users_ids: t.users_ids || [],
     }));
 
     try {
