@@ -27,7 +27,7 @@ import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 // ─────────────────────────────────────────────
-// Regex Keyword Definitions (Unicode Boundary Safe)
+// Regex Keyword Definitions & Canonical Dictionaries (Spelling Tolerance Engine)
 // ─────────────────────────────────────────────
 const BOUNDARY_START = '(?:^|[\\s,.:;،؛_!؟\\-\\(\\)\\[\\]])';
 const BOUNDARY_END = '(?=[\\s,.:;،؛_!؟\\-\\(\\)\\[\\]]|$)';
@@ -40,60 +40,77 @@ const makeKwRegex = makeKw;
 const KW_DEFS = [
   { 
     field: 'project', 
-    re: makeKw('في\\s+بروجيكت|فى\\s+بروجيكت|بروجيكت|البروجيكت|في\\s+مشروع|فى\\s+مشروع|مشروع|المشروع|projects?') 
+    re: makeKw('(?:في|فى|بـ?|لـ?|ال)?\\s*(?:بروجيكت|بروجكت|برجكت|بروجك|بروجيك|مشروع|مشاريع|projects?|projs?|prjs?)'),
+    canonical: ['بروجكت', 'بروجيكت', 'مشروع', 'project']
   },
   { 
     field: 'group', 
-    re: makeKw('في\\s+جروب|فى\\s+جروب|جروب|الجروب|في\\s+مجموعة|فى\\s+مجموعة|مجموعة|المجموعة|groups?') 
+    re: makeKw('(?:في|فى|بـ?|لـ?|ال)?\\s*(?:جروب|قروب|جرووب|قرووب|جروبات|قروبات|جرب|قرب|مجموعة|مجموعه|مجموعات|groups?|grps?)'),
+    canonical: ['جروب', 'قروب', 'مجموعة', 'group']
   },
   { 
     field: 'name', 
-    re: makeKw('الاسم|اسم|باسم|اسمه|اسمها|عنوانه|عنوانها|names?|named|titled') 
+    re: makeKw('(?:ال)?(?:اسم|اسمه|اسمها|اسمو|باسم|باسمه|باسمها|بإسم|بإسمه|عنوان|عنوانه|عنوانها|مسمى|المسمى|تسمية|names?|named|titled|titles?)'),
+    canonical: ['اسم', 'اسمه', 'عنوان', 'name', 'title']
   },
   { 
     field: 'description', 
-    re: makeKw('ديسكربشن|الديسكربشن|وصف|الوصف|وصفه|وصفها|تفاصيل|descriptions?|desc') 
+    re: makeKw('(?:ال)?(?:ديسكربشن|دسكربشن|ديسكريبشن|دسكريبشن|ديسكربشنز|وصف|وصفه|وصفها|تفاصيل|تفصيله|تفصيلها|descriptions?|desc|details?)'),
+    canonical: ['ديسكربشن', 'دسكربشن', 'وصف', 'تفاصيل', 'description']
   },
   { 
     field: 'urgent_date', 
-    re: makeKw('تاريخ\\s+العاجل|تاريخ\\s+التحول\\s+لعاجل|تاريخ\\s+عاجل|عاجل\\s+يوم|عاجل\\s+تاريخ|عاجل\\s+في|تاريخ_عاجل|urgent(?:\\s+date)?') 
+    re: makeKw('(?:تاريخ\\s+العاجل|تاريخ\\s+التحول\\s+لعاجل|تاريخ\\s+عاجل|موعد\\s+العاجل|عاجل\\s+يوم|عاجل\\s+تاريخ|عاجل\\s+في|عاجل\\s+فى|عاجل|العاجل|تاريخ_عاجل|urgent(?:\\s+date)?)'),
+    canonical: ['عاجل', 'العاجل', 'urgent']
   },
   { 
     field: 'date', 
-    re: makeKw('التسليم|وقت\\s+التسليم|تاريخ\\s+التسليم|الديدلاين|تاريخ_التسليم|delivery(?:\\s+date)?|deadline|due(?:\\s+date)?') 
+    re: makeKw('(?:في|فى|ال)?\\s*(?:تاريخ\\s+التسليم|وقت\\s+التسليم|موعد\\s+التسليم|ميعاد\\s+التسليم|يوم\\s+التسليم|تسليم|التسليم|ديدلاين|الديدلاين|ديد\\s+لاين|الديد\\s+لاين|تاريخ_التسليم|delivery(?:\\s+date)?|deadline|due(?:\\s+date)?)'),
+    canonical: ['تسليم', 'التسليم', 'ديدلاين', 'deadline', 'delivery']
   },
   { 
     field: 'leader', 
-    re: makeKw('ليدر|الليدر|المسؤول|القائد|leaders?') 
+    re: makeKw('(?:في|فى|ال)?\\s*(?:ليدر|الليدر|ليد|الليد|ليدرز|مسؤول|المسؤول|مسؤل|المسؤل|قائد|القائد|مدير|المدير|leaders?|leads?)'),
+    canonical: ['ليدر', 'مسؤول', 'قائد', 'leader']
   },
   { 
     field: 'user', 
-    re: makeKw('يوزرز?|اليوزر|مستخدم|الموظف|موظف|users?|assignees?') 
+    re: makeKw('(?:في|فى|ال)?\\s*(?:يوزر|يوزرز|اليوزر|اليوزرز|مستخدم|مستخدمين|المستخدم|المستخدمين|موظف|موظفين|الموظف|الموظفين|مهندس|مهندسين|المهندس|المهندسين|اعضاء|أعضاء|users?|assignees?)'),
+    canonical: ['يوزر', 'مستخدم', 'موظف', 'user', 'assignee']
   },
 ];
 
-// Regex to detect multiple tasks in one prompt
-const TASK_START_REGEX = /(?:^|[\n,،;]|\s+و\s*|\s+ثم\s*)(?:عاوز\s+اضيف\s+|عاوز\s+اعمل\s+|ضيف\s+|اعمل\s+)?(?:تاسك|مهمة|tasks?)(?=[\s,.:;،؛_!؟\-]|$)/giu;
+// Multi-task start split regex with speech variations
+const TASK_START_REGEX = /(?:^|[\n,،;]|\s+و\s*|\s+ثم\s*)(?:عاوز\s+اضيف\s+|عايز\s+اضيف\s+|عاوز\s+اعمل\s+|عايز\s+اعمل\s+|اضف\s+|ضيف\s+|اعمل\s+|اضافة\s+)?(?:تاسك|تسك|مهمة|مهمه|tasks?)(?=[\s,.:;،؛_!؟\-]|$)/giu;
 
 // ─────────────────────────────────────────────
-// Fuzzy Matching Engine with Transliteration
+// Transliteration & Phonetic Normalization
 // ─────────────────────────────────────────────
-const TRANSLIT_PAIRS = [
-  ['sport', 'سبورت'],
-  ['ego', 'ايجو'],
-  ['club', 'كلوب'],
-  ['clubs', 'كلوبز'],
-  ['system', 'سيستم'],
-  ['task', 'تاسك'],
-  ['project', 'مشروع'],
-  ['group', 'مجموعة'],
-  ['app', 'تطبيق'],
-  ['admin', 'ادمن'],
-  ['lead', 'ليد'],
-  ['dev', 'ديف'],
-  ['front', 'فرونت'],
-  ['back', 'باك'],
-];
+const ARABIC_TO_LATIN = {
+  'ا': 'a', 'أ': 'a', 'إ': 'e', 'آ': 'aa', 'ب': 'b', 'ت': 't', 'ث': 'th',
+  'ج': 'g', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ذ': 'z', 'ر': 'r', 'ز': 'z',
+  'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z', 'ع': 'a',
+  'غ': 'gh', 'ف': 'f', 'ق': 'k', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n',
+  'ه': 'h', 'و': 'o', 'ي': 'y', 'ى': 'y', 'ئ': 'e', 'ء': 'a', 'ؤ': 'o',
+  'ة': 'a', 'پ': 'p', 'چ': 'ch', 'ڤ': 'v', 'گ': 'g'
+};
+
+function arabicToLatin(str) {
+  if (!str) return '';
+  return str.split('').map(c => ARABIC_TO_LATIN[c] || c).join('');
+}
+
+function phoneticSimplify(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/[ieya]/g, 'i')
+    .replace(/[uo]/g, 'u')
+    .replace(/[bp]/g, 'b')
+    .replace(/[ckq]/g, 'k')
+    .replace(/[sz]/g, 's')
+    .replace(/(.)\1+/g, '$1');
+}
 
 function normalize(str) {
   if (!str) return '';
@@ -102,19 +119,20 @@ function normalize(str) {
     .replace(/[أإآ]/g, 'ا')
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
-    .replace(/[\u064B-\u065F]/g, '');
+    .replace(/[\u064B-\u065F\u0640]/g, '');
   s = s.replace(/[\-_.:;،,\/\\()[\]{}]/g, ' ');
   return s.replace(/\s+/g, ' ').trim();
 }
 
-function phoneticExpand(str) {
-  let s = normalize(str);
-  for (const [en, ar] of TRANSLIT_PAIRS) {
-    if (s.includes(ar)) {
-      s = s.replaceAll(ar, en);
-    }
-  }
-  return s;
+function normalizeToken(t) {
+  return (t || '')
+    .toLowerCase()
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[\u0640\u064B-\u065F]/g, '')
+    .replace(/^([وفلب]|ال)+/u, '')
+    .trim();
 }
 
 function levenshtein(a, b) {
@@ -146,11 +164,19 @@ export function similarity(a, b) {
     return 0.8 + (minL / maxL) * 0.19;
   }
 
-  // Phonetic match
-  const pa = phoneticExpand(na);
-  const pb = phoneticExpand(nb);
+  // Cross-lingual phonetic transliteration comparison
+  const pa = phoneticSimplify(arabicToLatin(na));
+  const pb = phoneticSimplify(arabicToLatin(nb));
+  if (pa === pb) return 0.95;
   if (pa && pb && (pa.includes(pb) || pb.includes(pa))) {
-    return 0.85;
+    const minL = Math.min(pa.length, pb.length);
+    const maxL = Math.max(pa.length, pb.length);
+    return 0.85 + (minL / maxL) * 0.1;
+  }
+  if (pa && pb && Math.min(pa.length, pb.length) >= 4) {
+    const pdist = levenshtein(pa, pb);
+    if (pdist <= 1) return 0.88;
+    if (pdist <= 2) return 0.75;
   }
 
   // Token matching
@@ -175,7 +201,7 @@ export function similarity(a, b) {
   return Math.max(tokenScore, editScore);
 }
 
-function fuzzyMatchProject(query, projectsList, threshold = 0.25) {
+function fuzzyMatchProject(query, projectsList, threshold = 0.35) {
   if (!query || !projectsList?.length) return null;
   let best = null;
   let bestScore = threshold;
@@ -190,7 +216,7 @@ function fuzzyMatchProject(query, projectsList, threshold = 0.25) {
   return best;
 }
 
-function fuzzyMatchGroup(query, groupsList, projectId = null, threshold = 0.25) {
+function fuzzyMatchGroup(query, groupsList, projectId = null, threshold = 0.35) {
   if (!query || !groupsList?.length) return null;
   let best = null;
   let bestScore = threshold;
@@ -208,49 +234,111 @@ function fuzzyMatchGroup(query, groupsList, projectId = null, threshold = 0.25) 
   return best;
 }
 
+function fuzzyMatchUser(query, usersList, threshold = 0.5) {
+  if (!query || !usersList?.length) return null;
+  const cleanQ = query.replace(/^@\s*/, '').trim();
+  const qTokens = cleanQ.split(/\s+/).filter(Boolean).map(w => phoneticSimplify(arabicToLatin(normalize(w))));
+  if (!qTokens.length) return null;
+
+  let best = null;
+  let bestScore = threshold;
+
+  for (const item of usersList) {
+    const uTokens = (item.name || '').split(/\s+/).filter(Boolean).map(w => phoneticSimplify(arabicToLatin(normalize(w))));
+    let matchedTokens = 0;
+    for (const q of qTokens) {
+      for (const u of uTokens) {
+        if (q === u) {
+          matchedTokens += 1;
+          break;
+        } else if (Math.min(q.length, u.length) >= 3 && (u.startsWith(q) || q.startsWith(u))) {
+          matchedTokens += 0.85;
+          break;
+        } else if (Math.min(q.length, u.length) >= 3 && levenshtein(q, u) <= 1) {
+          matchedTokens += 0.8;
+          break;
+        }
+      }
+    }
+    const score = matchedTokens / qTokens.length;
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+  return best;
+}
+
 function cleanValue(val) {
   if (!val) return '';
   return val
     .replace(/^[:\-—=،,;\s]+|[:\-—=،,;\s]+$/g, '')
-    .replace(/^(?:هو|هي|وهو|وهي|في|فى|بـ|لـ|من|الى|إلى|ان|أن)\s+/gu, '')
+    .replace(/^(?:هو|هي|وهو|وهي|في|فى|بـ?|لـ?|من|الى|إلى|ان|أن)\s+/gu, '')
+    .replace(/^(?:المهمة|المهمه|التاسك|التسك)\s+/gu, '')
+    .replace(/\s+(?:في|فى|بـ?|لـ?|من|الى|إلى|مع|على|عن)$/gu, '')
     .replace(/[:\-—=،,;\s]+$/g, '')
     .trim();
 }
 
 function parseDate(text) {
   if (!text) return '';
+  const clean = text.trim();
+
+  // Arabic relative date keywords
+  if (/(?:النهارده|النهاردة|اليوم|today)/i.test(clean)) {
+    return dayjs().format('YYYY-MM-DD');
+  }
+  if (/(?:بعد\s+بكرة|بعد\s+بكره|بعد\s+غد)/i.test(clean)) {
+    return dayjs().add(2, 'day').format('YYYY-MM-DD');
+  }
+  if (/(?:بكرة|بكره|غدا|غداً|tomorrow)/i.test(clean)) {
+    return dayjs().add(1, 'day').format('YYYY-MM-DD');
+  }
+  if (/(?:بعد\s+اسبوع|بعد\s+أسبوع|next\s+week)/i.test(clean)) {
+    return dayjs().add(1, 'week').format('YYYY-MM-DD');
+  }
+  if (/(?:بعد\s+شهر|next\s+month)/i.test(clean)) {
+    return dayjs().add(1, 'month').format('YYYY-MM-DD');
+  }
+
+  // Explicit date formats
   const patterns = [
-    /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/,
     /(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/,
+    /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/,
     /(\d{1,2})\s+(\d{1,2})\s+(\d{4})/,
+    /(\d{1,2})[\/\-](\d{1,2})/,
   ];
 
   for (const p of patterns) {
-    const m = text.match(p);
+    const m = clean.match(p);
     if (m) {
       let d;
       if (m[1].length === 4) {
         d = dayjs(`${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`);
-      } else {
+      } else if (m[3] && m[3].length === 4) {
         d = dayjs(`${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
+      } else if (!m[3]) {
+        const year = dayjs().year();
+        d = dayjs(`${year}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
       }
-      if (d.isValid()) return d.format('YYYY-MM-DD');
+      if (d && d.isValid()) return d.format('YYYY-MM-DD');
     }
   }
   return '';
 }
 
 // ─────────────────────────────────────────────
-// Positional Segment Parser
+// Positional Segment Parser with Typo-Tolerance
 // ─────────────────────────────────────────────
-function parseTaskSegment(seg, projectsList, groupsList) {
-  const matches = [];
+function parseTaskSegment(seg, projectsList, groupsList, usersList) {
+  const matchItems = [];
 
+  // 1. Primary Keyword Matching (Regex)
   for (const def of KW_DEFS) {
     const r = new RegExp(def.re);
     let m;
     while ((m = r.exec(seg)) !== null) {
-      matches.push({
+      matchItems.push({
         field: def.field,
         start: m.index,
         end: m.index + m[0].length,
@@ -258,20 +346,67 @@ function parseTaskSegment(seg, projectsList, groupsList) {
     }
   }
 
-  matches.sort((a, b) => a.start - b.start);
+  // 2. Secondary Typo-Scanning Fallback for Missed Keywords
+  const foundFields = new Set(matchItems.map(m => m.field));
+  const tokenRegex = /[\w\u0600-\u06FF]+/gu;
+  let tm;
+  while ((tm = tokenRegex.exec(seg)) !== null) {
+    const word = tm[0];
+    const wStart = tm.index;
+    const wEnd = tm.index + word.length;
+
+    // Check if token overlaps an already matched keyword
+    const overlaps = matchItems.some(m => !(wEnd <= m.start || wStart >= m.end));
+    if (overlaps) continue;
+
+    const normWord = normalizeToken(word);
+    if (normWord.length < 3) continue;
+
+    for (const def of KW_DEFS) {
+      if (foundFields.has(def.field)) continue;
+
+      for (const canon of def.canonical) {
+        const normCanon = normalizeToken(canon);
+        const dist = levenshtein(normWord, normCanon);
+        const maxL = Math.max(normWord.length, normCanon.length);
+        const sim = 1 - dist / maxL;
+
+        if ((dist <= 1 && maxL >= 4) || sim >= 0.8) {
+          // Preposition shift if "في" or "بـ" immediately preceded
+          let actualStart = wStart;
+          const before = seg.slice(0, wStart);
+          const prepMatch = before.match(/(?:في|فى|بـ?|لـ?)\s*$/u);
+          if (prepMatch) {
+            actualStart = wStart - prepMatch[0].length;
+          }
+
+          matchItems.push({
+            field: def.field,
+            start: actualStart,
+            end: wEnd,
+            isFuzzy: true,
+          });
+          foundFields.add(def.field);
+          break;
+        }
+      }
+    }
+  }
+
+  matchItems.sort((a, b) => a.start - b.start);
 
   const rawFields = {};
-  for (let i = 0; i < matches.length; i++) {
-    const curr = matches[i];
-    const nextStart = (i + 1 < matches.length) ? matches[i + 1].start : seg.length;
+  for (let i = 0; i < matchItems.length; i++) {
+    const curr = matchItems[i];
+    const nextStart = (i + 1 < matchItems.length) ? matchItems[i + 1].start : seg.length;
     const extracted = cleanValue(seg.slice(curr.end, nextStart));
     rawFields[curr.field] = extracted;
   }
 
-  if (!rawFields.name && matches.length > 0 && matches[0].start > 0) {
-    const preamble = cleanValue(seg.slice(0, matches[0].start));
+  if (!rawFields.name && matchItems.length > 0 && matchItems[0].start > 0) {
+    const preamble = cleanValue(seg.slice(0, matchItems[0].start));
     const cleanedPreamble = preamble
-      .replace(/^(?:عاوز\s+اضيف|عاوز\s+اعمل|ضيف|اعمل|تاسك|مهمة)\s+/gu, '')
+      .replace(/^(?:عاوز\s+اضيف|عايز\s+اضيف|عاوز\s+اعمل|عايز\s+اعمل|ضيف|اضف|اعمل|تاسك|مهمة)\s+/gu, '')
       .trim();
     if (cleanedPreamble && cleanedPreamble.length >= 2) {
       rawFields.name = cleanedPreamble;
@@ -288,6 +423,30 @@ function parseTaskSegment(seg, projectsList, groupsList) {
   const matchedProject = fuzzyMatchProject(projectVal, projectsList);
   const matchedGroup = fuzzyMatchGroup(groupVal, groupsList, matchedProject?.id || null);
 
+  // Leader / User fuzzy detection from voice/text if present
+  let leaderId = '';
+  let leaderName = '';
+  let assigneesIds = [];
+  let assigneesNames = [];
+
+  if (rawFields.leader && usersList?.length) {
+    const matchedLeader = fuzzyMatchUser(rawFields.leader, usersList);
+    if (matchedLeader) {
+      leaderId = matchedLeader.id;
+      leaderName = matchedLeader.name;
+      assigneesIds.push(matchedLeader.id);
+      assigneesNames.push(matchedLeader.name);
+    }
+  }
+
+  if (rawFields.user && usersList?.length) {
+    const matchedUser = fuzzyMatchUser(rawFields.user, usersList);
+    if (matchedUser && !assigneesIds.includes(matchedUser.id)) {
+      assigneesIds.push(matchedUser.id);
+      assigneesNames.push(matchedUser.name);
+    }
+  }
+
   return {
     _id: Date.now() + Math.random(),
     name: nameVal,
@@ -300,14 +459,14 @@ function parseTaskSegment(seg, projectsList, groupsList) {
     date_urgent: urgentDateVal,
     importanc_status: 'medium',
     status: 'pending',
-    user_id: '',
-    users_ids: [],
-    _leaderName: '',
-    _assigneeNames: [],
+    user_id: leaderId,
+    users_ids: assigneesIds,
+    _leaderName: leaderName,
+    _assigneeNames: assigneesNames,
   };
 }
 
-function parseTasksFromText(text, projectsList, groupsList) {
+function parseTasksFromText(text, projectsList, groupsList, usersList) {
   const trimmed = text.trim();
   if (!trimmed) return [];
 
@@ -332,7 +491,7 @@ function parseTasksFromText(text, projectsList, groupsList) {
 
   const results = [];
   for (const seg of segments) {
-    const taskObj = parseTaskSegment(seg, projectsList, groupsList);
+    const taskObj = parseTaskSegment(seg, projectsList, groupsList, usersList);
     if (taskObj.name || taskObj.project || taskObj.group || taskObj.description) {
       results.push(taskObj);
     }
@@ -814,10 +973,10 @@ const VoiceTaskChat = () => {
     addMessage('user', text);
     setInputText('');
 
-    const tasks = parseTasksFromText(text, projectsList, groupsList);
+    const tasks = parseTasksFromText(text, projectsList, groupsList, usersList);
 
     if (tasks.length === 0) {
-      addMessage('bot', '⚠️ مش قادر أفهم تفاصيل التاسك.\n\nجرّب مثلاً:\n"تاسك في بروجيكت Sportego في جروب Clubs اسمه New Task"');
+      addMessage('bot', '⚠️ مش قادر أفهم تفاصيل التاسك.\n\nجرّب مثلاً:\n"تاسك في بروجكت Sportego في جروب Clubs اسمه New Task"');
       return;
     }
 
@@ -837,9 +996,9 @@ const VoiceTaskChat = () => {
 
     addMessage(
       'bot', 
-      `✅ تم التعرف على ${tasks.length} تاسك بنجاح!\n\n${details}\n\n👉 برجاء تحديد الليدر أو الموظف (Assignee) في الكارد، ثم اضغط زر "إرسال التاسكات" 🚀`
+      `✅ تم التعرف على ${tasks.length} تاسك بنجاح!\n\n${details}\n\n👉 برجاء التأكد من البيانات والليدر أو الموظف في الكارد، ثم اضغط زر "إرسال التاسكات" 🚀`
     );
-  }, [inputText, projectsList, groupsList, addMessage]);
+  }, [inputText, projectsList, groupsList, usersList, addMessage]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
