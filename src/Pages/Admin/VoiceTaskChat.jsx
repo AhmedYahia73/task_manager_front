@@ -307,26 +307,33 @@ function parseDate(text) {
   }
 
   // Explicit date formats
+  // Explicit date formats (supporting 1-4 digits per component and normalizes leading zeros like 011 -> 11)
   const patterns = [
-    /(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/,
-    /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/,
-    /(\d{1,2})\s+(\d{1,2})\s+(\d{4})/,
-    /(\d{1,2})[\/\-](\d{1,2})/,
+    /(\d{4})[\/\-\.](\d{1,4})[\/\-\.](\d{1,4})/,
+    /(\d{1,4})[\/\-\.](\d{1,4})[\/\-\.](\d{4})/,
+    /(\d{1,4})\s+(\d{1,4})\s+(\d{4})/,
+    /(\d{1,4})[\/\-](\d{1,4})/,
   ];
 
   for (const p of patterns) {
     const m = clean.match(p);
     if (m) {
-      let d;
+      let y, mo, dNum;
       if (m[1].length === 4) {
-        d = dayjs(`${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`);
+        y = m[1];
+        mo = String(parseInt(m[2], 10)).padStart(2, '0');
+        dNum = String(parseInt(m[3], 10)).padStart(2, '0');
       } else if (m[3] && m[3].length === 4) {
-        d = dayjs(`${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
+        y = m[3];
+        mo = String(parseInt(m[2], 10)).padStart(2, '0');
+        dNum = String(parseInt(m[1], 10)).padStart(2, '0');
       } else if (!m[3]) {
-        const year = dayjs().year();
-        d = dayjs(`${year}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
+        y = String(dayjs().year());
+        mo = String(parseInt(m[2], 10)).padStart(2, '0');
+        dNum = String(parseInt(m[1], 10)).padStart(2, '0');
       }
-      if (d && d.isValid()) return d.format('YYYY-MM-DD');
+      const parsed = dayjs(`${y}-${mo}-${dNum}`);
+      if (parsed && parsed.isValid()) return parsed.format('YYYY-MM-DD');
     }
   }
   return '';
@@ -425,12 +432,44 @@ function parseTaskSegment(seg, projectsList, groupsList, usersList) {
   const dateVal = parseDate(rawFields.date || '');
   const urgentDateVal = parseDate(rawFields.urgent_date || '');
 
-  const matchedProject = fuzzyMatchProject(projectVal, projectsList);
-  const matchedGroup = fuzzyMatchGroup(groupVal, groupsList, matchedProject?.id || null);
+  let matchedProject = fuzzyMatchProject(projectVal, projectsList);
+  // Fallback: If project was not identified via keyword, scan segment for any known project
+  if (!matchedProject && projectsList?.length) {
+    for (const p of projectsList) {
+      if (p.name && p.name.length >= 3) {
+        const pRegex = new RegExp('(?:^|[\\s,.:;،؛_!؟\\-\\(\\)\\[\\]])' + p.name.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '(?=[\\s,.:;،؛_!؟\\-\\(\\)\\[\\]]|$)', 'iu');
+        if (pRegex.test(seg) || similarity(seg, p.name) >= 0.75) {
+          matchedProject = p;
+          break;
+        }
+      }
+    }
+  }
+
+  let matchedGroup = fuzzyMatchGroup(groupVal, groupsList, matchedProject?.id || null);
+  // Fallback: If group was not identified via keyword, scan segment for any candidate group
+  if (!matchedGroup && groupsList?.length) {
+    const candidateGroups = (matchedProject?.id !== null && matchedProject?.id !== undefined && matchedProject?.id !== '')
+      ? groupsList.filter(item => String(item.project_id) === String(matchedProject.id))
+      : groupsList;
+
+    for (const g of candidateGroups) {
+      if (g.name && g.name.length >= 3) {
+        const gRegex = new RegExp('(?:^|[\\s,.:;،؛_!؟\\-\\(\\)\\[\\]])' + g.name.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '(?=[\\s,.:;،؛_!؟\\-\\(\\)\\[\\]]|$)', 'iu');
+        if (gRegex.test(seg) || similarity(seg, g.name) >= 0.75) {
+          matchedGroup = g;
+          break;
+        }
+      }
+    }
+  }
 
   // If group was matched and has project_id, but project wasn't matched from text, infer project from group
   const finalProjectId = matchedProject?.id || (matchedGroup?.project_id ? matchedGroup.project_id : '');
   const finalProjectName = matchedProject?.name || (finalProjectId ? (projectsList?.find(p => String(p.id) === String(finalProjectId))?.name || projectVal) : projectVal);
+
+  const finalDate = dateVal || parseDate(rawFields.date) || parseDate(seg);
+  const finalUrgentDate = urgentDateVal || parseDate(rawFields.urgent_date) || (seg.includes('عاجل') ? parseDate(seg) : '');
 
   // Leader / User fuzzy detection from voice/text if present
   let leaderId = '';
@@ -464,8 +503,8 @@ function parseTaskSegment(seg, projectsList, groupsList, usersList) {
     group: matchedGroup?.name || groupVal,
     group_id: matchedGroup?.id || '',
     description: descVal,
-    delivery_date: dateVal,
-    date_urgent: urgentDateVal,
+    delivery_date: finalDate,
+    date_urgent: finalUrgentDate,
     importanc_status: 'medium',
     status: 'pending',
     user_id: leaderId,
@@ -522,7 +561,9 @@ function ChatBubble({ message, isUser }) {
         }`}>
         {isUser ? <User size={13} /> : <Bot size={13} />}
       </div>
-      <div className={`max-w-[88%] sm:max-w-[80%] rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm shadow-2xs whitespace-pre-line leading-relaxed
+      <div 
+        dir="auto"
+        className={`max-w-[88%] sm:max-w-[80%] rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm shadow-2xs whitespace-pre-line leading-relaxed
         ${isUser 
           ? 'bg-primary text-primary-foreground rounded-tr-sm' 
           : 'bg-muted/70 text-foreground rounded-tl-sm border border-border/50'
@@ -1013,8 +1054,10 @@ const VoiceTaskChat = () => {
     const projectDisplay = first.project ? `📁 المشروع: ${first.project}` : '';
     const groupDisplay = first.group ? `📂 الجروب: ${first.group}` : '';
     const nameDisplay = first.name ? `📝 الاسم: ${first.name}` : '';
+    const dateDisplay = first.delivery_date ? `📅 التسليم: ${first.delivery_date}` : '';
+    const urgentDisplay = first.date_urgent ? `⚠️ تاريخ العاجل: ${first.date_urgent}` : '';
 
-    const details = [projectDisplay, groupDisplay, nameDisplay].filter(Boolean).join('\n');
+    const details = [projectDisplay, groupDisplay, nameDisplay, dateDisplay, urgentDisplay].filter(Boolean).join('\n');
 
     addMessage(
       'bot', 
@@ -1363,6 +1406,7 @@ const VoiceTaskChat = () => {
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
+                  dir="auto"
                   value={inputText}
                   onChange={e => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
