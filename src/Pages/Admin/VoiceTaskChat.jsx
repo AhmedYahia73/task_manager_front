@@ -218,14 +218,19 @@ function fuzzyMatchProject(query, projectsList, threshold = 0.35) {
 
 function fuzzyMatchGroup(query, groupsList, projectId = null, threshold = 0.35) {
   if (!query || !groupsList?.length) return null;
+
+  // If a project is selected/specified, strictly search within groups belonging to that project (where project_id)
+  const candidateGroups = (projectId !== null && projectId !== undefined && projectId !== '')
+    ? groupsList.filter(item => String(item.project_id) === String(projectId))
+    : groupsList;
+
+  if (!candidateGroups.length) return null;
+
   let best = null;
   let bestScore = threshold;
 
-  for (const item of groupsList) {
-    let score = similarity(query, item.name);
-    if (projectId && item.project_id && item.project_id === projectId) {
-      score += 0.25;
-    }
+  for (const item of candidateGroups) {
+    const score = similarity(query, item.name);
     if (score > bestScore) {
       bestScore = score;
       best = item;
@@ -423,6 +428,10 @@ function parseTaskSegment(seg, projectsList, groupsList, usersList) {
   const matchedProject = fuzzyMatchProject(projectVal, projectsList);
   const matchedGroup = fuzzyMatchGroup(groupVal, groupsList, matchedProject?.id || null);
 
+  // If group was matched and has project_id, but project wasn't matched from text, infer project from group
+  const finalProjectId = matchedProject?.id || (matchedGroup?.project_id ? matchedGroup.project_id : '');
+  const finalProjectName = matchedProject?.name || (finalProjectId ? (projectsList?.find(p => String(p.id) === String(finalProjectId))?.name || projectVal) : projectVal);
+
   // Leader / User fuzzy detection from voice/text if present
   let leaderId = '';
   let leaderName = '';
@@ -450,8 +459,8 @@ function parseTaskSegment(seg, projectsList, groupsList, usersList) {
   return {
     _id: Date.now() + Math.random(),
     name: nameVal,
-    project: matchedProject?.name || projectVal,
-    project_id: matchedProject?.id || '',
+    project: finalProjectName,
+    project_id: finalProjectId,
     group: matchedGroup?.name || groupVal,
     group_id: matchedGroup?.id || '',
     description: descVal,
@@ -543,19 +552,17 @@ function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, 
         .slice(0, 6)
     : projectsList.slice(0, 6);
 
+  const scopedGroups = (task.project_id !== null && task.project_id !== undefined && task.project_id !== '')
+    ? groupsList.filter(g => String(g.project_id) === String(task.project_id))
+    : groupsList;
+
   const groupSuggestions = task.group
-    ? groupsList
-        .map(g => {
-          let score = similarity(task.group, g.name);
-          if (task.project_id && g.project_id === task.project_id) score += 0.25;
-          return { ...g, score };
-        })
+    ? scopedGroups
+        .map(g => ({ ...g, score: similarity(task.group, g.name) }))
         .filter(g => g.score > 0.2)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 6)
-    : groupsList
-        .filter(g => !task.project_id || g.project_id === task.project_id)
-        .slice(0, 6);
+        .slice(0, 8)
+    : scopedGroups.slice(0, 8);
 
   const filteredUsersForLeader = usersList.filter(u =>
     u.name?.toLowerCase().includes(leaderSearch.toLowerCase())
@@ -667,8 +674,13 @@ function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, 
 
           {/* Group */}
           <div className="relative">
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">
-              📂 Group *
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1 flex items-center justify-between">
+              <span>📂 Group *</span>
+              {task.project_id && (
+                <span className="text-[9px] text-primary lowercase font-medium">
+                  where project_id
+                </span>
+              )}
             </label>
             <input
               className={`w-full text-xs sm:text-sm bg-muted/40 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground/50
@@ -677,17 +689,22 @@ function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, 
               onChange={e => { onUpdate(task._id, 'group', e.target.value); setShowGroupSuggestions(true); }}
               onFocus={() => setShowGroupSuggestions(true)}
               onBlur={() => setTimeout(() => setShowGroupSuggestions(false), 200)}
-              placeholder="e.g. clubs..."
+              placeholder={task.project_id ? "Select/type group in this project..." : "e.g. clubs..."}
             />
             {task.group_id
               ? <span className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">✓ {task.group}</span>
               : task.group && <span className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 block">⚠️ Click below to select</span>
             }
 
-            {showGroupSuggestions && groupSuggestions.length > 0 && (
+            {showGroupSuggestions && (
               <div className="absolute z-50 top-full mt-1 w-full bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-                <div className="px-3 py-1.5 text-[10px] text-muted-foreground font-semibold uppercase border-b border-border bg-muted/30">
-                  Select Group
+                <div className="px-3 py-1.5 text-[10px] text-muted-foreground font-semibold uppercase border-b border-border bg-muted/30 flex items-center justify-between">
+                  <span>Select Group</span>
+                  {task.project_id && (
+                    <span className="text-[9px] text-primary font-mono font-medium lowercase">
+                      (project #{task.project_id})
+                    </span>
+                  )}
                 </div>
                 <div className="max-h-40 overflow-y-auto">
                   {groupSuggestions.map(g => (
@@ -708,6 +725,11 @@ function TaskCard({ task, index, usersList, projectsList, groupsList, onUpdate, 
                       )}
                     </button>
                   ))}
+                  {groupSuggestions.length === 0 && (
+                    <div className="text-center py-3 text-xs text-muted-foreground">
+                      {task.project_id ? 'لا توجد مجموعات تابعة لهذا المشروع' : 'No groups found'}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1050,19 +1072,79 @@ const VoiceTaskChat = () => {
       }
 
       if (field === '_projectSelect') {
-        return { ...t, project: value.name, project_id: value.id };
+        const newProjId = value.id;
+        const stillValid = t.group_id && groupsList.some(g => String(g.id) === String(t.group_id) && String(g.project_id) === String(newProjId));
+        let newGroupId = stillValid ? t.group_id : '';
+        let newGroupName = stillValid ? t.group : '';
+        if (!stillValid && t.group) {
+          const reMatched = fuzzyMatchGroup(t.group, groupsList, newProjId);
+          if (reMatched) {
+            newGroupId = reMatched.id;
+            newGroupName = reMatched.name;
+          }
+        }
+        return { 
+          ...t, 
+          project: value.name, 
+          project_id: newProjId, 
+          group: newGroupName, 
+          group_id: newGroupId 
+        };
       }
+
       if (field === '_groupSelect') {
-        return { ...t, group: value.name, group_id: value.id };
+        const selectedGroup = groupsList.find(g => String(g.id) === String(value.id));
+        const newProjId = (!t.project_id && selectedGroup?.project_id) ? selectedGroup.project_id : t.project_id;
+        const newProjName = (!t.project_id && selectedGroup?.project_id)
+          ? (projectsList.find(p => String(p.id) === String(selectedGroup.project_id))?.name || t.project)
+          : t.project;
+        return { 
+          ...t, 
+          group: value.name, 
+          group_id: value.id,
+          project: newProjName,
+          project_id: newProjId,
+        };
       }
 
       if (field === 'project') {
         const matched = fuzzyMatchProject(value, projectsList);
-        return { ...t, project: value, project_id: matched?.id || '' };
+        const newProjId = matched?.id || '';
+        const stillValid = t.group_id && groupsList.some(g => String(g.id) === String(t.group_id) && String(g.project_id) === String(newProjId));
+        let newGroupId = stillValid ? t.group_id : '';
+        let newGroupName = stillValid ? t.group : '';
+        if (newProjId && !stillValid && t.group) {
+          const reMatched = fuzzyMatchGroup(t.group, groupsList, newProjId);
+          if (reMatched) {
+            newGroupId = reMatched.id;
+            newGroupName = reMatched.name;
+          }
+        }
+        return { 
+          ...t, 
+          project: value, 
+          project_id: newProjId,
+          group: newGroupName,
+          group_id: newGroupId,
+        };
       }
+
       if (field === 'group') {
         const matched = fuzzyMatchGroup(value, groupsList, t.project_id || null);
-        return { ...t, group: value, group_id: matched?.id || '' };
+        const newGroupId = matched?.id || '';
+        let newProjId = t.project_id;
+        let newProjName = t.project;
+        if (!newProjId && matched?.project_id) {
+          newProjId = matched.project_id;
+          newProjName = projectsList.find(p => String(p.id) === String(matched.project_id))?.name || t.project;
+        }
+        return { 
+          ...t, 
+          group: value, 
+          group_id: newGroupId,
+          project: newProjName,
+          project_id: newProjId,
+        };
       }
 
       return { ...t, [field]: value };
