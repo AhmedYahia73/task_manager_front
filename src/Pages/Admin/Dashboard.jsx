@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useGet } from '@/hooks/useGet';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2, Users, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRoleNames } from '@/context/RoleNameContext';
 import { isLeaderSalesRole, isSalesRole } from '@/utils/auth';
@@ -343,11 +343,48 @@ const Dashboard = () => {
 
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(defaultTo);
+  const [leaderboardSearch, setLeaderboardSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppliedSearch(leaderboardSearch.trim());
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [leaderboardSearch]);
+
+  const handleLeaderboardSearchSubmit = (e) => {
+    e?.preventDefault?.();
+    setAppliedSearch(leaderboardSearch.trim());
+  };
+
+  const handleClearLeaderboardSearch = () => {
+    setLeaderboardSearch('');
+    setAppliedSearch('');
+  };
 
   const { data, loading } = useGet(`/api/admin/dashboard${fromDate && toDate ? `?from=${fromDate}&to=${toDate}` : ''}`);
 
-  const { data: leaderboardRes, loading: leaderboardLoading, refresh: refreshLeaderboard } = useGet(`/api/admin/dashboard/leaderboard?from=${fromDate}&to=${toDate}`);
-  const leaderboardList = leaderboardRes?.leaderboard || [];
+  const leaderboardQuery = `/api/admin/dashboard/leaderboard?from=${fromDate}&to=${toDate}${appliedSearch ? `&search=${encodeURIComponent(appliedSearch)}` : ''}`;
+  const { data: leaderboardRes, loading: leaderboardLoading, refresh: refreshLeaderboard } = useGet(leaderboardQuery);
+  const rawLeaderboardList = leaderboardRes?.leaderboard || [];
+
+  const leaderboardList = useMemo(() => {
+    const ranked = rawLeaderboardList.map((usr, idx) => ({
+      ...usr,
+      rank: usr.rank ?? (idx + 1)
+    }));
+
+    if (!appliedSearch) return ranked;
+    const q = appliedSearch.toLowerCase();
+    return ranked.filter((usr) => {
+      const nameMatch = usr.name && String(usr.name).toLowerCase().includes(q);
+      const phoneMatch = usr.phone && String(usr.phone).toLowerCase().includes(q);
+      const roleMatch = usr.role && String(usr.role).toLowerCase().includes(q);
+      return Boolean(nameMatch || phoneMatch || roleMatch);
+    });
+  }, [rawLeaderboardList, appliedSearch]);
 
   const navigate = useNavigate();
 
@@ -639,7 +676,7 @@ const Dashboard = () => {
       {/* Leaderboard Section */}
       {!loading && user?.role !== 'engineer' && (
         <div className="mt-8 bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
-          <div className="p-6 border-b border-border bg-muted/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="p-6 border-b border-border bg-muted/20 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
             <div>
               <h2 className="text-2xl font-bold font-['Plus_Jakarta_Sans'] text-foreground flex items-center gap-2">
                 <span className="material-symbols-outlined text-amber-500 text-3xl">emoji_events</span>
@@ -648,25 +685,60 @@ const Dashboard = () => {
               <p className="text-sm text-muted-foreground mt-1">Ranking based on completed tasks points</p>
             </div>
             
-            <div className="flex items-center gap-3 bg-background p-2 rounded-xl border border-input shadow-sm w-full md:w-auto">
-              <div className="flex items-center gap-2 px-2">
-                <span className="text-xs font-semibold text-muted-foreground">From:</span>
-                <input 
-                  type="date" 
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 text-foreground"
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+              {/* Search Bar & Button */}
+              <form 
+                onSubmit={handleLeaderboardSearchSubmit} 
+                className="flex items-center gap-2 bg-background px-3 py-1.5 rounded-xl border border-input shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all w-full sm:w-64"
+              >
+                <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                <input
+                  type="text"
+                  value={leaderboardSearch}
+                  onChange={(e) => setLeaderboardSearch(e.target.value)}
+                  placeholder="Search performer..."
+                  className="bg-transparent border-none text-sm font-medium focus:outline-none focus:ring-0 p-0 text-foreground w-full placeholder:text-muted-foreground/60"
                 />
-              </div>
-              <div className="w-px h-6 bg-border"></div>
-              <div className="flex items-center gap-2 px-2">
-                <span className="text-xs font-semibold text-muted-foreground">To:</span>
-                <input 
-                  type="date" 
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 text-foreground"
-                />
+                {leaderboardSearch && (
+                  <button
+                    type="button"
+                    onClick={handleClearLeaderboardSearch}
+                    className="text-muted-foreground hover:text-foreground p-0.5 rounded-md transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-xs transition-colors shrink-0 cursor-pointer"
+                  title="Search"
+                >
+                  Search
+                </button>
+              </form>
+
+              {/* Date Filter */}
+              <div className="flex items-center justify-between sm:justify-start gap-3 bg-background p-2 rounded-xl border border-input shadow-sm w-full sm:w-auto">
+                <div className="flex items-center gap-2 px-2">
+                  <span className="text-xs font-semibold text-muted-foreground">From:</span>
+                  <input 
+                    type="date" 
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 text-foreground"
+                  />
+                </div>
+                <div className="w-px h-6 bg-border"></div>
+                <div className="flex items-center gap-2 px-2">
+                  <span className="text-xs font-semibold text-muted-foreground">To:</span>
+                  <input 
+                    type="date" 
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 text-foreground"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -678,8 +750,20 @@ const Dashboard = () => {
               </div>
             ) : leaderboardList.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground">
-                <span className="material-symbols-outlined text-4xl mb-2 text-muted-foreground/50">sentiment_dissatisfied</span>
-                <p>No points recorded for this period.</p>
+                <span className="material-symbols-outlined text-4xl mb-2 text-muted-foreground/50">
+                  {appliedSearch ? 'search_off' : 'sentiment_dissatisfied'}
+                </span>
+                <p className="text-base font-medium">
+                  {appliedSearch ? `No performers found matching "${appliedSearch}"` : 'No points recorded for this period.'}
+                </p>
+                {appliedSearch && (
+                  <button
+                    onClick={handleClearLeaderboardSearch}
+                    className="mt-3 text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    Clear search filter
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 lg:gap-6">
@@ -692,16 +776,20 @@ const Dashboard = () => {
                     String(usr.whatsapp).toLowerCase() !== 'undefined'
                   );
                   const rawWhatsApp = hasWhatsApp ? String(usr.whatsapp).trim() : null;
+                  const rankNumber = usr.rank ?? (index + 1);
+                  const isFirst = rankNumber === 1;
+                  const isSecond = rankNumber === 2;
+                  const isThird = rankNumber === 3;
 
                   return (
                     <div 
                       key={usr.id} 
                       className={`relative bg-card rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 flex flex-col justify-between p-4 sm:p-5 md:p-6 overflow-hidden group ${
-                        index === 0 
+                        isFirst 
                           ? 'border-amber-400/50 shadow-amber-500/10 bg-gradient-to-b from-amber-500/[0.08] via-card to-card hover:border-amber-400' 
-                          : index === 1 
+                          : isSecond 
                           ? 'border-slate-300 dark:border-slate-700 shadow-slate-500/10 bg-gradient-to-b from-slate-400/[0.08] via-card to-card hover:border-slate-400' 
-                          : index === 2 
+                          : isThird 
                           ? 'border-amber-600/40 shadow-amber-600/10 bg-gradient-to-b from-amber-600/[0.08] via-card to-card hover:border-amber-600' 
                           : 'border-border/80 hover:border-primary/40 bg-card hover:shadow-md'
                       }`}
@@ -711,15 +799,15 @@ const Dashboard = () => {
                         <div className="flex items-center justify-between gap-2 mb-3.5">
                           {/* Rank Badge */}
                           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-xs ${
-                            index === 0 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-500/30 ring-2 ring-amber-400/30' :
-                            index === 1 ? 'bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-slate-400/30 ring-2 ring-slate-300/30' :
-                            index === 2 ? 'bg-gradient-to-r from-amber-700 to-orange-600 text-white shadow-orange-500/30 ring-2 ring-orange-400/30' :
+                            isFirst ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-500/30 ring-2 ring-amber-400/30' :
+                            isSecond ? 'bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-slate-400/30 ring-2 ring-slate-300/30' :
+                            isThird ? 'bg-gradient-to-r from-amber-700 to-orange-600 text-white shadow-orange-500/30 ring-2 ring-orange-400/30' :
                             'bg-muted text-muted-foreground border border-border/80'
                           }`}>
                             <span className="material-symbols-outlined text-[15px]">
-                              {index === 0 ? 'emoji_events' : index < 3 ? 'military_tech' : 'tag'}
+                              {isFirst ? 'emoji_events' : (isSecond || isThird) ? 'military_tech' : 'tag'}
                             </span>
-                            <span>Rank #{index + 1}</span>
+                            <span>Rank #{rankNumber}</span>
                           </div>
 
                           {/* Points Pill */}
@@ -738,25 +826,25 @@ const Dashboard = () => {
                                 src={usr.image} 
                                 alt={usr.name} 
                                 className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover shadow-sm transition-transform duration-300 group-hover:scale-105 ${
-                                  index === 0 ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
-                                  index === 1 ? 'ring-2 ring-slate-300 dark:ring-slate-600 ring-offset-2 ring-offset-card' :
-                                  index === 2 ? 'ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
+                                  isFirst ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
+                                  isSecond ? 'ring-2 ring-slate-300 dark:ring-slate-600 ring-offset-2 ring-offset-card' :
+                                  isThird ? 'ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
                                   'ring-2 ring-border ring-offset-2 ring-offset-card'
                                 }`} 
                               />
                             ) : (
                               <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-base sm:text-lg shadow-sm transition-transform duration-300 group-hover:scale-105 ${
-                                index === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
-                                index === 1 ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 ring-2 ring-slate-300 ring-offset-2 ring-offset-card' :
-                                index === 2 ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
+                                isFirst ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 ring-2 ring-amber-400 ring-offset-2 ring-offset-card' :
+                                isSecond ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 ring-2 ring-slate-300 ring-offset-2 ring-offset-card' :
+                                isThird ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 ring-2 ring-orange-400 ring-offset-2 ring-offset-card' :
                                 'bg-primary/10 text-primary ring-2 ring-border ring-offset-2 ring-offset-card'
                               }`}>
-                                {usr.name.charAt(0).toUpperCase()}
+                                {usr.name?.charAt(0)?.toUpperCase() || '?'}
                               </div>
                             )}
 
                             {/* Top 3 Trophy Badge on Avatar */}
-                            {index === 0 && (
+                            {isFirst && (
                               <span className="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 shadow-md flex items-center justify-center" title="1st Place">
                                 <span className="material-symbols-outlined text-[13px]">emoji_events</span>
                               </span>
