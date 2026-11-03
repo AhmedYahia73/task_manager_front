@@ -206,8 +206,14 @@ export default function AttendanceReport({ userId }) {
               </CardContent>
             </Card>
             <Card className="bg-blue-50 border-blue-200 hover:shadow-md transition-shadow">
-              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-blue-700 truncate">Total Delay (Hrs)</CardTitle></CardHeader>
-              <CardContent className="p-2 pt-1"><p className="text-lg font-black text-blue-900">{data?.summary?.totalDelay?.toFixed(2) || 0}</p></CardContent>
+              <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-blue-700 truncate">Total Delay</CardTitle></CardHeader>
+              <CardContent className="p-2 pt-1">
+                <p className="text-lg font-black text-blue-900">
+                  {typeof data?.summary?.totalDelay === 'number' 
+                    ? data?.summary?.totalDelay.toFixed(2) 
+                    : (data?.summary?.totalDelay || '0:00')}
+                </p>
+              </CardContent>
             </Card>
             <Card className="bg-emerald-50 border-emerald-200 hover:shadow-md transition-shadow">
               <CardHeader className="p-2 pb-0"><CardTitle className="text-[10px] uppercase font-bold text-emerald-700 truncate">Onsite Days</CardTitle></CardHeader>
@@ -290,7 +296,9 @@ export default function AttendanceReport({ userId }) {
                         {row.attendance?.over_time ? row.attendance.over_time.toFixed(2) : '-'}
                       </td>
                       <td className="px-4 py-3">
-                        {row.attendance?.delay ? row.attendance.delay.toFixed(2) : '-'}
+                        {row.attendance?.delay != null 
+                          ? (typeof row.attendance.delay === 'number' ? row.attendance.delay.toFixed(2) : row.attendance.delay) 
+                          : '-'}
                       </td>
                       <td className="px-4 py-3">
                         {row.attendance?.permissionHours || '-'}
