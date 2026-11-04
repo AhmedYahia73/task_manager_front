@@ -963,7 +963,7 @@ export default function TaskDetails() {
           {/* ثم الجروب بخط اصغر بلون مختلف */}
           <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 px-3 py-0.5 text-xs font-bold">
             <Layers className="w-3 h-3" />
-            <span>{task.group_name || 'Group'}</span>
+            <span>{task.group_name || task.project_group || 'Group'}</span>
           </div>
 
           {/* ثم اسم task */}

@@ -20,6 +20,7 @@ import {
   Eye, 
   Trash2,
   FolderKanban,
+  Layers,
   User as UserIcon,
   Filter,
   GripVertical
@@ -790,6 +791,7 @@ const FilteredTasks = () => {
   };
 
   const cardProps = {
+    showProjectInfo: true,
     isSelectionMode,
     onToggleSelect: toggleTaskSelection,
     onDragStart: handleDragStart,
@@ -1206,9 +1208,19 @@ const FilteredTasks = () => {
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-foreground">{task.project_name || 'N/A'}</span>
-                            <span className="text-xs text-muted-foreground">{task.project_group || 'N/A'}</span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5" title={`Project: ${task.project_name || 'N/A'}`}>
+                              <FolderKanban className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <span className="font-semibold text-foreground truncate max-w-[180px]">
+                                {task.project_name || 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5" title={`Group: ${task.group_name || task.project_group || 'N/A'}`}>
+                              <Layers className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <span className="text-xs font-medium text-muted-foreground truncate max-w-[180px]">
+                                {task.group_name || task.project_group || 'N/A'}
+                              </span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-5">

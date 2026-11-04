@@ -14,7 +14,9 @@ import {
   Check,
   ChevronDown,
   Lock,
-  AlarmClock
+  AlarmClock,
+  FolderKanban,
+  Layers
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import { ProjectRoleBadge } from '@/components/ProjectRoleBadge';
@@ -27,6 +29,7 @@ export const KanbanCard = ({
   dragOverCardId,
   projectId,
   groupId,
+  showProjectInfo,
   isSelectionMode,
   isSelected,
   onToggleSelect,
@@ -48,6 +51,12 @@ export const KanbanCard = ({
   const navigate = useNavigate();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const isCardSelected = typeof isSelected === 'function' ? isSelected(task.id) : Boolean(isSelected);
+
+  const projectName = task.project_name;
+  const groupName = task.group_name || task.project_group;
+  const shouldShowProjectInfo = showProjectInfo !== undefined 
+    ? showProjectInfo 
+    : Boolean(!groupId && (projectName || groupName));
 
   // Permission: if task is approved, only Leader or Admin can modify its status
   const taskProjectId = projectId || task.project_id;
@@ -258,6 +267,44 @@ export const KanbanCard = ({
           {task.delivery_date && (
             <span className="text-[10px] font-normal opacity-85 shrink-0">
               Due: {dayjs(task.delivery_date).format('MMM D')}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Project & Group Badges */}
+      {shouldShowProjectInfo && (projectName || groupName) && (
+        <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+          {projectName && (
+            <span 
+              onClick={(e) => {
+                if (task.project_id) {
+                  e.stopPropagation();
+                  navigate(`/admin/projects/${task.project_id}`);
+                }
+              }}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-muted/80 text-foreground border border-border/70 max-w-full ${task.project_id ? 'hover:border-primary/50 hover:bg-muted cursor-pointer transition-colors' : ''}`}
+              title={`Project: ${projectName}`}
+            >
+              <FolderKanban className="w-3 h-3 text-primary shrink-0" />
+              <span className="truncate max-w-[150px]">{projectName}</span>
+            </span>
+          )}
+          {groupName && (
+            <span 
+              onClick={(e) => {
+                const pId = task.project_id || projectId;
+                const gId = task.group_id || groupId;
+                if (pId && gId) {
+                  e.stopPropagation();
+                  navigate(`/admin/projects/${pId}/groups/${gId}/tasks`);
+                }
+              }}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 max-w-full ${(task.project_id || projectId) && (task.group_id || groupId) ? 'hover:bg-primary/20 cursor-pointer transition-colors' : ''}`}
+              title={`Group: ${groupName}`}
+            >
+              <Layers className="w-2.5 h-2.5 shrink-0" />
+              <span className="truncate max-w-[130px]">{groupName}</span>
             </span>
           )}
         </div>
