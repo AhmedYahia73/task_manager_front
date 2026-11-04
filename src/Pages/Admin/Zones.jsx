@@ -207,7 +207,7 @@ const Zones = () => {
       {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-card w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl border flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-card w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl border flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-muted/20">
               <h2 className="text-xl font-bold font-['Plus_Jakarta_Sans']">{editingId ? 'Edit Zone' : 'Add Zone'}</h2>
