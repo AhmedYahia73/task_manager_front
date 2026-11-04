@@ -24,7 +24,7 @@ export default function AttendanceReport({ userId }) {
   const loaderRef = useRef(null);
 
   const endpoint = userId ? `/api/admin/user/${userId}/attendance-report` : `/api/user/attendance/report`;
-  const { data, loading } = useGet(`${endpoint}?from=${from}&to=${to}&page=${page}&limit=15`);
+  const { data, loading, refresh } = useGet(`${endpoint}?from=${from}&to=${to}&page=${page}&limit=15`);
 
   useEffect(() => {
     setAllReports([]);
@@ -316,7 +316,7 @@ export default function AttendanceReport({ userId }) {
                                 id: row.attendance?.id,
                                 user: { id: userId },
                                 from: row.attendance?.from || `${row.date}T09:00:00`,
-                                to: row.attendance?.to || `${row.date}T17:00:00`,
+                                to: row.attendance?.to || null,
                                 onsite: hasOnsiteData ? row.attendance.onsite : false, // Default to false (remote)
                                 isRequestOnline: hasOnsiteData ? row.attendance.isRequestOnline : true // Default to true (Online Request)
                               });

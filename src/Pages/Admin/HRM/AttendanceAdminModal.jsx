@@ -64,7 +64,8 @@ export default function AttendanceAdminModal({
     if (initialData) {
       setUserId(initialData.user?.id || initialData.userId || '');
       setUserName(initialData.user?.name || '');
-      setMode('both');
+      const hasCheckout = Boolean(initialData.to);
+      setMode(defaultMode || (hasCheckout ? 'both' : 'checkin'));
 
       if (initialData.from) {
         const fromD = new Date(initialData.from);
@@ -79,10 +80,13 @@ export default function AttendanceAdminModal({
         if (!isNaN(toD.getTime())) {
           setCheckOutDate(`${toD.getFullYear()}-${pad(toD.getMonth() + 1)}-${pad(toD.getDate())}`);
           setCheckOutTime(`${pad(toD.getHours())}:${pad(toD.getMinutes())}`);
+        } else {
+          setCheckOutDate('');
+          setCheckOutTime('');
         }
       } else {
-        setCheckOutDate(getTodayStr());
-        setCheckOutTime(getCurrentTimeStr());
+        setCheckOutDate('');
+        setCheckOutTime('');
       }
 
       setWorkType(initialData.onsite ? 'onsite' : 'online');
@@ -150,39 +154,49 @@ export default function AttendanceAdminModal({
 
     let payload = {};
 
-    if (mode === 'checkout' && !initialData?.id) {
+    if (mode === 'checkout') {
       // Check-out only: sends only 'to' and action 'checkout'
       if (!checkOutDate || !checkOutTime) {
         return toast.error('Please specify check-out time (يرجى تحديد وقت الانصراف)');
       }
-      payload = {
-        userId,
-        to: `${checkOutDate}T${checkOutTime}`,
-        action: 'checkout',
-        mode: 'checkout',
-      };
-    } else if (mode === 'checkin' && !initialData?.id) {
-      // Check-in only: sends only 'from' and action 'checkin'
+      if (initialData?.id) {
+        payload = {
+          userId,
+          to: `${checkOutDate}T${checkOutTime}`,
+          onsite: workType === 'onsite',
+          isRequestOnline: workType === 'online',
+        };
+      } else {
+        payload = {
+          userId,
+          to: `${checkOutDate}T${checkOutTime}`,
+          action: 'checkout',
+          mode: 'checkout',
+        };
+      }
+    } else if (mode === 'checkin') {
+      // Check-in only: sends only 'from' and to: null (بدون انصراف)
       if (!checkInDate || !checkInTime) {
         return toast.error('Please specify check-in time (يرجى تحديد وقت الحضور)');
       }
       payload = {
         userId,
         from: `${checkInDate}T${checkInTime}`,
+        to: null,
         onsite: workType === 'onsite',
         isRequestOnline: workType === 'online',
         action: 'checkin',
         mode: 'checkin',
       };
     } else {
-      // Both (Full record or updating existing)
+      // Both (Full record or updating existing with optional check-out)
       if (!checkInDate || !checkInTime) {
-        return toast.error('Please specify check-in time');
+        return toast.error('Please specify check-in time (يرجى تحديد وقت الحضور)');
       }
       payload = {
         userId,
         from: `${checkInDate}T${checkInTime}`,
-        to: checkOutDate && checkOutTime ? `${checkOutDate}T${checkOutTime}` : null,
+        to: checkOutTime ? `${checkOutDate || checkInDate}T${checkOutTime}` : null,
         onsite: workType === 'onsite',
         isRequestOnline: workType === 'online',
       };
@@ -236,51 +250,49 @@ export default function AttendanceAdminModal({
           </button>
         </div>
 
-        {/* Mode Selector Tabs (Hidden when editing an existing record) */}
-        {!initialData?.id && (
-          <div className="px-6 pt-4 pb-1">
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/80">
-              <button
-                type="button"
-                onClick={() => setMode('checkin')}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  mode === 'checkin'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>حضور (Check-In)</span>
-              </button>
+        {/* Mode Selector Tabs */}
+        <div className="px-6 pt-4 pb-1">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/80">
+            <button
+              type="button"
+              onClick={() => setMode('checkin')}
+              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                mode === 'checkin'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>حضور (Check-In)</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setMode('checkout')}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  mode === 'checkout'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                }`}
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>انصراف (Check-Out)</span>
-              </button>
+            <button
+              type="button"
+              onClick={() => setMode('checkout')}
+              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                mode === 'checkout'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              }`}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>انصراف (Check-Out)</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setMode('both')}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  mode === 'both'
-                    ? 'bg-primary text-white shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                }`}
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                <span>كامل (Both)</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setMode('both')}
+              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                mode === 'both'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              }`}
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              <span>كامل (Both)</span>
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Form Body */}
         <div className="p-6 max-h-[75vh] overflow-y-auto space-y-4">
@@ -448,13 +460,24 @@ export default function AttendanceAdminModal({
             {/* Check-Out Section (Shown for mode 'checkout' or 'both') */}
             {(mode === 'checkout' || mode === 'both') && (
               <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 space-y-3">
-                <label className="text-xs font-bold text-foreground flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold text-xs">
                     <LogOut className="w-4 h-4" />
-                    Check-out Time (وقت الانصراف) <span className="text-rose-500">*</span>
+                    Check-out Time (وقت الانصراف - اختياري)
                   </span>
-                  <span className="text-[11px] text-muted-foreground font-normal">Date & Time</span>
-                </label>
+                  {(checkOutDate || checkOutTime) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCheckOutDate('');
+                        setCheckOutTime('');
+                      }}
+                      className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
+                    >
+                      تفريغ الانصراف (Clear)
+                    </button>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
@@ -465,7 +488,6 @@ export default function AttendanceAdminModal({
                       type="date"
                       value={checkOutDate}
                       onChange={(e) => setCheckOutDate(e.target.value)}
-                      required
                       className="w-full h-11 px-3 text-sm rounded-xl border border-input bg-background font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
                     />
                   </div>
@@ -476,8 +498,12 @@ export default function AttendanceAdminModal({
                     <input
                       type="time"
                       value={checkOutTime}
-                      onChange={(e) => setCheckOutTime(e.target.value)}
-                      required
+                      onChange={(e) => {
+                        setCheckOutTime(e.target.value);
+                        if (e.target.value && !checkOutDate) {
+                          setCheckOutDate(checkInDate || getTodayStr());
+                        }
+                      }}
                       className="w-full h-11 px-3 text-sm rounded-xl border border-input bg-background font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
                     />
                   </div>
@@ -488,31 +514,54 @@ export default function AttendanceAdminModal({
                   <span className="text-[10px] text-muted-foreground font-medium">Quick Select:</span>
                   <button
                     type="button"
-                    onClick={() => setCheckOutTime(getCurrentTimeStr())}
+                    onClick={() => {
+                      if (!checkOutDate) setCheckOutDate(checkInDate || getTodayStr());
+                      setCheckOutTime(getCurrentTimeStr());
+                    }}
                     className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-500/15 text-amber-800 dark:text-amber-200 hover:bg-amber-500/25 border border-amber-500/30 transition-colors cursor-pointer"
                   >
                     الآن (Now)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCheckOutTime('17:00')}
+                    onClick={() => {
+                      if (!checkOutDate) setCheckOutDate(checkInDate || getTodayStr());
+                      setCheckOutTime('17:00');
+                    }}
                     className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-muted text-foreground hover:bg-muted/80 border border-border transition-colors cursor-pointer"
                   >
                     05:00 PM
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCheckOutTime('17:30')}
+                    onClick={() => {
+                      if (!checkOutDate) setCheckOutDate(checkInDate || getTodayStr());
+                      setCheckOutTime('17:30');
+                    }}
                     className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-muted text-foreground hover:bg-muted/80 border border-border transition-colors cursor-pointer"
                   >
                     05:30 PM
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCheckOutTime('18:00')}
+                    onClick={() => {
+                      if (!checkOutDate) setCheckOutDate(checkInDate || getTodayStr());
+                      setCheckOutTime('18:00');
+                    }}
                     className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-muted text-foreground hover:bg-muted/80 border border-border transition-colors cursor-pointer"
                   >
                     06:00 PM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckOutDate('');
+                      setCheckOutTime('');
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 border border-rose-500/30 transition-colors cursor-pointer"
+                    title="Leave check-out empty (بدون انصراف)"
+                  >
+                    بدون انصراف (None)
                   </button>
                 </div>
               </div>
