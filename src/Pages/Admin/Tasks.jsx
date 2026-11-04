@@ -24,7 +24,9 @@ import {
   ChevronDown,
   Lock,
   Filter,
-  SlidersHorizontal
+  SlidersHorizontal,
+  FolderKanban,
+  Layers
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRoleNames } from '@/context/RoleNameContext';
@@ -765,6 +767,9 @@ const Tasks = () => {
   const { data: groupRes } = useGet(`/api/admin/projectGroup/${groupId}`);
   const group = groupRes?.group || groupRes?.data?.group;
 
+  const projectName = project?.name || projectDetailsData?.Project?.name || projectDetailsData?.project?.name;
+  const groupName = group?.name;
+
   const { mutate, loading: mutationLoading } = useMutation();
 
   // Create / Edit Task Modal State
@@ -1083,12 +1088,16 @@ const Tasks = () => {
       {/* Header Section */}
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <nav className="mb-2 text-sm text-muted-foreground flex items-center">
+          <nav className="mb-2 text-sm text-muted-foreground flex items-center flex-wrap gap-1">
             <Link to="/admin/projects" className="hover:underline hover:text-primary">Projects</Link>
             <span className="material-symbols-outlined mx-1 text-[16px]">chevron_right</span>
-            <Link to={`/admin/projects/${projectId}`} className="hover:underline hover:text-primary">Details</Link>
+            <Link to={`/admin/projects/${projectId}`} className="hover:underline hover:text-primary">
+              {projectName || 'Details'}
+            </Link>
             <span className="material-symbols-outlined mx-1 text-[16px]">chevron_right</span>
-            <span className="font-semibold text-foreground">Tasks Kanban Board</span>
+            <span className="font-semibold text-foreground">
+              {groupName ? `${groupName} (Tasks)` : 'Tasks Kanban Board'}
+            </span>
           </nav>
           <div className="flex items-center gap-3">
             <h1 className="font-plus-jakarta text-3xl md:text-4xl font-bold tracking-tight text-primary">
@@ -1098,7 +1107,40 @@ const Tasks = () => {
               {grandTotal} Tasks
             </span>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+
+          {/* Project & Group Identity */}
+          {(projectName || groupName) && (
+            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+              {projectName && (
+                <Link
+                  to={`/admin/projects/${projectId}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-muted/80 text-foreground border border-border/70 hover:border-primary/50 hover:bg-muted transition-all shadow-2xs group"
+                  title={`Project: ${projectName}`}
+                >
+                  <FolderKanban className="w-3.5 h-3.5 text-primary shrink-0 group-hover:scale-110 transition-transform" />
+                  <span className="text-muted-foreground text-[11px] font-normal">Project:</span>
+                  <span className="font-bold text-foreground group-hover:text-primary transition-colors">{projectName}</span>
+                </Link>
+              )}
+
+              {projectName && groupName && (
+                <span className="text-muted-foreground/40 hidden sm:inline">•</span>
+              )}
+
+              {groupName && (
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-primary/10 text-primary border border-primary/20 shadow-2xs"
+                  title={`Group: ${groupName}`}
+                >
+                  <Layers className="w-3.5 h-3.5 shrink-0 text-primary" />
+                  <span className="text-primary/70 text-[11px] font-normal">Group:</span>
+                  <span className="font-bold">{groupName}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="mt-2 text-sm text-muted-foreground">
             Manage, drag & drop, and track tasks across status columns with infinite scroll.
           </p>
           
