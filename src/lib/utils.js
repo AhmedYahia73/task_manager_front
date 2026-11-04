@@ -11,14 +11,25 @@ export const isTaskDelayedCompleted = (task) => {
   if (task.status !== 'done' && task.status !== 'approve') return false;
   if (!task.delivery_date) return false;
 
-  const dateOnly = typeof task.delivery_date === 'string' ? task.delivery_date.split('T')[0] : task.delivery_date;
-  const deadlineEnd = dayjs(dateOnly).endOf('day');
+  // المقارنة تعتمد حصراً على تاريخ الإنجاز (done_date) مقارنة بموعد التسليم (delivery_date).
+  // تأخر الموافقة (approve) لا يعتبر تأخيراً في إنجاز المهمة.
+  // في حال عدم توفر تاريخ done_date، لا يمكن اعتبار المهمة متأخرة.
+  if (!task.done_date) return false;
 
-  const completionDate = task.done_date || task.updatedAt;
-  if (completionDate) {
-    return dayjs(completionDate).isAfter(deadlineEnd);
-  }
+  const toDateOnly = (val) => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      const match = val.match(/^\d{4}-\d{2}-\d{2}/);
+      return match ? match[0] : null;
+    }
+    const d = dayjs(val);
+    return d.isValid() ? d.format('YYYY-MM-DD') : null;
+  };
 
-  // Fallback if timestamps are missing: check if delivery_date is before today
-  return dayjs(dateOnly).isBefore(dayjs(), 'day');
+  const deliveryDateOnly = toDateOnly(task.delivery_date);
+  const doneDateOnly = toDateOnly(task.done_date);
+
+  if (!deliveryDateOnly || !doneDateOnly) return false;
+
+  return doneDateOnly > deliveryDateOnly;
 };

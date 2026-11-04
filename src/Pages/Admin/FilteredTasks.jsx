@@ -424,7 +424,13 @@ const FilteredTasks = () => {
       const sourceTasks = (columnsData[sourceStatus]?.tasks || []).filter(t => t.id !== taskToMove.id);
       const targetTasks = [...(columnsData[targetColId]?.tasks || []).filter(t => t.id !== taskToMove.id)];
 
-      const updatedTask = { ...taskToMove, status: targetColId };
+      const updatedTask = { 
+        ...taskToMove, 
+        status: targetColId,
+        done_date: (targetColId === 'done' || targetColId === 'approve')
+          ? (taskToMove.done_date || new Date().toISOString().split('T')[0])
+          : taskToMove.done_date
+      };
       targetTasks.splice(targetIndex, 0, updatedTask);
 
       setColumnsData(prev => ({
@@ -511,7 +517,13 @@ const FilteredTasks = () => {
     }
 
     // Optimistic UI Update in columns
-    const updatedTask = { ...targetTask, status: newStatus };
+    const updatedTask = { 
+      ...targetTask, 
+      status: newStatus,
+      done_date: (newStatus === 'done' || newStatus === 'approve')
+        ? (targetTask.done_date || new Date().toISOString().split('T')[0])
+        : targetTask.done_date
+    };
     setColumnsData(prev => {
       const sourceCol = prev[oldStatus] || { tasks: [], total: 0 };
       const destCol = prev[newStatus] || { tasks: [], total: 0 };
