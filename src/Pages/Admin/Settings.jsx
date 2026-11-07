@@ -21,6 +21,20 @@ const formatTimeForInput = (timeStr) => {
   return timeStr;
 };
 
+const normalizeOnlineDays = (val) => {
+  let current = val;
+  while (typeof current === 'string') {
+    try {
+      const parsed = JSON.parse(current);
+      if (parsed === current) break;
+      current = parsed;
+    } catch {
+      break;
+    }
+  }
+  return Array.isArray(current) ? current.map((d) => String(d).trim().toLowerCase()) : [];
+};
+
 export const Settings = () => {
   const { data, loading: getLoading, refetch } = useGet('/api/admin/settings');
   
