@@ -59,7 +59,7 @@ export const Settings = () => {
         task_approve_points: settingsData.task_approve_points || 0,
         task_edit_points: settingsData.task_edit_points || 0,
         task_delay_points: settingsData.task_delay_points || 0,
-        online_days: settingsData.online_days || [],
+        online_days: normalizeOnlineDays(settingsData.online_days),
         delay_premission_minutes: settingsData.delay_premission_minutes || 0,
         early_max: formatTimeForInput(settingsData.early_max),
         late_max: formatTimeForInput(settingsData.late_max),
@@ -102,10 +102,11 @@ export const Settings = () => {
 
   const handleDayToggle = (day) => {
     setFormData(prev => {
-      const currentDays = prev.online_days || [];
-      const newDays = currentDays.includes(day)
-        ? currentDays.filter(d => d !== day)
-        : [...currentDays, day];
+      const dayLower = day.toLowerCase();
+      const currentDays = normalizeOnlineDays(prev.online_days);
+      const newDays = currentDays.includes(dayLower)
+        ? currentDays.filter(d => d !== dayLower)
+        : [...currentDays, dayLower];
       return { ...prev, online_days: newDays };
     });
   };
@@ -127,7 +128,10 @@ export const Settings = () => {
       const res = await mutate({
         method: 'PUT',
         url: `/api/admin/settings/${settingId}`,
-        data: formData
+        data: {
+          ...formData,
+          online_days: normalizeOnlineDays(formData.online_days)
+        }
       });
       if (res?.success) {
         toast.success("Settings updated successfully!");
@@ -301,7 +305,7 @@ export const Settings = () => {
                       type="button"
                       onClick={() => handleDayToggle(day)}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
-                        formData.online_days?.includes(day)
+                        normalizeOnlineDays(formData.online_days).includes(day.toLowerCase())
                           ? 'bg-primary border-primary text-primary-foreground'
                           : 'bg-background border-border text-muted-foreground hover:bg-muted'
                       }`}
