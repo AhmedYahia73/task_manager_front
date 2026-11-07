@@ -22,6 +22,7 @@ const formatTimeForInput = (timeStr) => {
 };
 
 const normalizeOnlineDays = (val) => {
+  if (!val) return [];
   let current = val;
   while (typeof current === 'string') {
     try {
@@ -32,7 +33,24 @@ const normalizeOnlineDays = (val) => {
       break;
     }
   }
-  return Array.isArray(current) ? current.map((d) => String(d).trim().toLowerCase()) : [];
+  if (Array.isArray(current)) {
+    return Array.from(
+      new Set(
+        current
+          .filter((d) => typeof d === 'string')
+          .map((d) => d.trim().toLowerCase())
+          .filter((d) => DAYS.includes(d))
+      )
+    );
+  }
+  if (typeof current === 'string') {
+    const lower = current.toLowerCase();
+    const foundDays = DAYS.filter((day) => lower.includes(day));
+    if (foundDays.length > 0) {
+      return Array.from(new Set(foundDays));
+    }
+  }
+  return [];
 };
 
 export const Settings = () => {
