@@ -36,6 +36,8 @@ const Users = () => {
   const shiftsList = listsData?.shifts || [];
   const departmentsList = listsData?.departments || [];
   const jobsList = listsData?.jobs || listsData?.jobs_list || [];
+  const projectsList = listsData?.projects || [];
+  const salesProjectsList = listsData?.sales_projects || [];
   
   const { data, loading, refresh } = useGet(`/api/admin/user?page=${page}&limit=10&search=${debouncedSearch}${roleFilter ? `&role=${roleFilter}` : ''}`);
   const { mutate, loading: mutationLoading } = useMutation();
@@ -58,6 +60,8 @@ const Users = () => {
     whatsapp: '',
     password: '',
     status: 'active',
+    role: roleFilter && ['engineer', 'sales', 'leader_sales'].includes(roleFilter) ? roleFilter : 'engineer',
+    project_ids: [],
     yearly_holidays: false,
     zone_id: '',
     shift_id: '',
@@ -69,9 +73,23 @@ const Users = () => {
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
+  const toggleProjectSelection = (projectId) => {
+    setFormData((prev) => {
+      const current = Array.isArray(prev.project_ids) ? prev.project_ids : [];
+      const exists = current.includes(projectId);
+      return {
+        ...prev,
+        project_ids: exists
+          ? current.filter((id) => id !== projectId)
+          : [...current, projectId],
+      };
+    });
+  };
+
   const openModal = (userItem = null) => {
     if (userItem) {
       setEditingId(userItem.id);
+      const userProjects = userItem.project_ids || userItem.sales_project_ids || (userItem.sales_project_id ? [userItem.sales_project_id] : []);
       setFormData({
         name: userItem.name,
         email: userItem.email,
@@ -79,6 +97,8 @@ const Users = () => {
         whatsapp: userItem.whatsapp || '',
         password: '', // Don't fill password on edit
         status: userItem.status,
+        role: userItem.role || 'engineer',
+        project_ids: Array.isArray(userProjects) ? userProjects : [],
         yearly_holidays: userItem.yearly_holidays || false,
         zone_id: userItem.zone_id || '',
         shift_id: userItem.shift_id || '',
@@ -89,7 +109,21 @@ const Users = () => {
       setSelectedImageFile(null);
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', whatsapp: '', password: '', status: 'active', yearly_holidays: false, zone_id: '', shift_id: '', department_id: '', job_id: '' });
+      setFormData({ 
+        name: '', 
+        email: '', 
+        phone: '', 
+        whatsapp: '', 
+        password: '', 
+        status: 'active', 
+        role: roleFilter && ['engineer', 'sales', 'leader_sales'].includes(roleFilter) ? roleFilter : 'engineer',
+        project_ids: [],
+        yearly_holidays: false, 
+        zone_id: '', 
+        shift_id: '', 
+        department_id: '', 
+        job_id: '' 
+      });
       setImagePreview(null);
       setSelectedImageFile(null);
     }
@@ -150,6 +184,16 @@ const Users = () => {
     data.append('whatsapp', formData.whatsapp || '');
     data.append('status', formData.status);
     data.append('yearly_holidays', String(!!formData.yearly_holidays));
+    data.append('role', formData.role || 'engineer');
+
+    const selectedProjIds = Array.isArray(formData.project_ids) ? formData.project_ids : [];
+    data.append('project_ids', JSON.stringify(selectedProjIds));
+    if (formData.role === 'sales' || formData.role === 'leader_sales') {
+      data.append('sales_project_ids', JSON.stringify(selectedProjIds));
+      if (selectedProjIds.length > 0) {
+        data.append('sales_project_id', selectedProjIds[0]);
+      }
+    }
 
     if (formData.password) data.append('password', formData.password);
     if (formData.zone_id) data.append('zone_id', formData.zone_id);
@@ -209,7 +253,7 @@ const Users = () => {
           </Button>
           <Button onClick={() => openModal()} className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2 h-9 text-xs sm:text-sm">
             <Plus className="w-4 h-4" />
-            Add {getRoleName('engineer')}
+            {roleFilter ? `Add ${getRoleName(roleFilter)}` : 'Add User'}
           </Button>
         </div>
       </div>
@@ -271,6 +315,22 @@ const Users = () => {
                       )}
                       <div>
                         <p className="font-semibold text-foreground">{userItem.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                            userItem.role === 'leader_sales' 
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300' 
+                              : userItem.role === 'sales'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
+                              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+                          }`}>
+                            {getRoleName(userItem.role)}
+                          </span>
+                          {userItem.project_ids && userItem.project_ids.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground font-medium">
+                              • {userItem.project_ids.length} {userItem.project_ids.length === 1 ? 'project' : 'projects'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -457,6 +517,129 @@ const Users = () => {
                   <label className="text-sm font-semibold text-foreground">{editingId ? 'New Password (Optional)' : 'Password'}</label>
                   <Input name="password" type="password" value={formData.password} onChange={handleInputChange} required={!editingId} className="h-11" placeholder="••••••••" />
                 </div>
+
+                {/* Role Selection */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">Role</label>
+                  <select 
+                    name="role" 
+                    value={formData.role} 
+                    onChange={(e) => {
+                      setFormData({ 
+                        ...formData, 
+                        role: e.target.value, 
+                        project_ids: [] 
+                      });
+                    }}
+                    required
+                    className="flex w-full h-11 items-center justify-between rounded-md border border-zinc-200 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="engineer">{getRoleName('engineer') || 'Engineer'}</option>
+                    <option value="sales">{getRoleName('sales') || 'Sales Rep'}</option>
+                    <option value="leader_sales">{getRoleName('leader_sales') || 'Sales Leader'}</option>
+                  </select>
+                </div>
+
+                {/* Dynamic Projects Selection */}
+                {formData.role === 'engineer' ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-semibold text-foreground">
+                        Assigned Projects
+                      </label>
+                      <span className="text-xs font-semibold text-primary">
+                        {formData.project_ids.length} selected
+                      </span>
+                    </div>
+                    <div className="border border-border rounded-xl p-3 max-h-44 overflow-y-auto space-y-1.5 bg-muted/10">
+                      {projectsList.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-2 text-center">
+                          No projects available.
+                        </p>
+                      ) : (
+                        projectsList.map((project) => {
+                          const isSelected = formData.project_ids.includes(project.id);
+                          return (
+                            <div
+                              key={project.id}
+                              onClick={() => toggleProjectSelection(project.id)}
+                              className={`flex items-center justify-between p-2 rounded-lg border text-sm cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-primary bg-primary/10 text-primary font-medium'
+                                  : 'border-border bg-card hover:bg-muted/50 text-foreground'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 truncate">
+                                {project.logo ? (
+                                  <img src={project.logo} alt="" className="w-5 h-5 rounded-md object-cover" />
+                                ) : (
+                                  <span className="material-symbols-outlined text-[18px] text-muted-foreground">folder</span>
+                                )}
+                                <span className="truncate">{project.name}</span>
+                              </div>
+                              <div
+                                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors text-xs font-bold ${
+                                  isSelected ? 'bg-primary border-primary text-white' : 'border-muted-foreground/30'
+                                }`}
+                              >
+                                {isSelected && '✓'}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                ) : (formData.role === 'sales' || formData.role === 'leader_sales') ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-semibold text-foreground">
+                        Assigned Sales Projects
+                      </label>
+                      <span className="text-xs font-semibold text-primary">
+                        {formData.project_ids.length} selected
+                      </span>
+                    </div>
+                    <div className="border border-border rounded-xl p-3 max-h-44 overflow-y-auto space-y-1.5 bg-muted/10">
+                      {salesProjectsList.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-2 text-center">
+                          No sales projects available.
+                        </p>
+                      ) : (
+                        salesProjectsList.map((project) => {
+                          const isSelected = formData.project_ids.includes(project.id);
+                          return (
+                            <div
+                              key={project.id}
+                              onClick={() => toggleProjectSelection(project.id)}
+                              className={`flex items-center justify-between p-2 rounded-lg border text-sm cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-primary bg-primary/10 text-primary font-medium'
+                                  : 'border-border bg-card hover:bg-muted/50 text-foreground'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 truncate">
+                                {project.logo ? (
+                                  <img src={project.logo} alt="" className="w-5 h-5 rounded-md object-cover" />
+                                ) : (
+                                  <span className="material-symbols-outlined text-[18px] text-muted-foreground">domain</span>
+                                )}
+                                <span className="truncate">{project.name}</span>
+                              </div>
+                              <div
+                                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors text-xs font-bold ${
+                                  isSelected ? 'bg-primary border-primary text-white' : 'border-muted-foreground/30'
+                                }`}
+                              >
+                                {isSelected && '✓'}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-foreground">Zone</label>
