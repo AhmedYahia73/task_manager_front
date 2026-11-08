@@ -17,11 +17,17 @@ import {
   Mail, 
   Phone, 
   Check, 
-  Filter 
+  Filter,
+  UserCheck,
+  ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { isAdminRole, getCurrentUser } from '@/utils/auth';
 
 export default function SalesLeaders() {
+  const currentUser = getCurrentUser();
+  const isAdmin = isAdminRole(currentUser?.role);
+
   const { projectId: routeProjectId } = useParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -87,6 +93,7 @@ export default function SalesLeaders() {
     phone: '',
     password: '',
     status: 'active',
+    role: 'leader_sales',
     target_id: '',
     sales_project_ids: [],
   });
@@ -97,6 +104,10 @@ export default function SalesLeaders() {
   // Delete Dialog State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingLeader, setDeletingLeader] = useState(null);
+
+  // Demote / Role Convert State
+  const [demoteModalOpen, setDemoteModalOpen] = useState(false);
+  const [demotingLeader, setDemotingLeader] = useState(null);
 
   const openModal = (item = null) => {
     if (item) {
@@ -123,6 +134,7 @@ export default function SalesLeaders() {
         phone: item.phone || '',
         password: '',
         status: item.status || 'active',
+        role: item.role || 'leader_sales',
         target_id: item.target_id || '',
         sales_project_ids: initialProjectIds,
       });
@@ -136,6 +148,7 @@ export default function SalesLeaders() {
         phone: '',
         password: '',
         status: 'active',
+        role: 'leader_sales',
         target_id: '',
         sales_project_ids: routeProjectId ? [routeProjectId] : [],
       });
@@ -190,6 +203,7 @@ export default function SalesLeaders() {
       payload.append('email', formData.email.trim());
       payload.append('phone', formData.phone.trim());
       payload.append('status', formData.status);
+      if (formData.role) payload.append('role', formData.role);
       if (formData.password) payload.append('password', formData.password);
       if (formData.target_id) payload.append('target_id', formData.target_id);
       if (selectedFile) payload.append('image', selectedFile);
@@ -205,7 +219,11 @@ export default function SalesLeaders() {
           data: payload,
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        toast.success('Sales Leader updated successfully');
+        toast.success(
+          formData.role === 'sales'
+            ? 'User role updated to Sales Representative successfully'
+            : 'Sales Leader updated successfully'
+        );
       } else {
         await mutate({
           method: 'POST',
@@ -220,6 +238,23 @@ export default function SalesLeaders() {
       refresh();
     } catch (err) {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to save leader');
+    }
+  };
+
+  const confirmDemoteToSales = async () => {
+    if (!demotingLeader) return;
+    try {
+      await mutate({
+        method: 'PUT',
+        url: `/api/admin/sales/leader/${demotingLeader.id}/role`,
+        data: { role: 'sales' },
+      });
+      toast.success(`${demotingLeader.name} has been converted to Sales Representative successfully!`);
+      setDemoteModalOpen(false);
+      setDemotingLeader(null);
+      refresh();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to convert to Sales Rep');
     }
   };
 
@@ -344,8 +379,14 @@ export default function SalesLeaders() {
                         )}
                         <div>
                           <p className="font-medium text-foreground">{item.name}</p>
-                          <span className="text-xs text-muted-foreground capitalize">
-                            Leader
+                          <span
+                            className={`text-[11px] font-medium px-1.5 py-0.5 rounded-md inline-block w-fit ${
+                              item.role === 'sales'
+                                ? 'bg-muted text-muted-foreground'
+                                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                            }`}
+                          >
+                            {item.role === 'sales' ? 'Sales Rep' : 'Sales Leader'}
                           </span>
                         </div>
                       </div>
@@ -418,6 +459,20 @@ export default function SalesLeaders() {
                     {/* Actions */}
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {isAdmin && item.role !== 'sales' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setDemotingLeader(item);
+                              setDemoteModalOpen(true);
+                            }}
+                            className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
+                            title="Convert to Sales Representative (تحويل إلى مندوب مبيعات)"
+                          >
+                            <UserCheck className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -560,6 +615,32 @@ export default function SalesLeaders() {
                 </div>
               </div>
 
+              {/* Role Selection (Admin Only) */}
+              {isAdmin && (
+                <div className="bg-muted/40 p-3 rounded-xl border border-border/70 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                      <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                      Role (الدور الوظيفي)
+                    </label>
+                    <span className="text-[10px] text-muted-foreground">Sales Leader or Sales Rep</span>
+                  </div>
+                  <select
+                    value={formData.role || 'leader_sales'}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    className="w-full bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+                  >
+                    <option value="leader_sales">Sales Leader (ليدر مبيعات)</option>
+                    <option value="sales">Sales Representative (مندوب مبيعات)</option>
+                  </select>
+                  {formData.role === 'sales' && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                      Note: Converting to Sales Representative will move them to the Sales Reps list.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Target & Status */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -694,6 +775,62 @@ export default function SalesLeaders() {
                   </>
                 ) : (
                   'Confirm Delete'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convert to Sales Rep Confirmation Modal */}
+      {demoteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                <UserCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Convert to Sales Representative</h3>
+                <p className="text-xs text-muted-foreground">تحويل ليدر المبيعات إلى مندوب مبيعات</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to convert{' '}
+              <strong className="text-foreground">{demotingLeader?.name}</strong> to{' '}
+              <strong className="text-emerald-500">Sales Representative (sales)</strong>?
+            </p>
+            <div className="mt-3 bg-muted/40 p-3 rounded-xl border text-xs text-muted-foreground space-y-1">
+              <p className="font-semibold text-foreground">What happens next:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>User role is updated to <span className="font-mono text-primary font-semibold">sales</span></li>
+                <li>Project access and memberships are preserved</li>
+                <li>They will appear in the <strong>Sales Reps</strong> list</li>
+              </ul>
+            </div>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDemoteModalOpen(false);
+                  setDemotingLeader(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-xs"
+                onClick={confirmDemoteToSales}
+                disabled={mutationLoading}
+              >
+                {mutationLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Converting...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="w-4 h-4" /> Confirm Conversion
+                  </>
                 )}
               </Button>
             </div>

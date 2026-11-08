@@ -15,6 +15,7 @@ import {
   Briefcase, 
   Target, 
   UserCheck, 
+  ShieldCheck,
   Mail, 
   Phone, 
   Check, 
@@ -97,6 +98,7 @@ export default function SalesReps() {
     phone: '',
     password: '',
     status: 'active',
+    role: 'sales',
     leader_id: '',
     target_id: '',
     sales_project_ids: [],
@@ -108,6 +110,10 @@ export default function SalesReps() {
   // Delete Dialog State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingRep, setDeletingRep] = useState(null);
+
+  // Promote / Convert Role State
+  const [promoteModalOpen, setPromoteModalOpen] = useState(false);
+  const [promotingRep, setPromotingRep] = useState(null);
 
   const openModal = (item = null) => {
     if (item) {
@@ -134,6 +140,7 @@ export default function SalesReps() {
         phone: item.phone || '',
         password: '',
         status: item.status || 'active',
+        role: item.role || 'sales',
         leader_id: item.leader_id || '',
         target_id: item.target_id || '',
         sales_project_ids: initialProjectIds,
@@ -148,6 +155,7 @@ export default function SalesReps() {
         phone: '',
         password: '',
         status: 'active',
+        role: 'sales',
         leader_id: isLeader ? (currentUser?.id || '') : '',
         target_id: '',
         sales_project_ids: routeProjectId ? [routeProjectId] : [],
@@ -203,8 +211,13 @@ export default function SalesReps() {
       payload.append('email', formData.email.trim());
       payload.append('phone', formData.phone.trim());
       payload.append('status', formData.status);
+      if (formData.role) payload.append('role', formData.role);
       if (formData.password) payload.append('password', formData.password);
-      if (formData.leader_id) payload.append('leader_id', formData.leader_id);
+      if (formData.role === 'leader_sales') {
+        payload.append('leader_id', '');
+      } else if (formData.leader_id) {
+        payload.append('leader_id', formData.leader_id);
+      }
       if (formData.target_id) payload.append('target_id', formData.target_id);
       if (selectedFile) payload.append('image', selectedFile);
       payload.append('sales_project_ids', JSON.stringify(formData.sales_project_ids));
@@ -219,7 +232,11 @@ export default function SalesReps() {
           data: payload,
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        toast.success('Sales Representative updated successfully');
+        toast.success(
+          formData.role === 'leader_sales'
+            ? 'User role updated to Sales Leader successfully'
+            : 'Sales Representative updated successfully'
+        );
       } else {
         await mutate({
           method: 'POST',
@@ -234,6 +251,23 @@ export default function SalesReps() {
       refresh();
     } catch (err) {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to save sales rep');
+    }
+  };
+
+  const confirmPromoteToLeader = async () => {
+    if (!promotingRep) return;
+    try {
+      await mutate({
+        method: 'PUT',
+        url: `/api/admin/sales/sales/${promotingRep.id}/role`,
+        data: { role: 'leader_sales' },
+      });
+      toast.success(`${promotingRep.name} has been promoted to Sales Leader successfully!`);
+      setPromoteModalOpen(false);
+      setPromotingRep(null);
+      refresh();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to promote to Sales Leader');
     }
   };
 
@@ -386,8 +420,14 @@ export default function SalesReps() {
                         )}
                         <div>
                           <p className="font-medium text-foreground">{item.name}</p>
-                          <span className="text-xs text-muted-foreground capitalize">
-                            Sales Rep
+                          <span
+                            className={`text-[11px] font-medium px-1.5 py-0.5 rounded-md inline-block w-fit ${
+                              item.role === 'leader_sales'
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                : 'text-muted-foreground'
+                            }`}
+                          >
+                            {item.role === 'leader_sales' ? 'Sales Leader' : 'Sales Rep'}
                           </span>
                         </div>
                       </div>
@@ -474,6 +514,20 @@ export default function SalesReps() {
                     {/* Actions */}
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {isAdmin && item.role !== 'leader_sales' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setPromotingRep(item);
+                              setPromoteModalOpen(true);
+                            }}
+                            className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
+                            title="Promote to Sales Leader (تحويل إلى ليدر مبيعات)"
+                          >
+                            <ShieldCheck className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -616,30 +670,73 @@ export default function SalesReps() {
                 </div>
               </div>
 
+              {/* Role Selection (Admin Only) */}
+              {isAdmin && (
+                <div className="bg-muted/40 p-3 rounded-xl border border-border/70 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                      Role (الدور الوظيفي)
+                    </label>
+                    <span className="text-[10px] text-muted-foreground">Sales Rep or Sales Leader</span>
+                  </div>
+                  <select
+                    value={formData.role || 'sales'}
+                    onChange={(e) => {
+                      const newRole = e.target.value;
+                      setFormData({
+                        ...formData,
+                        role: newRole,
+                        leader_id: newRole === 'leader_sales' ? '' : formData.leader_id,
+                      });
+                    }}
+                    className="w-full bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+                  >
+                    <option value="sales">Sales Representative (مندوب مبيعات)</option>
+                    <option value="leader_sales">Sales Leader (ليدر مبيعات)</option>
+                  </select>
+                  {formData.role === 'leader_sales' && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                      Note: Sales Leaders manage their team and do not report to another leader.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Assigned Leader & Target */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {isAdmin ? (
-                  <div>
-                    <label className="text-xs font-semibold mb-1 block">Team Leader</label>
-                    <select
-                      value={formData.leader_id}
-                      onChange={(e) => setFormData({ ...formData, leader_id: e.target.value })}
-                      className="w-full bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="">No Leader Assigned</option>
-                      {leadersList.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                {formData.role !== 'leader_sales' ? (
+                  isAdmin ? (
+                    <div>
+                      <label className="text-xs font-semibold mb-1 block">Team Leader</label>
+                      <select
+                        value={formData.leader_id}
+                        onChange={(e) => setFormData({ ...formData, leader_id: e.target.value })}
+                        className="w-full bg-background border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">No Leader Assigned</option>
+                        {leadersList.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-xs font-semibold mb-1 block">Team Leader</label>
+                      <div className="w-full bg-muted/50 border rounded-lg px-3 py-2 text-sm text-foreground font-medium flex items-center gap-2">
+                        <UserCheck className="w-4 h-4 text-primary" />
+                        <span>{currentUser?.name || 'You (Leader)'}</span>
+                      </div>
+                    </div>
+                  )
                 ) : (
                   <div>
-                    <label className="text-xs font-semibold mb-1 block">Team Leader</label>
-                    <div className="w-full bg-muted/50 border rounded-lg px-3 py-2 text-sm text-foreground font-medium flex items-center gap-2">
-                      <UserCheck className="w-4 h-4 text-primary" />
-                      <span>{currentUser?.name || 'You (Leader)'}</span>
+                    <label className="text-xs font-semibold mb-1 block text-muted-foreground">Team Leader</label>
+                    <div className="w-full bg-muted/30 border rounded-lg px-3 py-2 text-xs text-muted-foreground italic flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-amber-500" />
+                      <span>Not Applicable (Sales Leader)</span>
                     </div>
                   </div>
                 )}
@@ -777,6 +874,63 @@ export default function SalesReps() {
                   </>
                 ) : (
                   'Confirm Delete'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Promote to Leader Confirmation Modal */}
+      {promoteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Promote to Sales Leader</h3>
+                <p className="text-xs text-muted-foreground">تحويل مندوب المبيعات إلى ليدر مبيعات</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to promote{' '}
+              <strong className="text-foreground">{promotingRep?.name}</strong> to{' '}
+              <strong className="text-amber-500">Sales Leader (leader_sales)</strong>?
+            </p>
+            <div className="mt-3 bg-muted/40 p-3 rounded-xl border text-xs text-muted-foreground space-y-1">
+              <p className="font-semibold text-foreground">What happens next:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>User role is updated to <span className="font-mono text-primary font-semibold">leader_sales</span></li>
+                <li>Assigned team leader is cleared (they become a leader)</li>
+                <li>Assigned project access and memberships are preserved</li>
+                <li>They will be listed under the <strong>Sales Leaders</strong> section</li>
+              </ul>
+            </div>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPromoteModalOpen(false);
+                  setPromotingRep(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-amber-600 hover:bg-amber-700 text-white gap-2 shadow-xs"
+                onClick={confirmPromoteToLeader}
+                disabled={mutationLoading}
+              >
+                {mutationLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Converting...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" /> Confirm Promotion
+                  </>
                 )}
               </Button>
             </div>
