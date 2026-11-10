@@ -1,6 +1,17 @@
 import React from 'react';
 import { KanbanCard } from './KanbanCard';
-import { Plus, Loader2, Inbox, Lock, Ban, AlertTriangle, Clock } from 'lucide-react';
+import { KanbanProjectGroup } from './KanbanProjectGroup';
+import { 
+  Plus, 
+  Loader2, 
+  Inbox, 
+  Lock, 
+  Ban, 
+  AlertTriangle, 
+  Clock, 
+  ChevronsUpDown,
+  FolderKanban
+} from 'lucide-react';
 
 export const KanbanColumn = ({
   column,
@@ -23,11 +34,20 @@ export const KanbanColumn = ({
   onDragEnd,
   cardProps,
   widthClass = '',
-  className = ''
+  className = '',
+  // Project-grouped props
+  projectGroups = null,
+  onToggleAllProjects,
+  allProjectsOpen = false,
+  dragOverProjectId,
+  onDragOverProject,
+  onDragLeaveProject,
+  onDropOnProject
 }) => {
   const isLeaderOrAdmin = cardProps?.isLeaderOrAdmin;
   const isDelayColumn = column.id === 'delay' || column.isDelayColumn;
   const isColumnRestricted = isDelayColumn || (!isLeaderOrAdmin && (column.id === 'approve' || column.id === 'edit'));
+  const isGroupedView = Boolean(projectGroups);
 
   return (
     <div
@@ -73,33 +93,47 @@ export const KanbanColumn = ({
           </span>
         </div>
 
-        {/* Header Indicator */}
-        {isDelayColumn ? (
-          <span 
-            title="تظهر المهام في هذه الخانة تلقائيًا عند تجاوز موعد التسليم، ولا يمكن نقل مهام إليها يدويًا"
-            className="flex items-center gap-1 text-[10px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/70 px-2 py-0.5 rounded-md border border-rose-200 dark:border-rose-800 select-none shadow-xs"
-          >
-            <Clock className="w-2.5 h-2.5 text-rose-600" />
-            <span>تلقائي / Auto</span>
-          </span>
-        ) : isColumnRestricted ? (
-          <span 
-            title="Only Leaders and Admins can create tasks in or move tasks to this status"
-            className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/80 bg-muted/60 px-2 py-0.5 rounded-md border border-border/50 select-none"
-          >
-            <Lock className="w-2.5 h-2.5 text-amber-500" />
-            <span>Leader Only</span>
-          </span>
-        ) : (isLeaderOrAdmin && onAddTask) ? (
-          <button
-            type="button"
-            onClick={() => onAddTask(column.id)}
-            title={`Add task in ${column.label}`}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        ) : null}
+        {/* Header Right Actions */}
+        <div className="flex items-center gap-1.5">
+          {/* Expand/Collapse All Projects toggle (for grouped view) */}
+          {isGroupedView && projectGroups?.length > 1 && (
+            <button
+              type="button"
+              onClick={() => onToggleAllProjects?.(column.id)}
+              title={allProjectsOpen ? "Collapse all projects" : "Expand all projects"}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer border-none bg-transparent"
+            >
+              <ChevronsUpDown className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {isDelayColumn ? (
+            <span 
+              title="تظهر المهام في هذه الخانة تلقائيًا عند تجاوز موعد التسليم، ولا يمكن نقل مهام إليها يدويًا"
+              className="flex items-center gap-1 text-[10px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/70 px-2 py-0.5 rounded-md border border-rose-200 dark:border-rose-800 select-none shadow-xs"
+            >
+              <Clock className="w-2.5 h-2.5 text-rose-600" />
+              <span>تلقائي / Auto</span>
+            </span>
+          ) : isColumnRestricted ? (
+            <span 
+              title="Only Leaders and Admins can create tasks in or move tasks to this status"
+              className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/80 bg-muted/60 px-2 py-0.5 rounded-md border border-border/50 select-none"
+            >
+              <Lock className="w-2.5 h-2.5 text-amber-500" />
+              <span>Leader Only</span>
+            </span>
+          ) : (isLeaderOrAdmin && onAddTask) ? (
+            <button
+              type="button"
+              onClick={() => onAddTask(column.id)}
+              title={`Add task in ${column.label}`}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer border-none bg-transparent"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/* Drop Zone Banner indicator when dragging over */}
@@ -129,97 +163,169 @@ export const KanbanColumn = ({
         </div>
       )}
 
-      {/* Scrollable Tasks Container with Infinite Scroll */}
+      {/* Scrollable Container */}
       <div
-        onScroll={(e) => onScroll(column.id, e)}
+        onScroll={onScroll ? (e) => onScroll(column.id, e) : undefined}
         className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar"
       >
-        {/* Initial Loading Skeletons */}
-        {loading && tasks.length === 0 ? (
-          <div className="space-y-3 pt-2">
-            {[1, 2, 3].map((n) => (
-              <div
-                key={n}
-                className="animate-pulse rounded-xl border border-border/50 bg-card p-4 space-y-3"
-              >
-                <div className="flex justify-between items-center">
-                  <div className="h-4 w-16 bg-muted rounded" />
-                  <div className="h-4 w-8 bg-muted rounded" />
+        {isGroupedView ? (
+          /* ========================================================= */
+          /* GROUPED BY PROJECT VIEW                                   */
+          /* ========================================================= */
+          loading && projectGroups.length === 0 ? (
+            <div className="space-y-3 pt-2">
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="animate-pulse rounded-2xl border border-border/50 bg-card/80 p-4 space-y-3"
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="h-4 w-28 bg-muted rounded" />
+                    <div className="h-4 w-12 bg-muted rounded-full" />
+                  </div>
+                  <div className="h-10 w-full bg-muted/40 rounded-xl" />
                 </div>
-                <div className="h-4 w-3/4 bg-muted rounded" />
-                <div className="h-3 w-1/2 bg-muted rounded" />
-                <div className="flex justify-between items-center pt-2">
-                  <div className="h-5 w-5 bg-muted rounded-full" />
-                  <div className="h-3 w-16 bg-muted rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : tasks.length === 0 ? (
-          /* Empty State */
-          isDelayColumn ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-3 border border-emerald-500/20">
-                <Clock className="w-6 h-6 stroke-[1.5]" />
-              </div>
-              <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                No delayed tasks!
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px]">
-                All group tasks are currently on schedule.
-              </p>
+              ))}
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/60 text-muted-foreground mb-3">
-                <Inbox className="w-6 h-6 stroke-[1.5]" />
-              </div>
-              <p className="text-xs font-semibold text-muted-foreground">
-                No tasks in {column.label}
-              </p>
-              {isLeaderOrAdmin && (
-                <p className="text-[11px] text-muted-foreground/80 mt-1 max-w-[180px]">
-                  Drag a task here or click + to create one
+          ) : projectGroups.length === 0 ? (
+            /* Empty State */
+            isDelayColumn ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-3 border border-emerald-500/20">
+                  <Clock className="w-6 h-6 stroke-[1.5]" />
+                </div>
+                <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                  No delayed tasks!
                 </p>
-              )}
-            </div>
-          )
-        ) : (
-          /* Task Cards List */
-          <>
-            {tasks.map((task, index) => (
-              <KanbanCard
-                key={task.id}
-                task={task}
-                index={index}
-                columnId={column.id}
+                <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px]">
+                  All group tasks are currently on schedule.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/60 text-muted-foreground mb-3">
+                  <Inbox className="w-6 h-6 stroke-[1.5]" />
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  No tasks in {column.label}
+                </p>
+                {isLeaderOrAdmin && (
+                  <p className="text-[11px] text-muted-foreground/80 mt-1 max-w-[180px]">
+                    Drag a task here or click + to create one
+                  </p>
+                )}
+              </div>
+            )
+          ) : (
+            /* Project Accordion Groups */
+            projectGroups.map((proj) => (
+              <KanbanProjectGroup
+                key={proj.id}
+                project={proj}
+                column={column}
+                isOpen={proj.isOpen}
+                onToggle={proj.onToggle}
+                onLoadMore={proj.onLoadMore}
                 dragOverCardId={dragOverCardId}
-                onDragStart={onDragStart || cardProps?.onDragStart}
-                onDragEnd={onDragEnd || cardProps?.onDragEnd}
                 onDragOverCard={onDragOverCard}
                 onDragLeaveCard={onDragLeaveCard}
                 onDropOnCard={onDropOnCard}
-                {...cardProps}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                cardProps={cardProps}
+                isDragOver={dragOverProjectId === proj.id}
+                onDragOverProject={onDragOverProject}
+                onDragLeaveProject={onDragLeaveProject}
+                onDropOnProject={onDropOnProject}
               />
-            ))}
-
-            {/* Loading More Spinner (Infinite Scroll Bottom Indicator) */}
-            {loadingMore && (
-              <div className="py-3 flex items-center justify-center gap-2 text-xs text-primary font-medium animate-pulse">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span>Loading more tasks...</span>
+            ))
+          )
+        ) : (
+          /* ========================================================= */
+          /* FLAT TASKS VIEW (Standard / Tasks.jsx fallback)          */
+          /* ========================================================= */
+          loading && tasks.length === 0 ? (
+            <div className="space-y-3 pt-2">
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="animate-pulse rounded-xl border border-border/50 bg-card p-4 space-y-3"
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="h-4 w-16 bg-muted rounded" />
+                    <div className="h-4 w-8 bg-muted rounded" />
+                  </div>
+                  <div className="h-4 w-3/4 bg-muted rounded" />
+                  <div className="h-3 w-1/2 bg-muted rounded" />
+                  <div className="flex justify-between items-center pt-2">
+                    <div className="h-5 w-5 bg-muted rounded-full" />
+                    <div className="h-3 w-16 bg-muted rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : tasks.length === 0 ? (
+            isDelayColumn ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-3 border border-emerald-500/20">
+                  <Clock className="w-6 h-6 stroke-[1.5]" />
+                </div>
+                <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                  No delayed tasks!
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px]">
+                  All group tasks are currently on schedule.
+                </p>
               </div>
-            )}
-
-            {/* End of list badge if all loaded and more than 1 page */}
-            {!hasMore && tasks.length > 5 && (
-              <div className="pt-2 pb-1 text-center">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">
-                  All {total} tasks loaded
-                </span>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/60 text-muted-foreground mb-3">
+                  <Inbox className="w-6 h-6 stroke-[1.5]" />
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  No tasks in {column.label}
+                </p>
+                {isLeaderOrAdmin && (
+                  <p className="text-[11px] text-muted-foreground/80 mt-1 max-w-[180px]">
+                    Drag a task here or click + to create one
+                  </p>
+                )}
               </div>
-            )}
-          </>
+            )
+          ) : (
+            <>
+              {tasks.map((task, index) => (
+                <KanbanCard
+                  key={task.id}
+                  task={task}
+                  index={index}
+                  columnId={column.id}
+                  dragOverCardId={dragOverCardId}
+                  onDragStart={onDragStart || cardProps?.onDragStart}
+                  onDragEnd={onDragEnd || cardProps?.onDragEnd}
+                  onDragOverCard={onDragOverCard}
+                  onDragLeaveCard={onDragLeaveCard}
+                  onDropOnCard={onDropOnCard}
+                  {...cardProps}
+                />
+              ))}
+
+              {loadingMore && (
+                <div className="py-3 flex items-center justify-center gap-2 text-xs text-primary font-medium animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span>Loading more tasks...</span>
+                </div>
+              )}
+
+              {!hasMore && tasks.length > 5 && (
+                <div className="pt-2 pb-1 text-center">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">
+                    All {total} tasks loaded
+                  </span>
+                </div>
+              )}
+            </>
+          )
         )}
       </div>
     </div>
