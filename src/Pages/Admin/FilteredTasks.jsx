@@ -123,49 +123,56 @@ const FilteredTasks = () => {
   const usersList = listsData?.users_list || [];
 
   // =========================================================================
-  // KANBAN COLUMNS STATE (Independent pagination + infinite scroll per column)
+  // KANBAN STATUS & PROJECT STATE
   // =========================================================================
-  const [columnsData, setColumnsData] = useState(() => {
-    const initial = {};
-    activeKanbanColumns.forEach(col => {
-      initial[col.id] = {
-        tasks: [],
-        page: 1,
-        totalPages: 1,
-        total: 0,
-        loading: false,
-        loadingMore: false,
-        hasMore: false
-      };
-    });
-    return initial;
-  });
+  // Projects summary per status: { [status]: [{ project_id, project_name, total }] }
+  const [projectsSummary, setProjectsSummary] = useState({});
+  // Overall task totals per status
+  const [statusTotals, setStatusTotals] = useState({});
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
+  // Loaded tasks per project in each status:
+  // projectsData[statusKey][projKey] = { tasks: [], page: 1, totalPages: 1, total: 0, loading: false, loadingMore: false, hasMore: false, initialLoaded: false }
+  const [projectsData, setProjectsData] = useState({});
+
+  // Accordion expanded state: { [`${statusKey}_${projKey}`]: boolean }
+  const [expandedProjects, setExpandedProjects] = useState({});
+
+  // Drag and Drop state
   const [draggedTask, setDraggedTask] = useState(null);
   const [draggedFromCol, setDraggedFromCol] = useState(null);
+  const [draggedFromProj, setDraggedFromProj] = useState(null);
   const [draggedFromIndex, setDraggedFromIndex] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
+  const [dragOverProjectId, setDragOverProjectId] = useState(null);
   const [dragOverCardId, setDragOverCardId] = useState(null);
 
-  // Fetch a specific column's page
-  const fetchColumnPage = useCallback(async (statusKey, pageNum = 1, append = false) => {
-    setColumnsData(prev => ({
-      ...prev,
-      [statusKey]: {
-        ...prev[statusKey],
-        loading: !append,
-        loadingMore: append
-      }
-    }));
+  // Fetch tasks for a specific project inside a specific status column
+  const fetchProjectTasks = useCallback(async (statusKey, projKey, pageNum = 1, append = false) => {
+    setProjectsData(prev => {
+      const colData = prev[statusKey] || {};
+      const current = colData[projKey] || { tasks: [], page: 1, total: 0 };
+      return {
+        ...prev,
+        [statusKey]: {
+          ...colData,
+          [projKey]: {
+            ...current,
+            loading: !append,
+            loadingMore: append
+          }
+        }
+      };
+    });
 
     try {
       const res = await apiClient.get(endpoint, {
         params: {
           status: statusKey,
+          project_id: projKey === 'unassigned' ? 'unassigned' : projKey,
           page: pageNum,
-          limit: 12,
+          limit: 8,
           search: debouncedSearch,
-          project_id: projectId || undefined,
           user_id: userIdFilter || undefined
         }
       });
@@ -174,8 +181,10 @@ const FilteredTasks = () => {
       const fetchedTasks = data.tasks || data.Tasks || [];
       const pagination = data.pagination || { total: fetchedTasks.length, totalPages: 1, page: pageNum };
 
-      setColumnsData(prev => {
-        const currentTasks = prev[statusKey]?.tasks || [];
+      setProjectsData(prev => {
+        const colData = prev[statusKey] || {};
+        const current = colData[projKey] || { tasks: [] };
+        const currentTasks = current.tasks || [];
         let combined = append
           ? [...currentTasks, ...fetchedTasks.filter(item => !currentTasks.some(existing => existing.id === item.id))]
           : fetchedTasks;
@@ -203,52 +212,146 @@ const FilteredTasks = () => {
         return {
           ...prev,
           [statusKey]: {
-            tasks: combined,
-            page: pageNum,
-            totalPages: pagination.totalPages || 1,
-            total: Number(pagination.total || combined.length),
-            loading: false,
-            loadingMore: false,
-            hasMore: pageNum < (pagination.totalPages || 1)
+            ...colData,
+            [projKey]: {
+              tasks: combined,
+              page: pageNum,
+              totalPages: pagination.totalPages || 1,
+              total: Number(pagination.total || combined.length),
+              loading: false,
+              loadingMore: false,
+              hasMore: pageNum < (pagination.totalPages || 1),
+              initialLoaded: true
+            }
           }
         };
       });
     } catch (err) {
-      console.error(`Failed to load tasks for status ${statusKey}:`, err);
-      setColumnsData(prev => ({
-        ...prev,
-        [statusKey]: {
-          ...prev[statusKey],
-          loading: false,
-          loadingMore: false
+      console.error(`Failed to load tasks for status ${statusKey} project ${projKey}:`, err);
+      setProjectsData(prev => {
+        const colData = prev[statusKey] || {};
+        const current = colData[projKey] || { tasks: [] };
+        return {
+          ...prev,
+          [statusKey]: {
+            ...colData,
+            [projKey]: {
+              ...current,
+              loading: false,
+              loadingMore: false
+            }
+          }
+        };
+      });
+    }
+  }, [endpoint, debouncedSearch, userIdFilter, type]);
+
+  // Fetch summary of projects & task counts per status
+  const fetchProjectsSummary = useCallback(async () => {
+    setSummaryLoading(true);
+    try {
+      const res = await apiClient.get('/api/admin/tasks/status-projects', {
+        params: {
+          type,
+          search: debouncedSearch,
+          project_id: projectId || undefined,
+          user_id: userIdFilter || undefined
         }
-      }));
+      });
+      const data = res?.data?.data || res?.data || {};
+      const byStatus = data.projectsByStatus || {};
+      const totals = data.statusTotals || {};
+
+      setProjectsSummary(byStatus);
+      setStatusTotals(totals);
+
+      // Auto-expand the first project that has tasks in each column
+      setExpandedProjects(prevExpanded => {
+        const nextExpanded = { ...prevExpanded };
+        activeKanbanColumns.forEach(col => {
+          const projsInCol = byStatus[col.id] || [];
+          const hasAnyOpen = projsInCol.some(p => Boolean(nextExpanded[`${col.id}_${p.project_id || 'unassigned'}`]));
+          if (!hasAnyOpen && projsInCol.length > 0) {
+            const firstWithTasks = projsInCol.find(p => p.total > 0) || projsInCol[0];
+            const projKey = firstWithTasks.project_id || 'unassigned';
+            nextExpanded[`${col.id}_${projKey}`] = true;
+          }
+        });
+        return nextExpanded;
+      });
+
+    } catch (err) {
+      console.error("Failed to fetch status projects summary:", err);
+    } finally {
+      setSummaryLoading(false);
     }
-  }, [endpoint, debouncedSearch, projectId, userIdFilter]);
+  }, [type, debouncedSearch, projectId, userIdFilter, activeKanbanColumns]);
 
-  // Refresh all Kanban columns
-  const refreshAllColumns = useCallback(() => {
-    activeKanbanColumns.forEach(col => {
-      fetchColumnPage(col.id, 1, false);
-    });
-  }, [fetchColumnPage, activeKanbanColumns]);
-
-  // Trigger loading when search or filters change
+  // Refresh summary whenever filters or search change
   useEffect(() => {
-    refreshAllColumns();
-  }, [refreshAllColumns]);
+    fetchProjectsSummary();
+  }, [fetchProjectsSummary]);
 
-  // Handle Infinite Scroll within a Column container
-  const handleColumnScroll = useCallback((statusKey, e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    const col = columnsData[statusKey];
-
-    if (scrollHeight - scrollTop - clientHeight < 80) {
-      if (col && !col.loading && !col.loadingMore && col.hasMore) {
-        fetchColumnPage(statusKey, col.page + 1, true);
+  // When an accordion opens, fetch its page 1 if not yet loaded
+  useEffect(() => {
+    Object.entries(expandedProjects).forEach(([key, isOpen]) => {
+      if (!isOpen) return;
+      const [statusKey, projKey] = key.split('_');
+      if (!statusKey || !projKey) return;
+      const projState = projectsData[statusKey]?.[projKey];
+      if (!projState?.initialLoaded && !projState?.loading) {
+        fetchProjectTasks(statusKey, projKey, 1, false);
       }
+    });
+  }, [expandedProjects, projectsData, fetchProjectTasks]);
+
+  // Toggle individual project accordion
+  const handleToggleProject = useCallback((statusKey, projKey) => {
+    const key = `${statusKey}_${projKey}`;
+    setExpandedProjects(prev => {
+      const isCurrentlyOpen = Boolean(prev[key]);
+      const next = { ...prev, [key]: !isCurrentlyOpen };
+      if (!isCurrentlyOpen) {
+        const projState = projectsData[statusKey]?.[projKey];
+        if (!projState?.initialLoaded && !projState?.loading) {
+          fetchProjectTasks(statusKey, projKey, 1, false);
+        }
+      }
+      return next;
+    });
+  }, [projectsData, fetchProjectTasks]);
+
+  // Toggle all projects in a specific status column
+  const handleToggleAllProjectsInColumn = useCallback((statusKey) => {
+    const projectsInCol = projectsSummary[statusKey] || [];
+    if (projectsInCol.length === 0) return;
+
+    const allOpen = projectsInCol.every(p => Boolean(expandedProjects[`${statusKey}_${p.project_id || 'unassigned'}`]));
+
+    setExpandedProjects(prev => {
+      const next = { ...prev };
+      projectsInCol.forEach(p => {
+        const projKey = p.project_id || 'unassigned';
+        const key = `${statusKey}_${projKey}`;
+        next[key] = !allOpen;
+        if (!allOpen) {
+          const projState = projectsData[statusKey]?.[projKey];
+          if (!projState?.initialLoaded && !projState?.loading) {
+            fetchProjectTasks(statusKey, projKey, 1, false);
+          }
+        }
+      });
+      return next;
+    });
+  }, [projectsSummary, expandedProjects, projectsData, fetchProjectTasks]);
+
+  // Load more tasks on infinite scroll
+  const handleLoadMoreProject = useCallback((statusKey, projKey) => {
+    const projState = projectsData[statusKey]?.[projKey];
+    if (projState && !projState.loading && !projState.loadingMore && projState.hasMore) {
+      fetchProjectTasks(statusKey, projKey, projState.page + 1, true);
     }
-  }, [columnsData, fetchColumnPage]);
+  }, [projectsData, fetchProjectTasks]);
 
   // =========================================================================
   // TABLE VIEW DATA FETCH
@@ -302,6 +405,7 @@ const FilteredTasks = () => {
     if (isSelectionMode) return;
     setDraggedTask(task);
     setDraggedFromCol(colId || task.status);
+    setDraggedFromProj(task.project_id || 'unassigned');
     setDraggedFromIndex(index ?? null);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', task.id);
@@ -322,6 +426,21 @@ const FilteredTasks = () => {
     }
   };
 
+  const handleDragOverProject = (e, statusKey, projKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCol !== statusKey) setDragOverCol(statusKey);
+    if (dragOverProjectId !== projKey) setDragOverProjectId(projKey);
+  };
+
+  const handleDragLeaveProject = (e, statusKey, projKey) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    if (dragOverProjectId === projKey) {
+      setDragOverProjectId(null);
+    }
+  };
+
   const handleDragOverCard = (e, targetTask, targetColId, targetIndex) => {
     if (!draggedTask) return;
     if (draggedTask.id === targetTask.id) return;
@@ -333,6 +452,10 @@ const FilteredTasks = () => {
     }
     if (dragOverCol !== targetColId) {
       setDragOverCol(targetColId);
+    }
+    const tProj = targetTask.project_id || 'unassigned';
+    if (dragOverProjectId !== tProj) {
+      setDragOverProjectId(tProj);
     }
   };
 
@@ -346,17 +469,20 @@ const FilteredTasks = () => {
   const handleDragEnd = () => {
     setDraggedTask(null);
     setDraggedFromCol(null);
+    setDraggedFromProj(null);
     setDraggedFromIndex(null);
     setDragOverCol(null);
+    setDragOverProjectId(null);
     setDragOverCardId(null);
   };
 
-  // Dropping on another card in Kanban: Reorders within column or places at index
+  // Dropping on another card in Kanban: Reorders within project or moves across columns
   const handleDropOnCard = async (e, targetTask, targetColId, targetIndex) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOverCardId(null);
     setDragOverCol(null);
+    setDragOverProjectId(null);
 
     const taskToMove = draggedTask;
     if (!taskToMove || taskToMove.id === targetTask.id) {
@@ -365,49 +491,36 @@ const FilteredTasks = () => {
     }
 
     const sourceStatus = draggedFromCol || taskToMove.status;
-    const isSameColumn = sourceStatus === targetColId;
+    const sourceProj = draggedFromProj || taskToMove.project_id || 'unassigned';
+    const targetProj = targetTask.project_id || 'unassigned';
 
-    // Permissions check
-    if (!isSameColumn) {
-      if (!isAdmin && (targetColId === 'approve' || targetColId === 'edit')) {
-        toast.error("You don't have permission to approve tasks or request revision");
-        setDraggedTask(null);
-        return;
-      }
-      if (taskToMove.status === 'approve' && !isAdmin) {
-        toast.error("You don't have permission to modify approved tasks");
-        setDraggedTask(null);
-        return;
-      }
-    }
-
-    const previousColumnsData = { ...columnsData };
-
-    if (isSameColumn) {
-      const colTasks = [...(columnsData[sourceStatus]?.tasks || [])];
-      const fromIdx = colTasks.findIndex(t => t.id === taskToMove.id);
+    if (sourceStatus === targetColId && sourceProj === targetProj) {
+      // Reorder within the same project
+      const projTasks = [...(projectsData[sourceStatus]?.[sourceProj]?.tasks || [])];
+      const fromIdx = projTasks.findIndex(t => t.id === taskToMove.id);
       if (fromIdx === -1) {
         setDraggedTask(null);
         return;
       }
 
-      const [removed] = colTasks.splice(fromIdx, 1);
-      colTasks.splice(targetIndex, 0, removed);
+      const [removed] = projTasks.splice(fromIdx, 1);
+      projTasks.splice(targetIndex, 0, removed);
 
-      setColumnsData(prev => ({
+      setProjectsData(prev => ({
         ...prev,
         [sourceStatus]: {
-          ...prev[sourceStatus],
-          tasks: colTasks
+          ...(prev[sourceStatus] || {}),
+          [sourceProj]: {
+            ...(prev[sourceStatus]?.[sourceProj] || {}),
+            tasks: projTasks
+          }
         }
       }));
 
       setDraggedTask(null);
-      setDraggedFromCol(null);
-      setDraggedFromIndex(null);
 
       if (isAdmin) {
-        const payload = colTasks.map((t, idx) => ({
+        const payload = projTasks.map((t, idx) => ({
           id: t.id,
           sort: idx + 1
         }));
@@ -418,106 +531,62 @@ const FilteredTasks = () => {
         } catch (err) {
           console.error('Failed to reorder tasks:', err);
           toast.error('فشل في حفظ ترتيب المهام');
-          setColumnsData(previousColumnsData);
+          fetchProjectTasks(sourceStatus, sourceProj, 1, false);
         }
       }
     } else {
-      const sourceTasks = (columnsData[sourceStatus]?.tasks || []).filter(t => t.id !== taskToMove.id);
-      const targetTasks = [...(columnsData[targetColId]?.tasks || []).filter(t => t.id !== taskToMove.id)];
-
-      const updatedTask = { 
-        ...taskToMove, 
-        status: targetColId,
-        done_date: (targetColId === 'done' || targetColId === 'approve')
-          ? (taskToMove.done_date || new Date().toISOString().split('T')[0])
-          : taskToMove.done_date
-      };
-      targetTasks.splice(targetIndex, 0, updatedTask);
-
-      setColumnsData(prev => ({
-        ...prev,
-        [sourceStatus]: {
-          ...prev[sourceStatus],
-          tasks: sourceTasks,
-          total: Math.max(0, (prev[sourceStatus]?.total || 0) - 1)
-        },
-        [targetColId]: {
-          ...prev[targetColId],
-          tasks: targetTasks,
-          total: (prev[targetColId]?.total || 0) + 1
-        }
-      }));
-
-      setDraggedTask(null);
-      setDraggedFromCol(null);
-      setDraggedFromIndex(null);
-
-      if (isAdmin) {
-        const payload = targetTasks.map((t, idx) => ({
-          id: t.id,
-          sort: idx + 1,
-          status: targetColId
-        }));
-        try {
-          await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
-          const targetColInfo = KANBAN_COLUMNS.find(c => c.id === targetColId);
-          toast.success(`Task moved to ${targetColInfo?.label || targetColId}`);
-          if (viewMode === 'table') refreshTableTasks?.();
-        } catch (err) {
-          console.error('Failed to move/reorder task:', err);
-          toast.error('فشل في نقل وترتيب المهمة');
-          setColumnsData(previousColumnsData);
-        }
-      } else {
-        try {
-          await apiClient.put(`/api/admin/tasks/${taskToMove.id}`, { status: targetColId });
-          const targetColInfo = KANBAN_COLUMNS.find(c => c.id === targetColId);
-          toast.success(`Task moved to ${targetColInfo?.label || targetColId}`);
-          if (viewMode === 'table') refreshTableTasks?.();
-        } catch (err) {
-          console.error('Failed to move task:', err);
-          toast.error('فشل في نقل المهمة');
-          setColumnsData(previousColumnsData);
-        }
-      }
+      // Moving across columns or across projects
+      handleMoveTaskStatus(taskToMove.id, targetColId, targetProj);
     }
   };
 
-  // Move task status handler
-  const handleMoveTaskStatus = async (taskId, newStatus) => {
+  // Move task status handler (supports targetProjectId)
+  const handleMoveTaskStatus = async (taskId, newStatus, targetProjId = null) => {
     let targetTask = null;
     let oldStatus = null;
+    let oldProjKey = null;
 
-    for (const key of Object.keys(columnsData)) {
-      const found = columnsData[key].tasks.find(t => t.id === taskId);
-      if (found) {
-        targetTask = found;
-        oldStatus = key;
-        break;
+    for (const st of Object.keys(projectsData)) {
+      const projs = projectsData[st] || {};
+      for (const pk of Object.keys(projs)) {
+        const tList = projs[pk]?.tasks || [];
+        const found = tList.find(t => t.id === taskId);
+        if (found) {
+          targetTask = found;
+          oldStatus = st;
+          oldProjKey = pk;
+          break;
+        }
       }
+      if (targetTask) break;
     }
 
     if (!targetTask && viewMode === 'table') {
       targetTask = tableTaskList.find(t => t.id === taskId);
       oldStatus = targetTask?.status;
+      oldProjKey = targetTask?.project_id || 'unassigned';
     }
 
-    if (!targetTask || oldStatus === newStatus) return;
+    if (!targetTask) return;
+    if (oldStatus === newStatus && (!targetProjId || targetProjId === oldProjKey)) return;
 
     // Permissions check
     if (!isAdmin && (newStatus === 'approve' || newStatus === 'edit')) {
       toast.error("You don't have permission to approve tasks or request revision");
       setDragOverCol(null);
+      setDragOverProjectId(null);
       return;
     }
 
     if (targetTask.status === 'approve' && !isAdmin) {
       toast.error("You don't have permission to modify approved tasks");
       setDragOverCol(null);
+      setDragOverProjectId(null);
       return;
     }
 
-    // Optimistic UI Update in columns
+    const destProjKey = targetProjId || targetTask.project_id || 'unassigned';
+
     const updatedTask = { 
       ...targetTask, 
       status: newStatus,
@@ -525,27 +594,72 @@ const FilteredTasks = () => {
         ? (targetTask.done_date || new Date().toISOString().split('T')[0])
         : targetTask.done_date
     };
-    setColumnsData(prev => {
-      const sourceCol = prev[oldStatus] || { tasks: [], total: 0 };
-      const destCol = prev[newStatus] || { tasks: [], total: 0 };
 
-      return {
-        ...prev,
-        [oldStatus]: {
-          ...sourceCol,
-          tasks: sourceCol.tasks.filter(t => t.id !== taskId),
-          total: Math.max(0, sourceCol.total - 1)
-        },
-        [newStatus]: {
-          ...destCol,
-          tasks: [updatedTask, ...destCol.tasks.filter(t => t.id !== taskId)],
-          total: destCol.total + 1
-        }
+    // Optimistic UI updates
+    setProjectsData(prev => {
+      const next = { ...prev };
+      const sourceCol = { ...(next[oldStatus] || {}) };
+      const sourceProjData = { ...(sourceCol[oldProjKey] || { tasks: [], total: 0 }) };
+
+      sourceCol[oldProjKey] = {
+        ...sourceProjData,
+        tasks: sourceProjData.tasks.filter(t => t.id !== taskId),
+        total: Math.max(0, (sourceProjData.total || 0) - 1)
       };
+      next[oldStatus] = sourceCol;
+
+      const destCol = { ...(next[newStatus] || {}) };
+      const destProjData = { ...(destCol[destProjKey] || { tasks: [], total: 0, initialLoaded: true }) };
+
+      destCol[destProjKey] = {
+        ...destProjData,
+        tasks: [updatedTask, ...(destProjData.tasks || []).filter(t => t.id !== taskId)],
+        total: (destProjData.total || 0) + 1,
+        initialLoaded: true
+      };
+      next[newStatus] = destCol;
+
+      return next;
     });
 
+    setProjectsSummary(prev => {
+      const next = { ...prev };
+      const srcList = [...(next[oldStatus] || [])];
+      const srcIdx = srcList.findIndex(p => (p.project_id || 'unassigned') === oldProjKey);
+      if (srcIdx >= 0) {
+        srcList[srcIdx] = { ...srcList[srcIdx], total: Math.max(0, srcList[srcIdx].total - 1) };
+      }
+      next[oldStatus] = srcList;
+
+      const destList = [...(next[newStatus] || [])];
+      const destIdx = destList.findIndex(p => (p.project_id || 'unassigned') === destProjKey);
+      if (destIdx >= 0) {
+        destList[destIdx] = { ...destList[destIdx], total: (destList[destIdx].total || 0) + 1 };
+      } else {
+        destList.push({
+          project_id: destProjKey === 'unassigned' ? null : destProjKey,
+          project_name: targetTask.project_name || 'General / No Project',
+          total: 1
+        });
+      }
+      next[newStatus] = destList;
+      return next;
+    });
+
+    setStatusTotals(prev => ({
+      ...prev,
+      [oldStatus]: Math.max(0, (prev[oldStatus] || 0) - 1),
+      [newStatus]: (prev[newStatus] || 0) + 1
+    }));
+
+    // Auto-expand destination project so the user sees the card
+    setExpandedProjects(prev => ({
+      ...prev,
+      [`${newStatus}_${destProjKey}`]: true
+    }));
+
     if (viewMode === 'table') {
-      setTableTaskList(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+      setTableTaskList(prev => prev.map(t => t.id === taskId ? updatedTask : t));
     }
 
     try {
@@ -556,20 +670,23 @@ const FilteredTasks = () => {
       });
 
       if (res?.success) {
-        toast.success(`Task moved to ${KANBAN_COLUMNS.find(c => c.id === newStatus)?.label || newStatus}`);
-        if (viewMode === 'table') refreshTableTasks();
+        const targetColInfo = activeKanbanColumns.find(c => c.id === newStatus);
+        toast.success(`Task moved to ${targetColInfo?.label || newStatus}`);
+        if (viewMode === 'table') refreshTableTasks?.();
       } else {
         toast.error(res?.message || 'Failed to update task status');
-        refreshAllColumns();
+        fetchProjectsSummary();
       }
     } catch (err) {
       console.error('Status update failed:', err);
       toast.error('An error occurred while updating status');
-      refreshAllColumns();
+      fetchProjectsSummary();
     } finally {
       setDragOverCol(null);
+      setDragOverProjectId(null);
       setDraggedTask(null);
       setDraggedFromCol(null);
+      setDraggedFromProj(null);
       setDraggedFromIndex(null);
     }
   };
@@ -577,11 +694,24 @@ const FilteredTasks = () => {
   const handleDropOnCol = (e, targetStatus) => {
     e.preventDefault();
     setDragOverCol(null);
+    setDragOverProjectId(null);
 
     const taskId = e.dataTransfer.getData('text/plain') || draggedTask?.id;
     if (!taskId) return;
 
     handleMoveTaskStatus(taskId, targetStatus);
+  };
+
+  const handleDropOnProject = (e, targetStatus, targetProjKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverCol(null);
+    setDragOverProjectId(null);
+
+    const taskId = e.dataTransfer.getData('text/plain') || draggedTask?.id;
+    if (!taskId) return;
+
+    handleMoveTaskStatus(taskId, targetStatus, targetProjKey);
   };
 
   // =========================================================================
@@ -639,7 +769,7 @@ const FilteredTasks = () => {
     try {
       await apiClient.put('/api/admin/tasks/reorder', { tasks: payload });
       toast.success('تم تحديث ترتيب المهام بنجاح');
-      refreshAllColumns();
+      handleRefresh();
     } catch (err) {
       console.error('Error reordering tasks:', err);
       toast.error('فشل في حفظ ترتيب المهام');
@@ -659,17 +789,21 @@ const FilteredTasks = () => {
 
       if (res?.success) {
         toast.success(`Importance updated to ${newImportance}`);
-        setColumnsData(prev => {
-          const updated = { ...prev };
-          Object.keys(updated).forEach(key => {
-            updated[key] = {
-              ...updated[key],
-              tasks: updated[key].tasks.map(t => t.id === taskId ? { ...t, importanc_status: newImportance } : t)
-            };
+        setProjectsData(prev => {
+          const next = { ...prev };
+          Object.keys(next).forEach(st => {
+            const colProjs = { ...(next[st] || {}) };
+            Object.keys(colProjs).forEach(pk => {
+              colProjs[pk] = {
+                ...colProjs[pk],
+                tasks: (colProjs[pk].tasks || []).map(t => t.id === taskId ? { ...t, importanc_status: newImportance } : t)
+              };
+            });
+            next[st] = colProjs;
           });
-          return updated;
+          return next;
         });
-        if (viewMode === 'table') refreshTableTasks();
+        if (viewMode === 'table') refreshTableTasks?.();
       }
     } catch (err) {
       console.error('Failed to change importance:', err);
@@ -688,18 +822,26 @@ const FilteredTasks = () => {
 
     if (response?.success) {
       toast.success('Task deleted successfully');
-      setColumnsData(prev => {
+      setProjectsData(prev => {
         const next = { ...prev };
-        Object.keys(next).forEach(key => {
-          next[key] = {
-            ...next[key],
-            tasks: next[key].tasks.filter(t => t.id !== id),
-            total: Math.max(0, next[key].total - 1)
-          };
+        Object.keys(next).forEach(st => {
+          const colProjs = { ...(next[st] || {}) };
+          Object.keys(colProjs).forEach(pk => {
+            const hasTask = (colProjs[pk].tasks || []).some(t => t.id === id);
+            if (hasTask) {
+              colProjs[pk] = {
+                ...colProjs[pk],
+                tasks: colProjs[pk].tasks.filter(t => t.id !== id),
+                total: Math.max(0, (colProjs[pk].total || 0) - 1)
+              };
+            }
+          });
+          next[st] = colProjs;
         });
         return next;
       });
-      if (viewMode === 'table') refreshTableTasks();
+      fetchProjectsSummary();
+      if (viewMode === 'table') refreshTableTasks?.();
     } else {
       toast.error(response?.message || 'Failed to delete task');
     }
@@ -769,16 +911,17 @@ const FilteredTasks = () => {
         url: '/api/admin/tasks/bulk-status',
         data: {
           task_ids: selectedTaskIds,
+          taskIds: selectedTaskIds,
           status: bulkTargetStatus
         }
       });
 
       if (res?.success) {
-        toast.success(`Successfully moved ${selectedTaskIds.length} tasks to ${KANBAN_COLUMNS.find(c => c.id === bulkTargetStatus)?.label || bulkTargetStatus}`);
+        toast.success(`Successfully moved ${selectedTaskIds.length} tasks to ${activeKanbanColumns.find(c => c.id === bulkTargetStatus)?.label || bulkTargetStatus}`);
         setSelectedTaskIds([]);
         setIsSelectionMode(false);
-        refreshAllColumns();
-        if (viewMode === 'table') refreshTableTasks();
+        handleRefresh();
+        if (viewMode === 'table') refreshTableTasks?.();
       } else {
         toast.error(res?.message || 'Failed to update selected tasks');
       }
@@ -790,8 +933,20 @@ const FilteredTasks = () => {
     }
   };
 
+  // Manual refresh all columns & projects
+  const handleRefresh = useCallback(() => {
+    fetchProjectsSummary();
+    Object.entries(expandedProjects).forEach(([key, isOpen]) => {
+      if (isOpen) {
+        const [st, pk] = key.split('_');
+        if (st && pk) fetchProjectTasks(st, pk, 1, false);
+      }
+    });
+    if (viewMode === 'table') refreshTableTasks?.();
+  }, [fetchProjectsSummary, expandedProjects, fetchProjectTasks, viewMode, refreshTableTasks]);
+
   const cardProps = {
-    showProjectInfo: true,
+    showProjectInfo: false,
     isSelectionMode,
     onToggleSelect: toggleTaskSelection,
     onDragStart: handleDragStart,
@@ -807,7 +962,7 @@ const FilteredTasks = () => {
     availableColumns: activeKanbanColumns
   };
 
-  const totalTasksCount = Object.values(columnsData).reduce((acc, curr) => acc + (curr.total || 0), 0);
+  const totalTasksCount = Object.values(statusTotals).reduce((acc, curr) => acc + (curr || 0), 0);
 
   const getStatusStyles = (status) => {
     switch(status) {
@@ -906,10 +1061,7 @@ const FilteredTasks = () => {
 
           {/* Refresh button */}
           <button
-            onClick={() => {
-              refreshAllColumns();
-              if (viewMode === 'table') refreshTableTasks();
-            }}
+            onClick={handleRefresh}
             title="Refresh All Columns"
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-input bg-card text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
           >
@@ -966,7 +1118,7 @@ const FilteredTasks = () => {
         <div className="block md:hidden mb-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
             {activeKanbanColumns.map((col) => {
-              const count = columnsData[col.id]?.total || 0;
+              const count = statusTotals[col.id] || 0;
               const isActive = mobileActiveTab === col.id;
               return (
                 <button
@@ -1043,24 +1195,53 @@ const FilteredTasks = () => {
       {/* MAIN VIEW: Kanban or Table */}
       {viewMode === 'kanban' ? (
         <div className="w-full">
-          {/* Desktop Kanban: scrollable columns side-by-side */}
+          {/* Desktop Kanban: scrollable columns side-by-side with Status & Project grouping */}
           <div className="hidden md:flex gap-4 overflow-x-auto pb-4 custom-scrollbar items-start">
             {activeKanbanColumns.map((col) => {
-              const colState = columnsData[col.id] || { tasks: [], total: 0, loading: false, loadingMore: false, hasMore: false };
+              const projectSummaries = projectsSummary[col.id] || [];
+              const columnProjectGroups = projectSummaries.map((p) => {
+                const projKey = p.project_id || 'unassigned';
+                const projData = projectsData[col.id]?.[projKey] || {
+                  tasks: [],
+                  loading: false,
+                  loadingMore: false,
+                  hasMore: false,
+                  total: p.total || 0,
+                  page: 1
+                };
+                const isOpen = Boolean(expandedProjects[`${col.id}_${projKey}`]);
+
+                return {
+                  id: projKey,
+                  name: p.project_name || 'General / No Project',
+                  total: p.total ?? 0,
+                  tasks: projData.tasks || [],
+                  loading: projData.loading || false,
+                  loadingMore: projData.loadingMore || false,
+                  hasMore: projData.hasMore || false,
+                  isOpen,
+                  onToggle: () => handleToggleProject(col.id, projKey),
+                  onLoadMore: () => handleLoadMoreProject(col.id, projKey)
+                };
+              });
+
               return (
                 <KanbanColumn
                   key={col.id}
                   column={col}
-                  tasks={colState.tasks}
-                  total={colState.total}
-                  loading={colState.loading}
-                  loadingMore={colState.loadingMore}
-                  hasMore={colState.hasMore}
-                  onScroll={handleColumnScroll}
+                  total={statusTotals[col.id] || 0}
+                  loading={summaryLoading}
+                  projectGroups={columnProjectGroups}
+                  allProjectsOpen={columnProjectGroups.length > 0 && columnProjectGroups.every(g => g.isOpen)}
+                  onToggleAllProjects={() => handleToggleAllProjectsInColumn(col.id)}
                   isDragOver={dragOverCol === col.id}
                   onDragOver={handleDragOverCol}
                   onDragLeave={handleDragLeaveCol}
                   onDrop={handleDropOnCol}
+                  dragOverProjectId={dragOverProjectId}
+                  onDragOverProject={handleDragOverProject}
+                  onDragLeaveProject={handleDragLeaveProject}
+                  onDropOnProject={handleDropOnProject}
                   dragOverCardId={dragOverCardId}
                   onDragOverCard={handleDragOverCard}
                   onDragLeaveCard={handleDragLeaveCard}
@@ -1081,20 +1262,49 @@ const FilteredTasks = () => {
           <div className="block md:hidden">
             {(() => {
               const activeCol = activeKanbanColumns.find(c => c.id === mobileActiveTab) || activeKanbanColumns[0];
-              const colState = columnsData[activeCol.id] || { tasks: [], total: 0, loading: false, loadingMore: false, hasMore: false };
+              const projectSummaries = projectsSummary[activeCol.id] || [];
+              const columnProjectGroups = projectSummaries.map((p) => {
+                const projKey = p.project_id || 'unassigned';
+                const projData = projectsData[activeCol.id]?.[projKey] || {
+                  tasks: [],
+                  loading: false,
+                  loadingMore: false,
+                  hasMore: false,
+                  total: p.total || 0,
+                  page: 1
+                };
+                const isOpen = Boolean(expandedProjects[`${activeCol.id}_${projKey}`]);
+
+                return {
+                  id: projKey,
+                  name: p.project_name || 'General / No Project',
+                  total: p.total ?? 0,
+                  tasks: projData.tasks || [],
+                  loading: projData.loading || false,
+                  loadingMore: projData.loadingMore || false,
+                  hasMore: projData.hasMore || false,
+                  isOpen,
+                  onToggle: () => handleToggleProject(activeCol.id, projKey),
+                  onLoadMore: () => handleLoadMoreProject(activeCol.id, projKey)
+                };
+              });
+
               return (
                 <KanbanColumn
                   column={activeCol}
-                  tasks={colState.tasks}
-                  total={colState.total}
-                  loading={colState.loading}
-                  loadingMore={colState.loadingMore}
-                  hasMore={colState.hasMore}
-                  onScroll={handleColumnScroll}
+                  total={statusTotals[activeCol.id] || 0}
+                  loading={summaryLoading}
+                  projectGroups={columnProjectGroups}
+                  allProjectsOpen={columnProjectGroups.length > 0 && columnProjectGroups.every(g => g.isOpen)}
+                  onToggleAllProjects={() => handleToggleAllProjectsInColumn(activeCol.id)}
                   isDragOver={dragOverCol === activeCol.id}
                   onDragOver={handleDragOverCol}
                   onDragLeave={handleDragLeaveCol}
                   onDrop={handleDropOnCol}
+                  dragOverProjectId={dragOverProjectId}
+                  onDragOverProject={handleDragOverProject}
+                  onDragLeaveProject={handleDragLeaveProject}
+                  onDropOnProject={handleDropOnProject}
                   dragOverCardId={dragOverCardId}
                   onDragOverCard={handleDragOverCard}
                   onDragLeaveCard={handleDragLeaveCard}
