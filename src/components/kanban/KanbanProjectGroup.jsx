@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { KanbanCard } from './KanbanCard';
 import { 
   ChevronDown, 
   FolderKanban, 
   Loader2, 
   Inbox,
-  Layers,
   ArrowDown
 } from 'lucide-react';
 
@@ -50,7 +50,7 @@ export const KanbanProjectGroup = ({
       },
       {
         root: null,
-        rootMargin: '120px',
+        rootMargin: '140px',
         threshold: 0.1
       }
     );
@@ -80,14 +80,14 @@ export const KanbanProjectGroup = ({
         title={isOpen ? "Click to collapse tasks" : "Click to expand tasks"}
         className={`w-full px-3.5 py-2.5 flex items-center justify-between gap-2.5 text-left transition-colors cursor-pointer select-none border-none ${
           isOpen
-            ? 'bg-muted/40 hover:bg-muted/60 border-b border-border/50'
+            ? 'bg-muted/40 hover:bg-muted/60'
             : 'bg-card hover:bg-muted/30'
         }`}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {/* Animated Down Arrow */}
-          <div className={`flex h-6 w-6 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground transition-transform duration-200 shrink-0 ${
-            isOpen ? 'rotate-180 text-primary bg-primary/10' : ''
+          {/* Animated Down Arrow with smooth rotation */}
+          <div className={`flex h-6 w-6 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground transition-all duration-300 ease-out shrink-0 ${
+            isOpen ? 'rotate-180 text-primary bg-primary/10 scale-105' : ''
           }`}>
             <ChevronDown className="w-3.5 h-3.5" />
           </div>
@@ -105,7 +105,7 @@ export const KanbanProjectGroup = ({
 
         {/* Task Count Badge */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-extrabold transition-colors ${
             total > 0
               ? 'bg-primary/10 text-primary border border-primary/20'
               : 'bg-muted text-muted-foreground'
@@ -115,93 +115,123 @@ export const KanbanProjectGroup = ({
         </div>
       </button>
 
-      {/* Expanded Content: Tasks List */}
-      {isOpen && (
-        <div className="p-2.5 space-y-2.5 bg-muted/10">
-          {/* Initial Loading Skeletons */}
-          {loading && tasks.length === 0 ? (
-            <div className="space-y-2.5 pt-1">
-              {[1, 2].map((n) => (
-                <div
-                  key={n}
-                  className="animate-pulse rounded-xl border border-border/50 bg-card p-3 space-y-2.5"
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="h-3.5 w-20 bg-muted rounded" />
-                    <div className="h-3.5 w-10 bg-muted rounded" />
-                  </div>
-                  <div className="h-4 w-3/4 bg-muted rounded" />
-                  <div className="h-3 w-1/2 bg-muted rounded" />
-                  <div className="flex justify-between items-center pt-1">
-                    <div className="h-5 w-5 bg-muted rounded-full" />
-                    <div className="h-3 w-16 bg-muted rounded" />
-                  </div>
+      {/* Expanded Content: Tasks List with smooth height & opacity animation */}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="tasks-content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ 
+              height: 'auto', 
+              opacity: 1,
+              transition: {
+                height: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
+                opacity: { duration: 0.2, delay: 0.04 }
+              }
+            }}
+            exit={{ 
+              height: 0, 
+              opacity: 0,
+              transition: {
+                height: { duration: 0.22, ease: [0.16, 1, 0.3, 1] },
+                opacity: { duration: 0.15 }
+              }
+            }}
+            className="overflow-hidden border-t border-border/50"
+          >
+            <div className="p-2.5 space-y-2.5 bg-muted/10">
+              {/* Initial Loading Skeletons */}
+              {loading && tasks.length === 0 ? (
+                <div className="space-y-2.5 pt-1">
+                  {[1, 2].map((n) => (
+                    <div
+                      key={n}
+                      className="animate-pulse rounded-xl border border-border/50 bg-card p-3 space-y-2.5"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="h-3.5 w-20 bg-muted rounded" />
+                        <div className="h-3.5 w-10 bg-muted rounded" />
+                      </div>
+                      <div className="h-4 w-3/4 bg-muted rounded" />
+                      <div className="h-3 w-1/2 bg-muted rounded" />
+                      <div className="flex justify-between items-center pt-1">
+                        <div className="h-5 w-5 bg-muted rounded-full" />
+                        <div className="h-3 w-16 bg-muted rounded" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : tasks.length === 0 ? (
+                /* Empty State for Project */
+                <div className="flex flex-col items-center justify-center py-6 px-3 text-center rounded-xl border border-dashed border-border/50 bg-background/50">
+                  <Inbox className="w-5 h-5 text-muted-foreground/60 mb-1.5" />
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    No tasks for this project in {column.label}
+                  </p>
+                </div>
+              ) : (
+                /* Tasks List */
+                <>
+                  {tasks.map((task, index) => (
+                    <motion.div
+                      key={task.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: Math.min(index * 0.02, 0.12) }}
+                    >
+                      <KanbanCard
+                        task={task}
+                        index={index}
+                        columnId={column.id}
+                        dragOverCardId={dragOverCardId}
+                        onDragStart={onDragStart || cardProps?.onDragStart}
+                        onDragEnd={onDragEnd || cardProps?.onDragEnd}
+                        onDragOverCard={onDragOverCard}
+                        onDragLeaveCard={onDragLeaveCard}
+                        onDropOnCard={onDropOnCard}
+                        showProjectInfo={false}
+                        {...cardProps}
+                      />
+                    </motion.div>
+                  ))}
+
+                  {/* Infinite Scroll Sentinel element */}
+                  <div ref={sentinelRef} className="h-1 w-full pointer-events-none" />
+
+                  {/* Loading More Spinner */}
+                  {loadingMore && (
+                    <div className="py-2 flex items-center justify-center gap-2 text-xs text-primary font-medium animate-pulse">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                      <span>Loading more tasks...</span>
+                    </div>
+                  )}
+
+                  {/* Fallback button when more tasks are available */}
+                  {hasMore && !loadingMore && !loading && (
+                    <button
+                      type="button"
+                      onClick={onLoadMore}
+                      className="w-full py-1.5 rounded-xl border border-dashed border-primary/30 hover:border-primary/60 text-[11px] font-semibold text-primary hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <ArrowDown className="w-3 h-3" />
+                      <span>Load more ({tasks.length} of {total})</span>
+                    </button>
+                  )}
+
+                  {/* End of tasks list indicator */}
+                  {!hasMore && tasks.length >= 5 && (
+                    <div className="pt-1.5 pb-0.5 text-center">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">
+                        All {total} tasks loaded
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          ) : tasks.length === 0 ? (
-            /* Empty State for Project */
-            <div className="flex flex-col items-center justify-center py-6 px-3 text-center rounded-xl border border-dashed border-border/50 bg-background/50">
-              <Inbox className="w-5 h-5 text-muted-foreground/60 mb-1.5" />
-              <p className="text-xs font-semibold text-muted-foreground">
-                No tasks for this project in {column.label}
-              </p>
-            </div>
-          ) : (
-            /* Tasks List */
-            <>
-              {tasks.map((task, index) => (
-                <KanbanCard
-                  key={task.id}
-                  task={task}
-                  index={index}
-                  columnId={column.id}
-                  dragOverCardId={dragOverCardId}
-                  onDragStart={onDragStart || cardProps?.onDragStart}
-                  onDragEnd={onDragEnd || cardProps?.onDragEnd}
-                  onDragOverCard={onDragOverCard}
-                  onDragLeaveCard={onDragLeaveCard}
-                  onDropOnCard={onDropOnCard}
-                  showProjectInfo={false}
-                  {...cardProps}
-                />
-              ))}
-
-              {/* Infinite Scroll Sentinel element */}
-              <div ref={sentinelRef} className="h-1 w-full pointer-events-none" />
-
-              {/* Loading More Spinner */}
-              {loadingMore && (
-                <div className="py-2 flex items-center justify-center gap-2 text-xs text-primary font-medium animate-pulse">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                  <span>Loading more tasks...</span>
-                </div>
-              )}
-
-              {/* Fallback button when more tasks are available */}
-              {hasMore && !loadingMore && !loading && (
-                <button
-                  type="button"
-                  onClick={onLoadMore}
-                  className="w-full py-1.5 rounded-xl border border-dashed border-primary/30 hover:border-primary/60 text-[11px] font-semibold text-primary hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <ArrowDown className="w-3 h-3" />
-                  <span>Load more ({tasks.length} of {total})</span>
-                </button>
-              )}
-
-              {/* End of tasks list indicator */}
-              {!hasMore && tasks.length >= 5 && (
-                <div className="pt-1.5 pb-0.5 text-center">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">
-                    All {total} tasks loaded
-                  </span>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

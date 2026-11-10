@@ -1589,7 +1589,7 @@ const FilteredTasks = () => {
       {/* Bottom Summary Stats Cards */}
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {activeKanbanColumns.map((col) => {
-          const count = columnsData[col.id]?.total || 0;
+          const count = statusTotals[col.id] || 0;
           return (
             <div 
               key={col.id} 
