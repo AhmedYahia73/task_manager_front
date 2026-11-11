@@ -166,8 +166,9 @@ const FilteredTasks = () => {
     });
 
     try {
-      const res = await apiClient.get(endpoint, {
+      const res = await apiClient.get('/api/admin/tasks/kanban/project-tasks', {
         params: {
+          type,
           status: statusKey,
           project_id: projKey === 'unassigned' ? 'unassigned' : projKey,
           page: pageNum,
@@ -250,7 +251,7 @@ const FilteredTasks = () => {
   const fetchProjectsSummary = useCallback(async () => {
     setSummaryLoading(true);
     try {
-      const res = await apiClient.get('/api/admin/tasks/status-projects', {
+      const res = await apiClient.get('/api/admin/tasks/kanban/status-projects', {
         params: {
           type,
           search: debouncedSearch,
@@ -908,7 +909,7 @@ const FilteredTasks = () => {
     try {
       const res = await mutate({
         method: 'PUT',
-        url: '/api/admin/tasks/bulk-status',
+        url: '/api/admin/tasks/kanban/bulk-status',
         data: {
           task_ids: selectedTaskIds,
           taskIds: selectedTaskIds,
