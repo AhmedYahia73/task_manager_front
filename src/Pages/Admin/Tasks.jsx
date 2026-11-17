@@ -798,12 +798,7 @@ const Tasks = () => {
     if (task) {
       setEditingId(task.id);
 
-      const allLoadedTasks = Object.values(columnsData).flatMap(c => c.tasks);
-      const matchingFromList = allLoadedTasks
-        .filter(t => t.name?.trim().toLowerCase() === task.name?.trim().toLowerCase())
-        .map(t => t.user_id)
-        .filter(Boolean);
-      const initialUsers = Array.from(new Set([task.user_id, ...matchingFromList].filter(Boolean)));
+      const initialUsers = task.user_id ? [task.user_id] : [];
 
       setFormData({
         name: task.name,
@@ -827,7 +822,7 @@ const Tasks = () => {
           setFormData(prev => ({
             ...prev,
             date_urgent: taskDetail.date_urgent ? (typeof taskDetail.date_urgent === 'string' ? taskDetail.date_urgent.split('T')[0] : dayjs(taskDetail.date_urgent).format('YYYY-MM-DD')) : prev.date_urgent,
-            users_ids: (taskDetail.users_ids && Array.isArray(taskDetail.users_ids)) ? taskDetail.users_ids : prev.users_ids
+            users_ids: taskDetail.user_id ? [taskDetail.user_id] : (Array.isArray(taskDetail.users_ids) && taskDetail.users_ids.length > 0 ? [taskDetail.users_ids[0]] : prev.users_ids)
           }));
         }
       } catch (err) {
@@ -869,6 +864,13 @@ const Tasks = () => {
 
   const toggleUserSelection = (userId) => {
     setFormData(prev => {
+      if (editingId) {
+        const isSelected = prev.users_ids.includes(userId);
+        return {
+          ...prev,
+          users_ids: isSelected ? [] : [userId]
+        };
+      }
       const isSelected = prev.users_ids.includes(userId);
       return {
         ...prev,
@@ -913,6 +915,8 @@ const Tasks = () => {
         data.append('users_ids', uid);
       });
       data.append('user_id', formData.users_ids[0]);
+    } else if (editingId) {
+      data.append('user_id', '');
     }
 
     if (selectedDocFile) {
@@ -1941,10 +1945,10 @@ const Tasks = () => {
                           <span className="material-symbols-outlined text-[16px] text-primary">group</span>
                           Assign To
                           <span className="text-xs text-muted-foreground font-normal">
-                            (Select one or multiple {getRoleNamePlural('engineer').toLowerCase()})
+                            {editingId ? `(Select ${getRoleName('engineer').toLowerCase()})` : `(Select one or multiple ${getRoleNamePlural('engineer').toLowerCase()})`}
                           </span>
                         </label>
-                        {engineersList.length > 1 && (
+                        {!editingId && engineersList.length > 1 && (
                           <button
                             type="button"
                             onClick={handleSelectAllUsers}

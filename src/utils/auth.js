@@ -5,15 +5,22 @@ const TOKEN_KEY = 'admin_auth_token';
 // auth.js
 export const setAuthToken = (token) => {
   const isProduction = window.location.protocol === 'https:';
-  Cookies.set(TOKEN_KEY, token, { expires: 7, secure: isProduction }); 
+  // تعيين صلاحية الكوكي لـ 100 سنة حتى لا ينتهي التوكن أبداً
+  Cookies.set(TOKEN_KEY, token, { expires: 36500, secure: isProduction, sameSite: 'lax' }); 
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch (e) {}
 };
 
 export const getAuthToken = () => {
-  return Cookies.get(TOKEN_KEY);
+  return Cookies.get(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
 };
 
 export const removeAuthToken = () => {
   Cookies.remove(TOKEN_KEY);
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch (e) {}
 };
 
 export const isAuthenticated = () => {
