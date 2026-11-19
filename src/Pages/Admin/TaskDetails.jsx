@@ -556,8 +556,9 @@ export default function TaskDetails() {
   const { data: taskData, loading, refresh } = useGet(`/api/admin/tasks/${effectiveTaskId}`);
   const task = taskData?.task || taskData?.data?.task;
 
-  const taskUserRole = task?.user_role || (isAdmin ? 'admin' : 'engineer');
-  const isLeaderOrAdmin = taskUserRole === 'leader' || isAdmin;
+  const isTaskLeader = task?.user_role === 'leader' || task?.tester_id === user?.id;
+  const taskUserRole = task?.user_role || (isAdmin ? 'admin' : (isTaskLeader ? 'leader' : 'engineer'));
+  const isLeaderOrAdmin = isTaskLeader || isAdmin;
 
   const { mutate, loading: mutating } = useMutation();
 

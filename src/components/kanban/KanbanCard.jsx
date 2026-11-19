@@ -65,8 +65,11 @@ export const KanbanCard = ({
     ? `/admin/projects/${taskProjectId}/groups/${taskGroupId}/tasks/${task.id}` 
     : `/admin/tasks/${task.id}/view`;
 
+  const isTaskLeader = task.user_role === 'leader' || task.user_role === 'admin';
+  const canManageThisTask = isAdmin || isLeaderOrAdmin || isTaskLeader;
+
   const isApproved = task.status === 'approve';
-  const canModifyThisTask = isLeaderOrAdmin || !isApproved;
+  const canModifyThisTask = canManageThisTask || !isApproved;
 
   // Status helper styles
   const getStatusStyles = (status) => {
@@ -108,10 +111,10 @@ export const KanbanCard = ({
   const isStatusAllowed = (targetStatus) => {
     if (task.status === targetStatus) return false;
     if (task.status === 'approve') {
-      if (!isLeaderOrAdmin) return false;
+      if (!canManageThisTask) return false;
       return targetStatus === 'edit';
     }
-    if (!isLeaderOrAdmin && (targetStatus === 'approve' || targetStatus === 'edit')) {
+    if (!canManageThisTask && (targetStatus === 'approve' || targetStatus === 'edit')) {
       return false;
     }
     return true;
@@ -176,7 +179,7 @@ export const KanbanCard = ({
           ) : canModifyThisTask ? (
             <div 
               className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors p-0.5" 
-              title={isLeaderOrAdmin ? "اسحب لإعادة الترتيب أو تغيير الحالة" : "اسحب لتغيير الحالة"}
+              title={canManageThisTask ? "اسحب لإعادة الترتيب أو تغيير الحالة" : "اسحب لتغيير الحالة"}
             >
               <GripVertical className="w-4 h-4" />
             </div>
@@ -229,7 +232,7 @@ export const KanbanCard = ({
             <Edit className="w-3.5 h-3.5" />
           </button>
 
-          {isLeaderOrAdmin && (
+          {canManageThisTask && (
             <button
               type="button"
               title="Delete Task"

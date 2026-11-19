@@ -59,7 +59,6 @@ const FilteredTasks = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user?.role?.toLowerCase?.() || '';
   const isAdmin = isAdminRole(userRole);
-  const isLeaderOrAdmin = isAdmin; // In global task view, global admins or task leaders have full privilege
 
   // View mode: 'kanban' (default) or 'table'
   const [viewMode, setViewMode] = useState('kanban');
@@ -127,6 +126,42 @@ const FilteredTasks = () => {
   // =========================================================================
   // Projects summary per status: { [status]: [{ project_id, project_name, total }] }
   const [projectsSummary, setProjectsSummary] = useState({});
+
+  // Set of project IDs where current user is the leader
+  const leaderProjectIds = React.useMemo(() => {
+    const ids = new Set();
+    projectsList.forEach(p => {
+      if (p.tester_id === user?.id || p.user_role === 'leader') {
+        ids.add(p.id);
+      }
+    });
+    Object.values(projectsSummary).forEach(list => {
+      if (Array.isArray(list)) {
+        list.forEach(p => {
+          if (p.tester_id === user?.id || p.user_role === 'leader') {
+            if (p.project_id) ids.add(p.project_id);
+          }
+        });
+      }
+    });
+    return ids;
+  }, [projectsList, projectsSummary, user?.id]);
+
+  const isUserLeaderInAnyProject = isAdmin || leaderProjectIds.size > 0;
+  const isLeaderOrAdmin = isUserLeaderInAnyProject;
+
+  const isLeaderOfProject = useCallback((pId) => {
+    return isAdmin || Boolean(pId && leaderProjectIds.has(pId));
+  }, [isAdmin, leaderProjectIds]);
+
+  const isTaskLeaderOrAdmin = useCallback((task) => {
+    if (!task) return isAdmin;
+    if (isAdmin) return true;
+    if (task.user_role === 'leader' || task.user_role === 'admin') return true;
+    if (task.tester_id && task.tester_id === user?.id) return true;
+    if (task.project_id && leaderProjectIds.has(task.project_id)) return true;
+    return false;
+  }, [isAdmin, user?.id, leaderProjectIds]);
   // Overall task totals per status
   const [statusTotals, setStatusTotals] = useState({});
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -520,7 +555,7 @@ const FilteredTasks = () => {
 
       setDraggedTask(null);
 
-      if (isAdmin) {
+      if (isAdmin || isLeaderOfProject(sourceProj) || isTaskLeaderOrAdmin(taskToMove)) {
         const payload = projTasks.map((t, idx) => ({
           id: t.id,
           sort: idx + 1
@@ -571,19 +606,29 @@ const FilteredTasks = () => {
     if (!targetTask) return;
     if (oldStatus === newStatus && (!targetProjId || targetProjId === oldProjKey)) return;
 
+    const canManageTask = isTaskLeaderOrAdmin(targetTask);
+
     // Permissions check
-    if (!isAdmin && (newStatus === 'approve' || newStatus === 'edit')) {
+    if (!canManageTask && (newStatus === 'approve' || newStatus === 'edit')) {
       toast.error("You don't have permission to approve tasks or request revision");
       setDragOverCol(null);
       setDragOverProjectId(null);
       return;
     }
 
-    if (targetTask.status === 'approve' && !isAdmin) {
-      toast.error("You don't have permission to modify approved tasks");
-      setDragOverCol(null);
-      setDragOverProjectId(null);
-      return;
+    if (targetTask.status === 'approve') {
+      if (!canManageTask) {
+        toast.error("You don't have permission to modify approved tasks");
+        setDragOverCol(null);
+        setDragOverProjectId(null);
+        return;
+      }
+      if (newStatus !== 'edit' && newStatus !== 'approve') {
+        toast.error("Approved tasks can only be changed to Needs Revision");
+        setDragOverCol(null);
+        setDragOverProjectId(null);
+        return;
+      }
     }
 
     const destProjKey = targetProjId || targetTask.project_id || 'unassigned';
@@ -719,14 +764,16 @@ const FilteredTasks = () => {
   // TABLE VIEW DRAG AND DROP REORDER (Leader / Admin)
   // =========================================================================
   const handleTableDragStart = (e, index) => {
-    if (!isAdmin || debouncedSearch) return;
+    const task = tableTaskList[index];
+    if (!isTaskLeaderOrAdmin(task) || debouncedSearch) return;
     setDraggedTableIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', String(index));
   };
 
   const handleTableDragOver = (e, index) => {
-    if (!isAdmin || debouncedSearch) return;
+    const task = tableTaskList[index];
+    if (!isTaskLeaderOrAdmin(task) || debouncedSearch) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     if (dragOverTableIndex !== index) {
@@ -744,7 +791,8 @@ const FilteredTasks = () => {
   };
 
   const handleTableDrop = async (e, targetIndex) => {
-    if (!isAdmin || debouncedSearch) return;
+    const targetTask = tableTaskList[targetIndex];
+    if (!isTaskLeaderOrAdmin(targetTask) || debouncedSearch) return;
     e.preventDefault();
 
     if (draggedTableIndex === null || draggedTableIndex === undefined || draggedTableIndex === targetIndex) {
@@ -900,9 +948,25 @@ const FilteredTasks = () => {
   const handleBulkMove = async () => {
     if (selectedTaskIds.length === 0) return;
 
-    if (!isAdmin && (bulkTargetStatus === 'approve' || bulkTargetStatus === 'edit')) {
-      toast.error("You don't have permission to approve tasks or request revision");
-      return;
+    if (bulkTargetStatus === 'approve' || bulkTargetStatus === 'edit') {
+      const selectedTasks = [];
+      for (const st of Object.keys(projectsData)) {
+        for (const pk of Object.keys(projectsData[st] || {})) {
+          const tList = projectsData[st][pk]?.tasks || [];
+          for (const t of tList) {
+            if (selectedTaskIds.includes(t.id)) selectedTasks.push(t);
+          }
+        }
+      }
+      if (selectedTasks.length === 0 && viewMode === 'table') {
+        selectedTasks.push(...tableTaskList.filter(t => selectedTaskIds.includes(t.id)));
+      }
+
+      const hasUnauthorizedTask = selectedTasks.some(t => !isTaskLeaderOrAdmin(t));
+      if (!isUserLeaderInAnyProject || (selectedTasks.length > 0 && hasUnauthorizedTask)) {
+        toast.error("You don't have permission to approve tasks or request revision for some selected tasks");
+        return;
+      }
     }
 
     setIsBulkUpdating(true);
@@ -957,7 +1021,7 @@ const FilteredTasks = () => {
     onStatusChange: handleMoveTaskStatus,
     onImportanceChange: handleImportanceChange,
     onViewDoc: handleViewDoc,
-    isLeaderOrAdmin: isAdmin,
+    isLeaderOrAdmin: isUserLeaderInAnyProject,
     isAdmin,
     getRoleName,
     availableColumns: activeKanbanColumns
@@ -1173,11 +1237,11 @@ const FilteredTasks = () => {
               <option value="pending">Pending</option>
               <option value="inprogress">In Progress</option>
               <option value="done">Completed</option>
-              <option value="edit" disabled={!isAdmin}>
-                {isAdmin ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
+              <option value="edit" disabled={!isUserLeaderInAnyProject}>
+                {isUserLeaderInAnyProject ? 'Need to Revision' : 'Need to Revision (Leader 🔒)'}
               </option>
-              <option value="approve" disabled={!isAdmin}>
-                {isAdmin ? 'Approved' : 'Approved (Leader 🔒)'}
+              <option value="approve" disabled={!isUserLeaderInAnyProject}>
+                {isUserLeaderInAnyProject ? 'Approved' : 'Approved (Leader 🔒)'}
               </option>
             </select>
 
@@ -1329,7 +1393,7 @@ const FilteredTasks = () => {
             <table className="w-full border-collapse text-left text-sm text-muted-foreground">
               <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
-                  {isAdmin && !debouncedSearch && (
+                  {(isAdmin || isUserLeaderInAnyProject) && !debouncedSearch && (
                     <th className="w-10 px-2 py-4 text-center">
                       <span className="sr-only">Reorder</span>
                     </th>
@@ -1346,14 +1410,14 @@ const FilteredTasks = () => {
               <tbody className="divide-y divide-border">
                 {tableTasksLoading && tableTaskList.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin && !debouncedSearch ? 8 : 7} className="px-6 py-12 text-center">
+                    <td colSpan={(isAdmin || isUserLeaderInAnyProject) && !debouncedSearch ? 8 : 7} className="px-6 py-12 text-center">
                       <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                       <p className="mt-2 text-sm text-muted-foreground font-medium">Loading tasks...</p>
                     </td>
                   </tr>
                 ) : (tableTaskList.length > 0 ? tableTaskList : tableTasks).length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin && !debouncedSearch ? 8 : 7} className="px-6 py-12 text-center">
+                    <td colSpan={(isAdmin || isUserLeaderInAnyProject) && !debouncedSearch ? 8 : 7} className="px-6 py-12 text-center">
                       <p className="text-base font-semibold text-foreground">No tasks found</p>
                       <p className="text-sm text-muted-foreground">There are no tasks matching this filter.</p>
                     </td>
@@ -1372,7 +1436,7 @@ const FilteredTasks = () => {
                     return (
                       <tr 
                         key={task.id} 
-                        draggable={isAdmin && !debouncedSearch}
+                        draggable={isTaskLeaderOrAdmin(task) && !debouncedSearch}
                         onDragStart={(e) => handleTableDragStart(e, index)}
                         onDragOver={(e) => handleTableDragOver(e, index)}
                         onDragLeave={handleTableDragLeave}
@@ -1385,7 +1449,7 @@ const FilteredTasks = () => {
                           isUrgent ? 'urgent-row-glow' : 'hover:bg-muted/50'
                         }`}
                       >
-                        {isAdmin && !debouncedSearch && (
+                        {(isAdmin || isUserLeaderInAnyProject) && !debouncedSearch && (
                           <td 
                             className="w-10 px-2 py-5 text-center cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground"
                             onClick={(e) => e.stopPropagation()}
@@ -1482,8 +1546,8 @@ const FilteredTasks = () => {
                               value={task.importanc_status || 'medium'}
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => handleImportanceChange(task.id, e.target.value)}
-                            disabled={!isAdmin}
-                            className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${!isAdmin ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
+                            disabled={!isTaskLeaderOrAdmin(task)}
+                            className={`inline-flex appearance-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${!isTaskLeaderOrAdmin(task) ? 'cursor-not-allowed opacity-75' : 'cursor-pointer focus:ring-2 focus:ring-primary/50'} focus:outline-none border transition-all ${getImportanceStyles(task.importanc_status || 'medium')}`}
                             style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
                           >
                             <option value="low" className="bg-card text-foreground">Low</option>
@@ -1494,7 +1558,7 @@ const FilteredTasks = () => {
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          {task.status === 'approve' && !isAdmin ? (
+                          {task.status === 'approve' && !isTaskLeaderOrAdmin(task) ? (
                             <span 
                               title="Approved task: Locked (Only Leader or Admin can request revision)"
                               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 select-none cursor-not-allowed"
@@ -1515,17 +1579,17 @@ const FilteredTasks = () => {
                               <option value="done" className="bg-card text-foreground">Completed</option>
                               <option 
                                 value="edit" 
-                                disabled={!isAdmin}
+                                disabled={!isTaskLeaderOrAdmin(task)}
                                 className="bg-card text-foreground"
                               >
-                                {!isAdmin ? 'Need to Revision (Leader 🔒)' : 'Need to Revision'}
+                                {!isTaskLeaderOrAdmin(task) ? 'Need to Revision (Leader 🔒)' : 'Need to Revision'}
                               </option>
                               <option 
                                 value="approve" 
-                                disabled={!isAdmin}
+                                disabled={!isTaskLeaderOrAdmin(task)}
                                 className="bg-card text-foreground"
                               >
-                                {!isAdmin ? 'Approved (Leader 🔒)' : 'Approved'}
+                                {!isTaskLeaderOrAdmin(task) ? 'Approved (Leader 🔒)' : 'Approved'}
                               </option>
                             </select>
                           )}
@@ -1539,7 +1603,7 @@ const FilteredTasks = () => {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            {isAdmin && (
+                            {isTaskLeaderOrAdmin(task) && (
                               <button
                                 onClick={() => handleDelete(task.id)}
                                 className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
