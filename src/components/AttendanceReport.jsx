@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGet } from '@/hooks/useGet';
-import { Loader2, Calendar, Clock, CheckCircle, AlertTriangle, Gift, FileMinus, Palmtree, Edit2 } from 'lucide-react';
+import { Loader2, Calendar, Clock, CheckCircle, AlertTriangle, Gift, FileMinus, Palmtree, Edit2, Globe, Wifi, Building2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { motion } from 'framer-motion';
 import AttendanceAdminModal from '../Pages/Admin/HRM/AttendanceAdminModal';
 
@@ -55,6 +56,130 @@ export default function AttendanceReport({ userId }) {
     if (loaderRef.current) observer.observe(loaderRef.current);
     return () => observer.disconnect();
   }, [loading, data?.pagination, page]);
+
+  const renderStatusCell = (row) => {
+    const rawOnlineType = row.onlineType || row.onlineDetails?.type || row.attendance?.onlineType;
+    let computedOnlineType = rawOnlineType;
+
+    if (!computedOnlineType && row.status?.toLowerCase().includes('online')) {
+      const isCheckinOnline = row.attendance ? !row.attendance.onsite : true;
+      const isCheckoutOnline = row.attendance && row.attendance.to ? row.attendance.departureOnsite === false : isCheckinOnline;
+      if (isCheckinOnline && isCheckoutOnline) {
+        computedOnlineType = 'all';
+      } else if (isCheckinOnline && !isCheckoutOnline) {
+        computedOnlineType = 'checkin';
+      } else if (!isCheckinOnline && isCheckoutOnline) {
+        computedOnlineType = 'checkout';
+      } else {
+        computedOnlineType = 'all';
+      }
+    }
+
+    const isOnline = Boolean(computedOnlineType || row.status?.toLowerCase().includes('online'));
+
+    if (!isOnline) {
+      return <span className="font-semibold">{row.status}</span>;
+    }
+
+    const effectiveType = computedOnlineType || 'all';
+
+    const typeDetails = {
+      checkout: {
+        badgeText: 'Online (Checkout)',
+        pillBg: 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100',
+        tagColor: 'bg-emerald-600 text-white',
+        titleAr: 'أونلاين في الانصراف (Check-out)',
+        desc: 'حضور في المقر (Onsite) وانصراف خارج المقر (Online)',
+        checkin: { text: 'Onsite (في المقر)', isOnline: false },
+        checkout: { text: 'Online (خارج المقر)', isOnline: true },
+      },
+      checkin: {
+        badgeText: 'Online (Checkin)',
+        pillBg: 'bg-indigo-50 text-indigo-800 border-indigo-300 hover:bg-indigo-100',
+        tagColor: 'bg-indigo-600 text-white',
+        titleAr: 'أونلاين في الحضور (Check-in)',
+        desc: 'حضور خارج المقر (Online) وانصراف في المقر (Onsite)',
+        checkin: { text: 'Online (خارج المقر)', isOnline: true },
+        checkout: { text: 'Onsite (في المقر)', isOnline: false },
+      },
+      all: {
+        badgeText: 'Online (All)',
+        pillBg: 'bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100',
+        tagColor: 'bg-purple-600 text-white',
+        titleAr: 'أونلاين بالكامل (All)',
+        desc: 'حضور وانصراف أونلاين بالكامل خارج المقر',
+        checkin: { text: 'Online (خارج المقر)', isOnline: true },
+        checkout: { text: 'Online (خارج المقر)', isOnline: true },
+      },
+    }[effectiveType] || {
+      badgeText: 'Online',
+      pillBg: 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100',
+      tagColor: 'bg-blue-600 text-white',
+      titleAr: 'حضور أونلاين',
+      desc: 'حضور مسجل بنظام الأونلاين',
+      checkin: { text: 'Online', isOnline: true },
+      checkout: { text: 'Online', isOnline: true },
+    };
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all border shadow-xs cursor-pointer ${typeDetails.pillBg} hover:scale-105 active:scale-95`}
+            title="اضغط لعرض تفاصيل الأونلاين (checkout / checkin / all)"
+          >
+            <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+            <span>Online</span>
+            <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${typeDetails.tagColor}`}>
+              {effectiveType}
+            </span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-3.5 shadow-xl rounded-xl border border-border bg-card z-50 text-foreground">
+          <div className="space-y-2.5 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-blue-600" />
+                تفاصيل الأونلاين
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${typeDetails.tagColor}`}>
+                {effectiveType}
+              </span>
+            </div>
+
+            <div className="bg-muted/50 p-2.5 rounded-lg space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground font-medium">Check-in (الحضور):</span>
+                <span className={`font-bold flex items-center gap-1 ${typeDetails.checkin.isOnline ? 'text-blue-600' : 'text-emerald-600'}`}>
+                  {typeDetails.checkin.isOnline ? <Wifi className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
+                  {typeDetails.checkin.text}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground font-medium">Check-out (الانصراف):</span>
+                <span className={`font-bold flex items-center gap-1 ${typeDetails.checkout.isOnline ? 'text-blue-600' : 'text-emerald-600'}`}>
+                  {typeDetails.checkout.isOnline ? <Wifi className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
+                  {typeDetails.checkout.text}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 text-center">
+              <p className="font-bold text-blue-950 dark:text-blue-200">{typeDetails.titleAr}</p>
+              <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium mt-0.5">{typeDetails.desc}</p>
+            </div>
+
+            <div className="text-[10px] text-muted-foreground text-center flex items-center justify-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              <span>الحالة: {row.status}</span>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -282,7 +407,7 @@ export default function AttendanceReport({ userId }) {
                     <tr key={idx} className={`${row.color || 'bg-background hover:bg-muted/30'}`}>
                       <td className="px-4 py-3 font-medium">{row.date}</td>
                       <td className="px-4 py-3">{row.day}</td>
-                      <td className="px-4 py-3 font-semibold">{row.status}</td>
+                      <td className="px-4 py-3">{renderStatusCell(row)}</td>
                       <td className="px-4 py-3">
                         {row.attendance ? new Date(row.attendance.from).toLocaleTimeString() : '-'}
                       </td>
