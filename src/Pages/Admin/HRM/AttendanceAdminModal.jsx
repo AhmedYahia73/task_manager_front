@@ -164,12 +164,16 @@ export default function AttendanceAdminModal({
           userId,
           to: `${checkOutDate}T${checkOutTime}`,
           onsite: workType === 'onsite',
+          departureOnsite: workType === 'onsite',
           isRequestOnline: workType === 'online',
         };
       } else {
         payload = {
           userId,
           to: `${checkOutDate}T${checkOutTime}`,
+          onsite: workType === 'onsite',
+          departureOnsite: workType === 'onsite',
+          isRequestOnline: workType === 'online',
           action: 'checkout',
           mode: 'checkout',
         };
@@ -184,6 +188,7 @@ export default function AttendanceAdminModal({
         from: `${checkInDate}T${checkInTime}`,
         to: null,
         onsite: workType === 'onsite',
+        departureOnsite: workType === 'onsite',
         isRequestOnline: workType === 'online',
         action: 'checkin',
         mode: 'checkin',
@@ -198,6 +203,7 @@ export default function AttendanceAdminModal({
         from: `${checkInDate}T${checkInTime}`,
         to: checkOutTime ? `${checkOutDate || checkInDate}T${checkOutTime}` : null,
         onsite: workType === 'onsite',
+        departureOnsite: workType === 'onsite',
         isRequestOnline: workType === 'online',
       };
     }

@@ -58,30 +58,37 @@ export default function AttendanceReport({ userId }) {
   }, [loading, data?.pagination, page]);
 
   const renderStatusCell = (row) => {
+    const hasCheckedOut = Boolean(row.attendance?.to);
     const rawOnlineType = row.onlineType || row.onlineDetails?.type || row.attendance?.onlineType;
     let computedOnlineType = rawOnlineType;
 
     if (!computedOnlineType && row.status?.toLowerCase().includes('online')) {
       const isCheckinOnline = row.attendance ? !row.attendance.onsite : true;
-      const isCheckoutOnline = row.attendance && row.attendance.to ? row.attendance.departureOnsite === false : isCheckinOnline;
-      if (isCheckinOnline && isCheckoutOnline) {
-        computedOnlineType = 'all';
-      } else if (isCheckinOnline && !isCheckoutOnline) {
-        computedOnlineType = 'checkin';
-      } else if (!isCheckinOnline && isCheckoutOnline) {
-        computedOnlineType = 'checkout';
+      const isCheckoutOnline = hasCheckedOut ? row.attendance.departureOnsite === false : false;
+
+      if (hasCheckedOut) {
+        if (isCheckinOnline && isCheckoutOnline) {
+          computedOnlineType = 'all';
+        } else if (isCheckinOnline && !isCheckoutOnline) {
+          computedOnlineType = 'checkin';
+        } else if (!isCheckinOnline && isCheckoutOnline) {
+          computedOnlineType = 'checkout';
+        } else {
+          computedOnlineType = null;
+        }
       } else {
-        computedOnlineType = 'all';
+        // لم يسجل انصراف بعد
+        computedOnlineType = isCheckinOnline ? 'checkin' : null;
       }
     }
 
-    const isOnline = Boolean(computedOnlineType || row.status?.toLowerCase().includes('online'));
+    const isOnline = Boolean(computedOnlineType || (row.status?.toLowerCase().includes('online') && (row.attendance ? !row.attendance.onsite || (hasCheckedOut && row.attendance.departureOnsite === false) : true)));
 
     if (!isOnline) {
       return <span className="font-semibold">{row.status}</span>;
     }
 
-    const effectiveType = computedOnlineType || 'all';
+    const effectiveType = computedOnlineType || (row.attendance && !row.attendance.onsite ? 'checkin' : 'checkout');
 
     const typeDetails = {
       checkout: {
@@ -159,9 +166,20 @@ export default function AttendanceReport({ userId }) {
 
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground font-medium">Check-out (الانصراف):</span>
-                <span className={`font-bold flex items-center gap-1 ${typeDetails.checkout.isOnline ? 'text-blue-600' : 'text-emerald-600'}`}>
-                  {typeDetails.checkout.isOnline ? <Wifi className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
-                  {typeDetails.checkout.text}
+                <span className={`font-bold flex items-center gap-1 ${
+                  !hasCheckedOut
+                    ? 'text-amber-600'
+                    : typeDetails.checkout.isOnline
+                    ? 'text-blue-600'
+                    : 'text-emerald-600'
+                }`}>
+                  {!hasCheckedOut ? (
+                    '⏳ لم يسجل انصراف بعد'
+                  ) : typeDetails.checkout.isOnline ? (
+                    <><Wifi className="w-3.5 h-3.5" /> {typeDetails.checkout.text}</>
+                  ) : (
+                    <><Building2 className="w-3.5 h-3.5" /> {typeDetails.checkout.text}</>
+                  )}
                 </span>
               </div>
             </div>
